@@ -1,0 +1,21 @@
+{
+  "include": [
+    "./",
+  ],
+  "exclude": [
+    "./dist"
+  ],
+  "compilerOptions": {
+    "strict": true,
+    "target": "es6",
+    "rootDir": "./",
+    "outDir": "./dist",
+    "esModuleInterop": true,
+    "lib": [
+      "ES2019",
+    ],
+    "module": "commonjs",
+    "resolveJsonModule": true,
+    "noImplicitAny": true
+  }
+}
