@@ -1,49 +1,62 @@
-import wallet from "../turbin3-wallet.json"
-import { createUmi } from "@metaplex-foundation/umi-bundle-defaults"
-import { 
-    createMetadataAccountV3, 
-    CreateMetadataAccountV3InstructionAccounts, 
-    CreateMetadataAccountV3InstructionArgs,
-    DataV2Args
-} from "@metaplex-foundation/mpl-token-metadata";
-import { createSignerFromKeypair, signerIdentity, publicKey } from "@metaplex-foundation/umi";
+import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
+import { getWallet } from "./wallet";
+import {
+  createSignerFromKeypair,
+  signerIdentity,
+  publicKey,
+} from "@metaplex-foundation/umi";
+import {
+  createMetadataAccountV3,
+  CreateMetadataAccountV3InstructionAccounts,
+  CreateMetadataAccountV3InstructionArgs,
+  DataV2Args,
+} from "@metaplex-foundation/mpl-token-metadata";
 
 // Define our Mint address
-const mint = publicKey("<mint address>")
+const mint = publicKey("fPcP9vGoowPikgu7oTRCJKHUvSNn9N5WZhYshR4UXyo");
 
 // Create a UMI connection
-const umi = createUmi('https://api.devnet.solana.com');
-const keypair = umi.eddsa.createKeypairFromSecretKey(new Uint8Array(wallet));
-const signer = createSignerFromKeypair(umi, keypair);
-umi.use(signerIdentity(createSignerFromKeypair(umi, keypair)));
+const umi = createUmi("https://api.devnet.solana.com");
 
 (async () => {
-    try {
-        // Start here
-        // let accounts: CreateMetadataAccountV3InstructionAccounts = {
-        //     ???
-        // }
+  try {
+    // Start here
+    const { secretKey } = await getWallet();
+    const keypair = umi.eddsa.createKeypairFromSecretKey(secretKey);
+    const signer = createSignerFromKeypair(umi, keypair);
+    umi.use(signerIdentity(createSignerFromKeypair(umi, keypair)));
 
-        // let data: DataV2Args = {
-        //     ???
-        // }
+    const accounts: CreateMetadataAccountV3InstructionAccounts = {
+      mint,
+      payer: signer,
+      mintAuthority: signer,
+      updateAuthority: signer,
+    };
 
-        // let args: CreateMetadataAccountV3InstructionArgs = {
-        //     ???
-        // }
+    const data: DataV2Args = {
+      name: "awesome token",
+      symbol: "AWSM",
+      uri: "https://assets.coingecko.com/coins/images/4128/standard/solana.png?1718769756",
+      sellerFeeBasisPoints: 0,
+      creators: [{ address: keypair.publicKey, share: 100, verified: false }],
+      collection: null,
+      uses: null,
+    };
 
-        // let tx = createMetadataAccountV3(
-        //     umi,
-        //     {
-        //         ...accounts,
-        //         ...args
-        //     }
-        // )
+    const args: CreateMetadataAccountV3InstructionArgs = {
+      data,
+      isMutable: true,
+      collectionDetails: null,
+    };
 
-        // let result = await tx.sendAndConfirm(umi);
-        // console.log(bs58.encode(result.signature));
-    } catch(e) {
-        console.error(`Oops, something went wrong: ${e}`)
-    }
+    const tx = createMetadataAccountV3(umi, {
+      ...accounts,
+      ...args,
+    });
+    const result = await tx.sendAndConfirm(umi);
+    console.log(bs58.encode(result.signature)); // 5jPh8Mban2AUDio5SsEpbtEUJdJbV4vgNwSnktzYcoYosh2xjCfUeuWQp4Hdt3cWjv89SpmuLgtR6PyDaiAtFofr
+  } catch (e) {
+    console.error(`Oops, something went wrong: ${e}`);
+  }
 })();
