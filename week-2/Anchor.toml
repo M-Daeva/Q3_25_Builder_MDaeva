@@ -1,0 +1,21 @@
+[toolchain]
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.localnet]
+vault = "Fy8V7mvvD4W3sAcCK725XxTi2XKZ4oDWBxaZV1hvDWom"
+
+[programs.devnet]
+vault = "Fy8V7mvvD4W3sAcCK725XxTi2XKZ4oDWBxaZV1hvDWom"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "localnet"
+wallet = "~/dev/.test-wallets/solana/dev-keypair.json"
+
+[scripts]
+test = "bun test"
