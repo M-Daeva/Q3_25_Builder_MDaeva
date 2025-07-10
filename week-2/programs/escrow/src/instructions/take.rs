@@ -77,6 +77,7 @@ impl<'info> Take<'info> {
     pub fn take(&mut self, id: u8, maker: Pubkey) -> Result<()> {
         let Take {
             token_program,
+            maker: maker_account,
             taker,
             escrow_state,
             vault_ata_for_maker_mint,
@@ -120,6 +121,21 @@ impl<'info> Take<'info> {
             escrow_state.maker.amount,
             maker_mint.decimals,
         )?;
+
+        // close vault_ata_for_maker_mint
+        //
+        let cpi_program = token_program.to_account_info();
+        let cpi_accounts = token_interface::CloseAccount {
+            account: vault_ata_for_maker_mint.to_account_info(),
+            destination: maker_account.to_account_info(),
+            authority: escrow_state.to_account_info(),
+        };
+
+        token_interface::close_account(CpiContext::new_with_signer(
+            cpi_program,
+            cpi_accounts,
+            &[seeds],
+        ))?;
 
         Ok(())
     }

@@ -61,6 +61,8 @@ impl<'info> Refund<'info> {
             ..
         } = self;
 
+        // return maker_mint tokens to maker_ata_for_maker_mint
+        //
         let cpi_program = token_program.to_account_info();
         let cpi_accounts = token_interface::TransferChecked {
             from: vault_ata_for_maker_mint.to_account_info(),
@@ -68,13 +70,29 @@ impl<'info> Refund<'info> {
             mint: maker_mint.to_account_info(),
             authority: escrow_state.to_account_info(),
         };
-
         let seeds: &[&[u8]] = &[b"escrow", maker.key.as_ref(), &[id], &[escrow_state.bump]];
 
         token_interface::transfer_checked(
             CpiContext::new_with_signer(cpi_program, cpi_accounts, &[seeds]),
             escrow_state.maker.amount,
             maker_mint.decimals,
-        )
+        )?;
+
+        // close vault_ata_for_maker_mint
+        //
+        let cpi_program = token_program.to_account_info();
+        let cpi_accounts = token_interface::CloseAccount {
+            account: vault_ata_for_maker_mint.to_account_info(),
+            destination: maker.to_account_info(),
+            authority: escrow_state.to_account_info(),
+        };
+
+        token_interface::close_account(CpiContext::new_with_signer(
+            cpi_program,
+            cpi_accounts,
+            &[seeds],
+        ))?;
+
+        Ok(())
     }
 }
