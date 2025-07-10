@@ -1,4 +1,4 @@
-import { AddressLookupTableAccount } from "@solana/web3.js";
+import { AddressLookupTableAccount, Keypair, PublicKey } from "@solana/web3.js";
 import { networks, ProgramName } from "../config";
 
 export type Network = (typeof networks)[number];
@@ -23,4 +23,11 @@ export interface TxParams {
   lookupTables?: AddressLookupTableAccount[];
   priorityFee?: LinearParams;
   cpu?: LinearParams;
+  signers?: Keypair[];
+}
+
+export interface TraderInfo {
+  trader: PublicKey | string;
+  amount: number;
+  mint: PublicKey | string;
 }

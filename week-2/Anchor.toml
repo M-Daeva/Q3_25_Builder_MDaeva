@@ -6,9 +6,11 @@ skip-lint = false
 
 [programs.localnet]
 vault = "Fy8V7mvvD4W3sAcCK725XxTi2XKZ4oDWBxaZV1hvDWom"
+escrow = "3F2bCYNtdEw5GcYupVe6g3CepC5VD2yAicZPYz6zjo5W"
 
 [programs.devnet]
 vault = "Fy8V7mvvD4W3sAcCK725XxTi2XKZ4oDWBxaZV1hvDWom"
+escrow = "3F2bCYNtdEw5GcYupVe6g3CepC5VD2yAicZPYz6zjo5W"
 
 [registry]
 url = "https://api.apr.dev"

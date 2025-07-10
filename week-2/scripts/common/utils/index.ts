@@ -2,6 +2,7 @@ import { AES, enc } from "crypto-js";
 import util from "util";
 import { all, create } from "mathjs";
 import * as anchor from "@coral-xyz/anchor";
+import * as spl from "@solana/spl-token";
 import { Network, TxParams } from "../interfaces";
 import { getSimulationComputeUnits } from "@solana-developers/helpers";
 import { NETWORK_CONFIG } from "../config";
@@ -177,10 +178,11 @@ export async function handleTx(
 ): Promise<anchor.web3.TransactionSignature> {
   const { connection, wallet } = provider;
 
-  let { lookupTables, priorityFee, cpu } = params;
+  let { lookupTables, priorityFee, cpu, signers } = params;
   lookupTables = lookupTables || [];
   priorityFee = { k: priorityFee?.k || 1, b: priorityFee?.b || 0 };
   cpu = { k: cpu?.k || 1, b: cpu?.b || 0 };
+  signers = signers || []; // additional signers (like mint keypairs)
 
   // TODO: check this option: https://www.helius.dev/docs/priority-fee/estimating-fees-using-serialized-transaction
   // get priority fees
@@ -221,16 +223,26 @@ export async function handleTx(
     instructions.unshift(ComputeBudgetProgram.setComputeUnitLimit({ units }));
   }
 
-  // sign and send tx
-  const transaction = new VersionedTransaction(
-    new TransactionMessage({
-      instructions,
-      recentBlockhash: blockhash,
-      payerKey: wallet.publicKey,
-    }).compileToLegacyMessage()
-    //.compileToV0Message(lookupTables) // TODO
-  );
+  // TODO .compileToV0Message(lookupTables)
+  // create transaction message
+  const message = new TransactionMessage({
+    instructions,
+    recentBlockhash: blockhash,
+    payerKey: wallet.publicKey,
+  }).compileToLegacyMessage();
+
+  // create versioned transaction
+  const transaction = new VersionedTransaction(message);
+
+  // sign with additional signers first (like mint keypairs)
+  if (signers.length > 0) {
+    transaction.sign(signers);
+  }
+
+  // then sign with the wallet
   const signedTx = await wallet.signTransaction(transaction);
+
+  // send transaction
   const signature = await connection.sendTransaction(signedTx);
 
   await connection.confirmTransaction({
@@ -245,10 +257,61 @@ export async function handleTx(
 export function getHandleTx(provider: anchor.AnchorProvider) {
   return async (
     instructions: TransactionInstruction[],
-    params: TxParams
+    params: TxParams,
+    isDisplayed: boolean
   ): Promise<anchor.web3.TransactionSignature> => {
     const tx = await handleTx(provider, instructions, params);
-    l("\n", tx, "\n");
-    return tx;
+    return logAndReturn(tx, isDisplayed);
   };
+}
+
+export async function getOrCreateAtaInstructions(
+  connection: anchor.web3.Connection,
+  payer: PublicKey,
+  mintPubkey: PublicKey,
+  ownerPubkey: PublicKey,
+  allowOwnerOffCurve: boolean
+): Promise<{
+  ata: anchor.web3.PublicKey;
+  ixs: anchor.web3.TransactionInstruction[];
+}> {
+  // calculate the ATA address
+  const associatedToken = await spl.getAssociatedTokenAddress(
+    mintPubkey,
+    ownerPubkey,
+    allowOwnerOffCurve,
+    spl.TOKEN_PROGRAM_ID,
+    spl.ASSOCIATED_TOKEN_PROGRAM_ID
+  );
+
+  // check if the account exists and is properly initialized
+  try {
+    await spl.getAccount(
+      connection,
+      associatedToken,
+      undefined,
+      spl.TOKEN_PROGRAM_ID
+    );
+
+    // account exists and is properly initialized
+    return {
+      ata: associatedToken,
+      ixs: [],
+    };
+  } catch (_) {
+    // create the ATA creation instruction
+    const instruction = spl.createAssociatedTokenAccountInstruction(
+      payer,
+      associatedToken,
+      ownerPubkey,
+      mintPubkey,
+      spl.TOKEN_PROGRAM_ID,
+      spl.ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+
+    return {
+      ata: associatedToken,
+      ixs: [instruction],
+    };
+  }
 }
