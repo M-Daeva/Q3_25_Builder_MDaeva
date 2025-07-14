@@ -6,9 +6,10 @@ use anchor_lang::prelude::*;
 pub mod error;
 pub mod helpers;
 pub mod instructions;
+pub mod math;
 pub mod state;
 
-use instructions::{create_pool::*, provide_liquidity::*, swap::*};
+use instructions::{create_pool::*, liquidity::*, swap::*};
 
 declare_id!("CpuYGzAZWKWBHXUoBSfEg3qnvRd8pMcRa9XV29Xoj3KU");
 
@@ -35,7 +36,7 @@ pub mod amm {
     }
 
     pub fn provide_liquidity(
-        ctx: Context<ProvideLiquidity>,
+        ctx: Context<Liquidity>,
         _id: u64,
         mint_x_amount: u64,
         mint_y_amount: u64,
@@ -43,9 +44,15 @@ pub mod amm {
         ctx.accounts.provide_liquidity(mint_x_amount, mint_y_amount)
     }
 
+    pub fn withdraw_liquidity(
+        ctx: Context<Liquidity>,
+        _id: u64,
+        mint_lp_amount: u64,
+    ) -> Result<()> {
+        ctx.accounts.withdraw_liquidity(mint_lp_amount)
+    }
+
     pub fn swap(ctx: Context<Swap>, _id: u64, amount_in: u64, mint_in: Pubkey) -> Result<()> {
         ctx.accounts.swap(amount_in, mint_in)
     }
-
-    // TODO: withdraw liquidity
 }

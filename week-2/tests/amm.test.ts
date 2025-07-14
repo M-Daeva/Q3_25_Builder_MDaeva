@@ -1,5 +1,5 @@
 import * as anchor from "@coral-xyz/anchor";
-import { describe, expect, it, beforeEach } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import { Amm } from "../scripts/common/schema/types/amm";
 import { Keypair } from "@solana/web3.js";
 import { ChainHelpers, AmmHelpers } from "../scripts/common/account";
@@ -28,45 +28,31 @@ describe("amm-anchor", async () => {
   await chain.createMint(mintXKeypair, 6, TX_PARAMS);
   await chain.createMint(mintYKeypair, 6, TX_PARAMS);
 
-  let poolCreator: Keypair;
-  let liquidityProviderA: Keypair;
-  let liquidityProviderB: Keypair;
-  let trader: Keypair;
-
   const amm = new AmmHelpers(provider, ammProgram);
 
-  beforeEach(async () => {
-    const chain = new ChainHelpers(provider);
+  // generate new keypairs for each test
+  const poolCreator = Keypair.generate();
+  const liquidityProviderA = Keypair.generate();
+  const liquidityProviderB = Keypair.generate();
+  const trader = Keypair.generate();
 
-    // generate new keypairs for each test
-    poolCreator = Keypair.generate();
-    liquidityProviderA = Keypair.generate();
-    liquidityProviderB = Keypair.generate();
-    trader = Keypair.generate();
+  // airdrop SOL for transaction fees
+  await Promise.all(
+    [poolCreator, liquidityProviderA, liquidityProviderB, trader].map((x) =>
+      chain.requestAirdrop(x.publicKey, 2)
+    )
+  );
 
-    // airdrop SOL for transaction fees
-    await Promise.all(
-      [poolCreator, liquidityProviderA, liquidityProviderB, trader].map((x) =>
-        chain.requestAirdrop(x.publicKey, 2)
-      )
-    );
-
-    // mint tokens for users
-    let promiseList = [];
-    for (const mintKeypair of [mintXKeypair, mintYKeypair]) {
-      for (const user of [liquidityProviderA, liquidityProviderB, trader]) {
-        promiseList.push(
-          chain.mintTokens(
-            100,
-            mintKeypair.publicKey,
-            user.publicKey,
-            TX_PARAMS
-          )
-        );
-      }
+  // mint tokens for users
+  let promiseList = [];
+  for (const mintKeypair of [mintXKeypair, mintYKeypair]) {
+    for (const user of [liquidityProviderA, liquidityProviderB, trader]) {
+      promiseList.push(
+        chain.mintTokens(100, mintKeypair.publicKey, user.publicKey, TX_PARAMS)
+      );
     }
-    await Promise.all(promiseList);
-  });
+  }
+  await Promise.all(promiseList);
 
   describe("instructions", () => {
     it("create pool, provide liquidity", async () => {
@@ -141,14 +127,64 @@ describe("amm-anchor", async () => {
           1e6 * (trader_mint_x_balance_before - trader_mint_x_balance_after)
         )
       ).toEqual(1_000);
-      // amount_out = 8_000_000 - 2_000_000 * 8_000_000 / (2_000_000 + 1_000) = 3_998
-      // fee = 0.01 * 3_998 = 39
-      // amount_to_send = 3_998 - 39 = 3_959
+      // mint_y_amount ≈ (1 - 0.01) * 1_000 * (8_000_000 / 2_000_000) = 3_960
       expect(
         Math.round(
           1e6 * (trader_mint_y_balance_after - trader_mint_y_balance_before)
         )
       ).toEqual(3_960);
+
+      // swap
+      await amm.trySwap(id, 3_960, mintYKeypair.publicKey, trader, TX_PARAMS);
+    });
+
+    it("withdraw liquidity", async () => {
+      const id: number = 0;
+
+      const liquidity_provider_mint_x_balance_before =
+        await chain.getTokenBalance(
+          mintXKeypair.publicKey,
+          liquidityProviderA.publicKey
+        );
+      const liquidity_provider_mint_y_balance_before =
+        await chain.getTokenBalance(
+          mintYKeypair.publicKey,
+          liquidityProviderA.publicKey
+        );
+
+      // withdraw liquidity
+      await amm.tryWithdrawLiquidity(
+        id,
+        4_000_000,
+        liquidityProviderA,
+        TX_PARAMS
+      );
+
+      const liquidity_provider_mint_x_balance_after =
+        await chain.getTokenBalance(
+          mintXKeypair.publicKey,
+          liquidityProviderA.publicKey
+        );
+      const liquidity_provider_mint_y_balance_after =
+        await chain.getTokenBalance(
+          mintYKeypair.publicKey,
+          liquidityProviderA.publicKey
+        );
+
+      expect(
+        Math.round(
+          1e6 *
+            (liquidity_provider_mint_x_balance_after -
+              liquidity_provider_mint_x_balance_before)
+        )
+      ).toEqual(2_000_018);
+      expect(
+        Math.round(
+          1e6 *
+            (liquidity_provider_mint_y_balance_after -
+              liquidity_provider_mint_y_balance_before)
+        )
+      ).toEqual(8_000_000);
     });
   });
 });

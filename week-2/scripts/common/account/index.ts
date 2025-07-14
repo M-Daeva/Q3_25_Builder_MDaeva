@@ -355,6 +355,34 @@ export class AmmHelpers {
     return await this.handleTx([ix], modifiedParams, isDisplayed);
   }
 
+  async tryWithdrawLiquidity(
+    id: number,
+    mintLpAmount: number,
+    liquidityProviderKeypair: Keypair,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const { mintX, mintY } = await this.getPoolConfig(id);
+
+    const ix = await this.program.methods
+      .withdrawLiquidity(new anchor.BN(id), new anchor.BN(mintLpAmount))
+      .accounts({
+        mintX,
+        mintY,
+        tokenProgram: spl.TOKEN_PROGRAM_ID,
+        liquidityProvider: liquidityProviderKeypair.publicKey,
+      })
+      .instruction();
+
+    // add liquidityProviderKeypair as signer
+    const modifiedParams = {
+      ...params,
+      signers: [...(params.signers || []), liquidityProviderKeypair],
+    };
+
+    return await this.handleTx([ix], modifiedParams, isDisplayed);
+  }
+
   async trySwap(
     id: number,
     amountIn: number,
@@ -388,6 +416,14 @@ export class AmmHelpers {
     return await this.handleTx([ix], modifiedParams, isDisplayed);
   }
 
+  async getPoolConfigList(isDisplayed: boolean = false) {
+    const poolConfigList = (await this.program.account.poolConfig.all()).map(
+      (x) => x.account
+    );
+
+    return logAndReturn(poolConfigList, isDisplayed);
+  }
+
   async getPoolConfig(id: number, isDisplayed: boolean = false) {
     const [poolConfigPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("config"), new anchor.BN(id).toArrayLike(Buffer, "le", 8)],
@@ -413,8 +449,6 @@ export class AmmHelpers {
 
     return logAndReturn(poolBalance, isDisplayed);
   }
-
-  // TODO: get pool id list
 }
 
 export class ChainHelpers {

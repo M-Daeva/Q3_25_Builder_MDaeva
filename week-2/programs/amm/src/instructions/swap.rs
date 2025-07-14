@@ -6,7 +6,8 @@ use anchor_spl::{
 
 use crate::{
     error::ProgError,
-    helpers::{calc_amount_out, calc_fee, transfer_from_program, transfer_to_program},
+    helpers::{transfer_from_program, transfer_to_program},
+    math::{calc_amount_out, calc_fee},
     state::{PoolBalance, PoolConfig},
 };
 

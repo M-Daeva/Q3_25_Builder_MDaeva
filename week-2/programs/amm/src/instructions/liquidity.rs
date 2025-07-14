@@ -6,7 +6,8 @@ use anchor_spl::{
 
 use crate::{
     error::ProgError,
-    helpers::{calc_sqrt, mint_to, transfer_to_program},
+    helpers::{burn_from, mint_to, transfer_from_program, transfer_to_program},
+    math::{calc_shares, calc_sqrt},
     state::{PoolBalance, PoolConfig},
 };
 
@@ -16,7 +17,7 @@ use crate::{
 // Estimated function frame size: 4800 bytes. Exceeding the maximum stack offset may cause undefined behavior during execution.
 #[derive(Accounts)]
 #[instruction(id: u64)]
-pub struct ProvideLiquidity<'info> {
+pub struct Liquidity<'info> {
     pub system_program: Program<'info, System>,
     pub token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -98,9 +99,9 @@ pub struct ProvideLiquidity<'info> {
     pub liquidity_pool_mint_y_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 }
 
-impl<'info> ProvideLiquidity<'info> {
+impl<'info> Liquidity<'info> {
     pub fn provide_liquidity(&mut self, mint_x_amount: u64, mint_y_amount: u64) -> Result<()> {
-        let ProvideLiquidity {
+        let Liquidity {
             token_program,
             liquidity_provider,
             pool_config,
@@ -121,7 +122,11 @@ impl<'info> ProvideLiquidity<'info> {
             Err(ProgError::NoLiquidity)?;
         }
 
-        let lp_amount = calc_sqrt(mint_x_amount, mint_y_amount);
+        let mint_lp_amount = calc_sqrt(mint_x_amount, mint_y_amount);
+
+        pool_balance.mint_x_amount += mint_x_amount;
+        pool_balance.mint_y_amount += mint_y_amount;
+        pool_balance.mint_lp_amount += mint_lp_amount;
 
         // send tokens from the liquidity provider to the pool
         for (amount, mint, from, to) in [
@@ -143,7 +148,7 @@ impl<'info> ProvideLiquidity<'info> {
 
         // mint tokens to the liquidity provider
         mint_to(
-            lp_amount,
+            mint_lp_amount,
             mint_lp,
             liquidity_provider_mint_lp_ata,
             &[
@@ -155,11 +160,89 @@ impl<'info> ProvideLiquidity<'info> {
             token_program,
         )?;
 
-        pool_balance.set_inner(PoolBalance {
-            mint_x_amount: pool_balance.mint_x_amount + mint_x_amount,
-            mint_y_amount: pool_balance.mint_y_amount + mint_y_amount,
-            mint_lp_amount: pool_balance.mint_lp_amount + lp_amount,
-        });
+        Ok(())
+    }
+}
+
+impl<'info> Liquidity<'info> {
+    pub fn withdraw_liquidity(&mut self, mint_lp_amount: u64) -> Result<()> {
+        let Liquidity {
+            token_program,
+            liquidity_provider,
+            pool_config,
+            pool_balance,
+            mint_lp,
+            mint_x,
+            mint_y,
+            liquidity_provider_mint_lp_ata,
+            liquidity_provider_mint_x_ata,
+            liquidity_provider_mint_y_ata,
+            liquidity_pool_mint_x_ata,
+            liquidity_pool_mint_y_ata,
+            ..
+        } = self;
+
+        let mint_x_amount = calc_shares(
+            mint_lp_amount,
+            true,
+            pool_balance.mint_x_amount,
+            pool_balance.mint_y_amount,
+            pool_balance.mint_lp_amount,
+        );
+        let mint_y_amount = calc_shares(
+            mint_lp_amount,
+            false,
+            pool_balance.mint_x_amount,
+            pool_balance.mint_y_amount,
+            pool_balance.mint_lp_amount,
+        );
+
+        if mint_x_amount == 0 || mint_y_amount == 0 {
+            Err(ProgError::NoLiquidity)?;
+        }
+
+        pool_balance.mint_x_amount -= mint_x_amount;
+        pool_balance.mint_y_amount -= mint_y_amount;
+        pool_balance.mint_lp_amount -= mint_lp_amount;
+
+        // burn lp tokens
+        burn_from(
+            mint_lp_amount,
+            mint_lp,
+            liquidity_provider_mint_lp_ata,
+            liquidity_provider,
+            token_program,
+        )?;
+
+        // send tokens from the pool to the liquidity provider
+        for (amount, mint, from, to) in [
+            (
+                mint_x_amount,
+                mint_x,
+                liquidity_pool_mint_x_ata,
+                liquidity_provider_mint_x_ata,
+            ),
+            (
+                mint_y_amount,
+                mint_y,
+                liquidity_pool_mint_y_ata,
+                liquidity_provider_mint_y_ata,
+            ),
+        ] {
+            transfer_from_program(
+                amount,
+                mint,
+                from,
+                to,
+                &[
+                    b"config",
+                    pool_config.id.to_le_bytes().as_ref(),
+                    &[pool_config.config_bump],
+                ],
+                pool_config,
+                token_program,
+            )?;
+        }
 
         Ok(())
     }
