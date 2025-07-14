@@ -22,5 +22,5 @@ cluster = "localnet"
 wallet = "~/dev/.test-wallets/solana/dev-keypair.json"
 
 [scripts]
-# test = "bun test"
-test = "bun test --test-name-pattern amm"
+test = "bun test"
+# test = "bun test --test-name-pattern amm"
