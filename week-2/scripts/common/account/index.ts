@@ -14,6 +14,7 @@ import {
 
 import { Vault } from "../schema/types/vault";
 import { Escrow } from "../schema/types/escrow";
+import { Amm } from "../schema/types/amm";
 import VaultIdl from "../schema/idl/vault.json";
 
 export class VaultHelpers {
@@ -276,6 +277,108 @@ export class EscrowHelpers {
     );
 
     return logAndReturn(vaultAta, isDisplayed);
+  }
+}
+
+export class AmmHelpers {
+  private provider: anchor.AnchorProvider;
+  private program: anchor.Program<Amm>;
+
+  private handleTx: (
+    instructions: anchor.web3.TransactionInstruction[],
+    params: TxParams,
+    isDisplayed: boolean
+  ) => Promise<anchor.web3.TransactionSignature>;
+
+  constructor(provider: anchor.AnchorProvider, program: anchor.Program<Amm>) {
+    this.provider = provider;
+    this.program = program;
+    this.handleTx = getHandleTx(provider);
+  }
+
+  async tryCreatePool(
+    id: number,
+    mintX: PublicKey | string,
+    mintY: PublicKey | string,
+    feeBps: number,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const ix = await this.program.methods
+      .createPool(
+        new anchor.BN(id),
+        publicKeyFromString(mintX),
+        publicKeyFromString(mintY),
+        feeBps
+      )
+      .accounts({
+        tokenProgram: spl.TOKEN_PROGRAM_ID,
+        mintX,
+        mintY,
+        poolCreator: this.provider.wallet.publicKey,
+      })
+      .instruction();
+
+    return await this.handleTx([ix], params, isDisplayed);
+  }
+
+  async tryProvideLiquidity(
+    id: number,
+    mintXAmount: number,
+    mintYAmount: number,
+    liquidityProviderKeypair: Keypair,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const { mintX, mintY } = await this.getPoolConfig(id);
+
+    const ix = await this.program.methods
+      .provideLiquidity(
+        new anchor.BN(id),
+        new anchor.BN(mintXAmount),
+        new anchor.BN(mintYAmount)
+      )
+      .accounts({
+        mintX,
+        mintY,
+        tokenProgram: spl.TOKEN_PROGRAM_ID,
+        liquidityProvider: liquidityProviderKeypair.publicKey,
+      })
+      .instruction();
+
+    // add liquidityProviderKeypair as signer
+    const modifiedParams = {
+      ...params,
+      signers: [...(params.signers || []), liquidityProviderKeypair],
+    };
+
+    return await this.handleTx([ix], modifiedParams, isDisplayed);
+  }
+
+  async getPoolConfig(id: number, isDisplayed: boolean = false) {
+    const [poolConfigPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("config"), new anchor.BN(id).toArrayLike(Buffer, "le", 8)],
+      this.program.programId
+    );
+
+    const poolConfig = await this.program.account.poolConfig.fetch(
+      poolConfigPda
+    );
+
+    return logAndReturn(poolConfig, isDisplayed);
+  }
+
+  async getPoolBalance(id: number, isDisplayed: boolean = false) {
+    const [poolBalancePda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("balance"), new anchor.BN(id).toArrayLike(Buffer, "le", 8)],
+      this.program.programId
+    );
+
+    const poolBalance = await this.program.account.poolBalance.fetch(
+      poolBalancePda
+    );
+
+    return logAndReturn(poolBalance, isDisplayed);
   }
 }
 

@@ -7,10 +7,12 @@ skip-lint = false
 [programs.localnet]
 vault = "Fy8V7mvvD4W3sAcCK725XxTi2XKZ4oDWBxaZV1hvDWom"
 escrow = "3F2bCYNtdEw5GcYupVe6g3CepC5VD2yAicZPYz6zjo5W"
+amm = "CpuYGzAZWKWBHXUoBSfEg3qnvRd8pMcRa9XV29Xoj3KU"
 
 [programs.devnet]
 vault = "Fy8V7mvvD4W3sAcCK725XxTi2XKZ4oDWBxaZV1hvDWom"
 escrow = "3F2bCYNtdEw5GcYupVe6g3CepC5VD2yAicZPYz6zjo5W"
+amm = "CpuYGzAZWKWBHXUoBSfEg3qnvRd8pMcRa9XV29Xoj3KU"
 
 [registry]
 url = "https://api.apr.dev"
@@ -20,4 +22,5 @@ cluster = "localnet"
 wallet = "~/dev/.test-wallets/solana/dev-keypair.json"
 
 [scripts]
-test = "bun test"
+# test = "bun test"
+test = "bun test --test-name-pattern amm"

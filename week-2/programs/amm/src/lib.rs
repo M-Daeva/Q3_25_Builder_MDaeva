@@ -3,13 +3,14 @@
 
 use anchor_lang::prelude::*;
 
+pub mod error;
 pub mod helpers;
 pub mod instructions;
 pub mod state;
 
-use instructions::create_pool::*;
+use instructions::{create_pool::*, provide_liquidity::*};
 
-declare_id!("3F2bCYNtdEw5GcYupVe6g3CepC5VD2yAicZPYz6zjo5W");
+declare_id!("CpuYGzAZWKWBHXUoBSfEg3qnvRd8pMcRa9XV29Xoj3KU");
 
 #[program]
 pub mod amm {
@@ -25,6 +26,7 @@ pub mod amm {
         ctx.accounts.create_pool(
             id,
             ctx.bumps.pool_config,
+            ctx.bumps.pool_balance,
             ctx.bumps.mint_lp,
             mint_x,
             mint_y,
@@ -32,7 +34,15 @@ pub mod amm {
         )
     }
 
-    // TODO: provide liquidity
+    pub fn provide_liquidity(
+        ctx: Context<ProvideLiquidity>,
+        _id: u64,
+        mint_x_amount: u64,
+        mint_y_amount: u64,
+    ) -> Result<()> {
+        ctx.accounts.provide_liquidity(mint_x_amount, mint_y_amount)
+    }
+
     // TODO: swap
-    // TODO: claim
+    // TODO: withdraw liquidity
 }

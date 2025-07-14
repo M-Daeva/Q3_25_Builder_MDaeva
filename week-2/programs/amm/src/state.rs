@@ -4,6 +4,7 @@ use anchor_lang::prelude::*;
 #[derive(InitSpace)]
 pub struct PoolConfig {
     pub config_bump: u8,
+    pub balance_bump: u8,
     pub lp_bump: u8,
     pub id: u64,
     pub authority: Option<Pubkey>,
@@ -12,4 +13,12 @@ pub struct PoolConfig {
     pub mint_lp: Pubkey,
     pub fee_bps: u16,
     pub is_locked: bool,
+}
+
+#[account]
+#[derive(InitSpace, Default)]
+pub struct PoolBalance {
+    pub mint_x_amount: u64,
+    pub mint_y_amount: u64,
+    pub mint_lp_amount: u64,
 }
