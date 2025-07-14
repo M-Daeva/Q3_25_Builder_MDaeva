@@ -355,6 +355,39 @@ export class AmmHelpers {
     return await this.handleTx([ix], modifiedParams, isDisplayed);
   }
 
+  async trySwap(
+    id: number,
+    amountIn: number,
+    mintIn: PublicKey | string,
+    traderKeypair: Keypair,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const { mintX, mintY } = await this.getPoolConfig(id);
+
+    const ix = await this.program.methods
+      .swap(
+        new anchor.BN(id),
+        new anchor.BN(amountIn),
+        publicKeyFromString(mintIn)
+      )
+      .accounts({
+        mintX,
+        mintY,
+        tokenProgram: spl.TOKEN_PROGRAM_ID,
+        trader: traderKeypair.publicKey,
+      })
+      .instruction();
+
+    // add traderKeypair as signer
+    const modifiedParams = {
+      ...params,
+      signers: [...(params.signers || []), traderKeypair],
+    };
+
+    return await this.handleTx([ix], modifiedParams, isDisplayed);
+  }
+
   async getPoolConfig(id: number, isDisplayed: boolean = false) {
     const [poolConfigPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("config"), new anchor.BN(id).toArrayLike(Buffer, "le", 8)],
@@ -380,6 +413,8 @@ export class AmmHelpers {
 
     return logAndReturn(poolBalance, isDisplayed);
   }
+
+  // TODO: get pool id list
 }
 
 export class ChainHelpers {

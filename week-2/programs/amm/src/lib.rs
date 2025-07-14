@@ -8,7 +8,7 @@ pub mod helpers;
 pub mod instructions;
 pub mod state;
 
-use instructions::{create_pool::*, provide_liquidity::*};
+use instructions::{create_pool::*, provide_liquidity::*, swap::*};
 
 declare_id!("CpuYGzAZWKWBHXUoBSfEg3qnvRd8pMcRa9XV29Xoj3KU");
 
@@ -43,6 +43,9 @@ pub mod amm {
         ctx.accounts.provide_liquidity(mint_x_amount, mint_y_amount)
     }
 
-    // TODO: swap
+    pub fn swap(ctx: Context<Swap>, _id: u64, amount_in: u64, mint_in: Pubkey) -> Result<()> {
+        ctx.accounts.swap(amount_in, mint_in)
+    }
+
     // TODO: withdraw liquidity
 }

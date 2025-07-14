@@ -5,4 +5,7 @@ use anchor_lang::prelude::*;
 pub enum ProgError {
     #[msg("No liquidity is provided")]
     NoLiquidity,
+
+    #[msg("The mint isn't supported")]
+    WrongMint,
 }

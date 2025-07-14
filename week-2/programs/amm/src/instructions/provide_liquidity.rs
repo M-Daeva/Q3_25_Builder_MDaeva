@@ -6,7 +6,7 @@ use anchor_spl::{
 
 use crate::{
     error::ProgError,
-    helpers::{get_sqrt, mint_to, transfer_to_program},
+    helpers::{calc_sqrt, mint_to, transfer_to_program},
     state::{PoolBalance, PoolConfig},
 };
 
@@ -121,7 +121,7 @@ impl<'info> ProvideLiquidity<'info> {
             Err(ProgError::NoLiquidity)?;
         }
 
-        let lp_amount = get_sqrt(mint_x_amount, mint_y_amount);
+        let lp_amount = calc_sqrt(mint_x_amount, mint_y_amount);
 
         // send tokens from the liquidity provider to the pool
         for (amount, mint, from, to) in [

@@ -111,5 +111,44 @@ describe("amm-anchor", async () => {
       expect(poolBalance.mintYAmount.toNumber()).toEqual(8_000_000);
       expect(providerALpBalance).toEqual(4);
     });
+
+    it("swap", async () => {
+      const id: number = 0;
+
+      const trader_mint_x_balance_before = await chain.getTokenBalance(
+        mintXKeypair.publicKey,
+        trader.publicKey
+      );
+      const trader_mint_y_balance_before = await chain.getTokenBalance(
+        mintYKeypair.publicKey,
+        trader.publicKey
+      );
+
+      // swap
+      await amm.trySwap(id, 1_000, mintXKeypair.publicKey, trader, TX_PARAMS);
+
+      const trader_mint_x_balance_after = await chain.getTokenBalance(
+        mintXKeypair.publicKey,
+        trader.publicKey
+      );
+      const trader_mint_y_balance_after = await chain.getTokenBalance(
+        mintYKeypair.publicKey,
+        trader.publicKey
+      );
+
+      expect(
+        Math.round(
+          1e6 * (trader_mint_x_balance_before - trader_mint_x_balance_after)
+        )
+      ).toEqual(1_000);
+      // amount_out = 8_000_000 - 2_000_000 * 8_000_000 / (2_000_000 + 1_000) = 3_998
+      // fee = 0.01 * 3_998 = 39
+      // amount_to_send = 3_998 - 39 = 3_959
+      expect(
+        Math.round(
+          1e6 * (trader_mint_y_balance_after - trader_mint_y_balance_before)
+        )
+      ).toEqual(3_960);
+    });
   });
 });
