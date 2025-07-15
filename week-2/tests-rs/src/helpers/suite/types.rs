@@ -1,23 +1,15 @@
-// use cosmwasm_std::{Addr, Binary, Decimal, StdResult};
-// use cw_multi_test::AppResponse;
-
 use solana_keypair::Keypair;
 use solana_pubkey::Pubkey;
-// use anyhow::Error;
 use strum_macros::{Display, EnumIter, IntoStaticStr};
 
-// use coral_base::converters::str_to_dec;
+use crate::helpers::suite::decimal::{str_to_dec, Decimal};
 
-// pub const P6: u128 = 1_000_000; // 1 asset with 6 decimals
-// pub const P12: u128 = P6.pow(2); // 1_000_000 of assets with 6 decimals
-// pub const P18: u128 = P6 * P12; // 1 of asset with 18 decimals
-// pub const P24: u128 = P12.pow(2); // 1_000_000 of assets with 18 decimals
+pub const DEFAULT_SOL_AMOUNT: u64 = 1_000;
+pub const INCREASED_SOL_AMOUNT: u64 = 100_000;
 
-// pub const DEFAULT_FUNDS_AMOUNT: u128 = P12; // give each user 1 asset (1 CRD, 1 INJ, etc.)
-// pub const INCREASED_FUNDS_AMOUNT: u128 = 100 * P12; // give admin such amount of assets to ensure providing 1e6 of assets to each pair
-
-// pub const DEFAULT_DECIMALS: u8 = 6;
-// pub const INCREASED_DECIMALS: u8 = 18;
+pub const SOL_DECIMALS: u8 = 9;
+pub const DEFAULT_TOKEN_DECIMALS: u8 = 6;
+pub const WBTC_TOKEN_DECIMALS: u8 = 8;
 
 #[derive(Debug, Clone, Copy, Display, IntoStaticStr, EnumIter)]
 pub enum ProjectAccount {
@@ -70,182 +62,109 @@ impl ProjectAccount {
 
         Keypair::from_base58_string(base58_string)
     }
+
+    pub fn get_initial_sol_amount(&self) -> u64 {
+        match self {
+            ProjectAccount::Admin => INCREASED_SOL_AMOUNT,
+            _ => DEFAULT_SOL_AMOUNT,
+        }
+    }
 }
 
-// impl ProjectAccount {
-//     pub fn get_initial_funds_amount(&self) -> u128 {
-//         match self {
-//             ProjectAccount::Admin => INCREASED_FUNDS_AMOUNT,
-//             _ => DEFAULT_FUNDS_AMOUNT,
-//         }
-//     }
-// }
+#[derive(Debug, Clone, Copy, Display, IntoStaticStr, EnumIter)]
+pub enum ProjectCoin {
+    SOL,
+}
+
+#[derive(Debug, Clone, Copy, Display, IntoStaticStr, EnumIter)]
+pub enum ProjectToken {
+    USDC,
+    PYTH,
+    WBTC,
+}
 
 // #[derive(Debug, Clone, Copy, Display, IntoStaticStr, EnumIter)]
-// pub enum ProjectCoin {
-//     #[strum(serialize = "ustars")]
-//     Stars,
-//     #[strum(serialize = "factory/wasm1s/uusdc")]
-//     Usdc,
-//     #[strum(serialize = "factory/wasm1s/ukuji")]
-//     Kuji,
-//     #[strum(serialize = "factory/wasm1s/uusk")]
-//     Usk,
+// pub enum ProjectNft {
+//     Gopniks,
+//     Pigeons,
 // }
 
-// #[derive(Debug, Clone, Copy, Display, IntoStaticStr, EnumIter)]
-// pub enum ProjectToken {
-//     #[strum(serialize = "wasm1mzdhwvvh22wrt07w59wxyd58822qavwkx5lcej7aqfkpqqlhaqfsqq5gpq")]
-//     Atom,
-//     #[strum(serialize = "wasm14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s0phg4d")]
-//     Luna,
-//     #[strum(serialize = "wasm1suhgf5svhu4usrurvxzlgn54ksxmn8gljarjtxqnapv8kjnp4nrss5maay")]
-//     Inj,
-// }
+pub trait GetPrice {
+    fn get_price(&self) -> Decimal;
+}
 
-// pub trait GetPrice {
-//     fn get_price(&self) -> Decimal;
-// }
+impl GetPrice for ProjectAsset {
+    fn get_price(&self) -> Decimal {
+        match self {
+            ProjectAsset::Coin(project_coin) => project_coin.get_price(),
+            ProjectAsset::Token(project_token) => project_token.get_price(),
+        }
+    }
+}
 
-// impl GetPrice for ProjectAsset {
-//     fn get_price(&self) -> Decimal {
-//         match self {
-//             ProjectAsset::Coin(project_coin) => project_coin.get_price(),
-//             ProjectAsset::Token(project_token) => project_token.get_price(),
-//         }
-//     }
-// }
+impl GetPrice for ProjectCoin {
+    fn get_price(&self) -> Decimal {
+        match self {
+            ProjectCoin::SOL => str_to_dec("160"),
+        }
+    }
+}
 
-// impl GetPrice for ProjectCoin {
-//     fn get_price(&self) -> Decimal {
-//         match self {
-//             ProjectCoin::Stars => str_to_dec("0.01"),
-//             ProjectCoin::Usdc => str_to_dec("1"),
-//             ProjectCoin::Kuji => str_to_dec("1.5"),
-//             ProjectCoin::Usk => str_to_dec("1"),
-//         }
-//     }
-// }
+impl GetPrice for ProjectToken {
+    fn get_price(&self) -> Decimal {
+        match self {
+            ProjectToken::USDC => str_to_dec("1"),
+            ProjectToken::PYTH => str_to_dec("0.1"),
+            ProjectToken::WBTC => str_to_dec("120000"),
+        }
+    }
+}
 
-// impl GetPrice for ProjectToken {
-//     fn get_price(&self) -> Decimal {
-//         match self {
-//             ProjectToken::Atom => str_to_dec("10"),
-//             ProjectToken::Luna => str_to_dec("0.5"),
-//             ProjectToken::Inj => str_to_dec("5"),
-//         }
-//     }
-// }
+pub trait GetDecimals {
+    fn get_decimals(&self) -> u8;
+}
 
-// pub trait GetDecimals {
-//     fn get_decimals(&self) -> u8;
-// }
+impl GetDecimals for ProjectAsset {
+    fn get_decimals(&self) -> u8 {
+        match self {
+            ProjectAsset::Coin(project_coin) => project_coin.get_decimals(),
+            ProjectAsset::Token(project_token) => project_token.get_decimals(),
+        }
+    }
+}
 
-// impl GetDecimals for ProjectAsset {
-//     fn get_decimals(&self) -> u8 {
-//         match self {
-//             ProjectAsset::Coin(project_coin) => project_coin.get_decimals(),
-//             ProjectAsset::Token(project_token) => project_token.get_decimals(),
-//         }
-//     }
-// }
+impl GetDecimals for ProjectCoin {
+    fn get_decimals(&self) -> u8 {
+        match self {
+            ProjectCoin::SOL => SOL_DECIMALS,
+        }
+    }
+}
 
-// impl GetDecimals for ProjectCoin {
-//     fn get_decimals(&self) -> u8 {
-//         match self {
-//             ProjectCoin::Stars => DEFAULT_DECIMALS,
-//             ProjectCoin::Usdc => DEFAULT_DECIMALS,
-//             ProjectCoin::Kuji => DEFAULT_DECIMALS,
-//             ProjectCoin::Usk => DEFAULT_DECIMALS,
-//         }
-//     }
-// }
+impl GetDecimals for ProjectToken {
+    fn get_decimals(&self) -> u8 {
+        match self {
+            ProjectToken::USDC => DEFAULT_TOKEN_DECIMALS,
+            ProjectToken::PYTH => DEFAULT_TOKEN_DECIMALS,
+            ProjectToken::WBTC => WBTC_TOKEN_DECIMALS,
+        }
+    }
+}
 
-// impl GetDecimals for ProjectToken {
-//     fn get_decimals(&self) -> u8 {
-//         match self {
-//             ProjectToken::Atom => DEFAULT_DECIMALS,
-//             ProjectToken::Luna => DEFAULT_DECIMALS,
-//             ProjectToken::Inj => INCREASED_DECIMALS,
-//         }
-//     }
-// }
+#[derive(Debug, Clone, Copy, Display)]
+pub enum ProjectAsset {
+    Coin(ProjectCoin),
+    Token(ProjectToken),
+}
 
-// impl From<ProjectAccount> for Addr {
-//     fn from(project_account: ProjectAccount) -> Self {
-//         Self::unchecked(project_account.to_string())
-//     }
-// }
+impl From<ProjectCoin> for ProjectAsset {
+    fn from(project_coin: ProjectCoin) -> Self {
+        Self::Coin(project_coin)
+    }
+}
 
-// impl From<ProjectToken> for Addr {
-//     fn from(project_token: ProjectToken) -> Self {
-//         Addr::unchecked(project_token.to_string())
-//     }
-// }
-
-// impl From<ProjectCoin> for Token {
-//     fn from(project_coin: ProjectCoin) -> Self {
-//         Self::new_native(&project_coin.to_string())
-//     }
-// }
-
-// impl From<ProjectToken> for Token {
-//     fn from(project_token: ProjectToken) -> Self {
-//         Self::new_cw20(&project_token.into())
-//     }
-// }
-
-// #[derive(Debug, Clone, Copy, Display)]
-// pub enum ProjectAsset {
-//     Coin(ProjectCoin),
-//     Token(ProjectToken),
-// }
-
-// impl From<ProjectCoin> for ProjectAsset {
-//     fn from(project_coin: ProjectCoin) -> Self {
-//         Self::Coin(project_coin)
-//     }
-// }
-
-// impl From<ProjectToken> for ProjectAsset {
-//     fn from(project_token: ProjectToken) -> Self {
-//         Self::Token(project_token)
-//     }
-// }
-
-// #[derive(Debug, Clone, Copy, EnumIter)]
-// pub enum ProjectPair {
-//     AtomLuna,
-//     StarsInj,
-//     StarsLuna,
-//     StarsNoria,
-// }
-
-// impl ProjectPair {
-//     pub fn split_pair(&self) -> (ProjectAsset, ProjectAsset) {
-//         match self {
-//             ProjectPair::AtomLuna => (ProjectToken::Atom.into(), ProjectToken::Luna.into()),
-//             ProjectPair::StarsInj => (ProjectCoin::Kuji.into(), ProjectToken::Inj.into()),
-//             ProjectPair::StarsLuna => (ProjectCoin::Kuji.into(), ProjectToken::Luna.into()),
-//             ProjectPair::StarsNoria => (ProjectCoin::Kuji.into(), ProjectCoin::Usk.into()),
-//         }
-//     }
-// }
-
-// #[derive(Debug)]
-// pub enum WrappedResponse {
-//     Execute(Result<AppResponse, Error>),
-//     Query(StdResult<Binary>),
-// }
-
-// impl From<Result<AppResponse, Error>> for WrappedResponse {
-//     fn from(exec_res: Result<AppResponse, Error>) -> Self {
-//         Self::Execute(exec_res)
-//     }
-// }
-
-// impl From<StdResult<Binary>> for WrappedResponse {
-//     fn from(query_res: StdResult<Binary>) -> Self {
-//         Self::Query(query_res)
-//     }
-// }
+impl From<ProjectToken> for ProjectAsset {
+    fn from(project_token: ProjectToken) -> Self {
+        Self::Token(project_token)
+    }
+}
