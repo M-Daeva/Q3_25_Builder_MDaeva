@@ -1,38 +1,38 @@
-use anchor_lang::Result;
+use anchor_lang::{
+    error::{AnchorError, Error, ProgramErrorWithOrigin},
+    prelude::ProgramError,
+    Result,
+};
 use litesvm::LiteSVM;
+use pretty_assertions::assert_eq;
 use solana_keypair::Keypair;
 use solana_kite::{
     create_associated_token_account, create_token_mint, deploy_program, get_pda_and_bump,
-    mint_tokens_to_account, send_transaction_from_instructions, SolanaKiteError,
+    get_token_account_balance, mint_tokens_to_account, send_transaction_from_instructions,
+    SolanaKiteError,
 };
-use solana_program::native_token::LAMPORTS_PER_SOL;
+use solana_program::{msg, native_token::LAMPORTS_PER_SOL};
 use solana_signer::Signer;
 use strum::IntoEnumIterator;
 
-use crate::helpers::suite::types::ProjectAccount;
+use crate::helpers::suite::{
+    core::{App, WithTokenPubkey},
+    types::{AppCoin, AppToken, AppUser, GetDecimals},
+};
 
 #[test]
 fn default() -> Result<()> {
-    let mut litesvm = LiteSVM::new().with_spl_programs();
+    let mut app = App::new();
 
-    //  let mint_x = create_token_mint(&mut litesvm, mint_authority, decimals).unwrap();
+    let bob_pyth_balance = app.get_balance(AppUser::Bob, AppToken::PYTH)?;
+    let bob_sol_balance = app.get_balance(AppUser::Bob, AppCoin::SOL)?;
 
-    // get SOL
-    for user in ProjectAccount::iter() {
-        litesvm
-            .airdrop(
-                &user.pubkey(),
-                user.get_initial_sol_amount() * LAMPORTS_PER_SOL,
-            )
-            .unwrap();
+    assert_eq!(bob_pyth_balance, 1_000_000_000);
+    assert_eq!(bob_sol_balance, 1_000_000_000_000);
 
-        // let b = litesvm.get_balance(&user.pubkey()).unwrap_or_default();
-        // println!("{:#?}", b / LAMPORTS_PER_SOL);
-    }
-
-    println!("{:#?}", ProjectAccount::Admin);
-    println!("{:#?}", ProjectAccount::Admin.pubkey());
-    println!("{:#?}\n", ProjectAccount::Admin.keypair().pubkey());
+    // println!("{:#?}", AppUser::Admin);
+    // println!("{:#?}", AppUser::Admin.pubkey());
+    // println!("{:#?}\n", AppUser::Admin.keypair().pubkey());
 
     Ok(())
 }

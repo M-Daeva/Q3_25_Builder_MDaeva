@@ -5091,6 +5091,7 @@ dependencies = [
 name = "tests"
 version = "1.0.0"
 dependencies = [
+ "amm",
  "anchor-lang",
  "litesvm",
  "pretty_assertions",

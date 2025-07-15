@@ -38,3 +38,6 @@ solana-program = { workspace = true }
 spl-associated-token-account = { workspace = true }
 spl-token = { workspace = true }
 solana-kite = { workspace = true }
+
+# contracts
+amm = { workspace = true }

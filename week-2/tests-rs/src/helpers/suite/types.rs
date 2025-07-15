@@ -4,50 +4,67 @@ use strum_macros::{Display, EnumIter, IntoStaticStr};
 
 use crate::helpers::suite::decimal::{str_to_dec, Decimal};
 
-pub const DEFAULT_SOL_AMOUNT: u64 = 1_000;
-pub const INCREASED_SOL_AMOUNT: u64 = 100_000;
+const ASSET_AMOUNT_DEFAULT: u64 = 1_000;
+const ASSET_AMOUNT_INCREASED: u64 = 100_000;
 
-pub const SOL_DECIMALS: u8 = 9;
-pub const DEFAULT_TOKEN_DECIMALS: u8 = 6;
-pub const WBTC_TOKEN_DECIMALS: u8 = 8;
+const DECIMALS_COIN_SOL: u8 = 9;
+const DECIMALS_TOKEN_DEFAULT: u8 = 6;
+const DECIMALS_TOKEN_WBTC: u8 = 8;
 
-#[derive(Debug, Clone, Copy, Display, IntoStaticStr, EnumIter)]
-pub enum ProjectAccount {
+const PRICE_COIN_SOL: &str = "160";
+const PRICE_TOKEN_USDC: &str = "1";
+const PRICE_TOKEN_PYTH: &str = "0.1";
+const PRICE_TOKEN_WBTC: &str = "120000";
+
+const KEYPAIR_ADMIN: &str =
+    "3SKiuW2cbAJH8KDAuhB5cdJnAGU8Y9a95gRWMFB6zPy8XH45HTNebRALhL1EqPv2QkBytb8iTu577TcmLutkzC9g";
+const PUBKEY_ADMIN: &str = "Fk5wpZL2pV8AYkMKnEo5TAJ1p88FmUxBbKsZLwpiqWqQ";
+
+const KEYPAIR_ALICE: &str =
+    "4TwYiTAG6eHLznaSGZinmQGSFxKxxmx7DHwKcbs5WkasMmLPP5fv1BYKJjsfmR47KFzmA2gs5DHtsZnR8YvMCinB";
+const PUBKEY_ALICE: &str = "68ZZmGRDn5971SDrj5Ldj6MUJTeRUdSV1NQUuzsaQ4N3";
+
+const KEYPAIR_BOB: &str =
+    "zsbe2oRXt1K3gRNCurjZFTVzQtYqJjhyPAQMk4VsLWe3QoU3pMGZDVVRvmgZXgLtXvAsC9kGi4ShpYpjrQbtaf5";
+const PUBKEY_BOB: &str = "FPS369ZvUkQTdsU8pzmypafNnNghiDHi8G6gDCvux5SB";
+
+// "5gi185z4U57MEkJJTzweNrJQJQftaQH2onL8ZGRyXKWA3zspJWyQfF1J8ZRV7zd3D8aZyZxtaw8MsPZpMLMGh6L2"
+// "8XdLEJXrM3yYfFg5EpMqcCKmXXSQeBKfTjvNP619LbE2"
+
+// "5fbcPBxRADG5oxsK3K7PtM5A2CXFSErQ7bWoTXA1qeZsngyFYzWKUm4R7pBtD9fazVA9FgFC4h4WschCTQ7xjeJG"
+// "HBtzyBH14hR6t5UfYT3ptL6d1pMnVCep2RY8vUgHmaRA"
+
+// "2RyN2wrHo8fDrvqULn61ThcSeMyBE3eQ35ADxk5bvjkMrtZRKZwYNRQgxS33UkTrw3udySYMeoJxapbLbyz3aDiZ"
+// "An6eCPnnsspFAy5bUrgnNkU4hkedv9ZDRUJazUTG1ewb"
+
+// "35DNq3ZSomYUDFCA3tGKQNFgmnbRLpYzoioUGo2Pbu6hSzz4uXKLFNMWHnxN3c95yiQooZ3L2gS3yfcpHog5WDB7"
+// "5uXsgfEWa6LNEMcFd7Box2haMVA5BnBTU26wr26irend"
+
+// "5pgbqemaPfHvkUP7tKBohFojQtwQ5eRVUGDX5DT9rbhBTx1cGjLi9eCLGQzUuigANBFkihsixn7BKYa1QkMEwjW2"
+// "H8aGuHSeWFSsStZX1oUyXGsdpDaAdW1EPTKjvJCBQZU6"
+
+// "2LPw7PJBb9LYsnjDSfquWqUwCUjnCZagTmNu728HCajL3qGWyKsoLCGJhG95FfFD9GjBaunvPUJoe3pHaVi3Rphj"
+// "DaZEjWGiyhKRNWzRRgkCqVzvF4GXaKRzSpykQ1j1g5id"
+
+// "2LqYQK6T3vfK2V9bqqMT9UHYzk1zhLqRpzupsDzn5B7ngEU4c17hPzPiP2QEWKKR87p98mK7QdEdCc1xuQkQykBj"
+// "3PqqfCCyx1gJeH78qVLdXAzzDYifb1MGgUGF3xJZZTnH"
+
+// "xwc4MbnqQQJP174H34wk4zHFkkkLxxmfWYaZN9rHJ8kRho861SbjZKjRwzWHysjLnWPg5P59GR3se56EeD846X3"
+// "74CFAjJLQwZ42rLuybcJZsBJ2zWtyhYsJarDp1CiRiFB"
+
+#[derive(Debug, Clone, Copy, Display, IntoStaticStr, EnumIter, PartialEq)]
+pub enum AppUser {
     Admin,
     Alice,
     Bob,
-    //
-    // "5gi185z4U57MEkJJTzweNrJQJQftaQH2onL8ZGRyXKWA3zspJWyQfF1J8ZRV7zd3D8aZyZxtaw8MsPZpMLMGh6L2"
-    // "8XdLEJXrM3yYfFg5EpMqcCKmXXSQeBKfTjvNP619LbE2"
-
-    // "5fbcPBxRADG5oxsK3K7PtM5A2CXFSErQ7bWoTXA1qeZsngyFYzWKUm4R7pBtD9fazVA9FgFC4h4WschCTQ7xjeJG"
-    // "HBtzyBH14hR6t5UfYT3ptL6d1pMnVCep2RY8vUgHmaRA"
-
-    // "2RyN2wrHo8fDrvqULn61ThcSeMyBE3eQ35ADxk5bvjkMrtZRKZwYNRQgxS33UkTrw3udySYMeoJxapbLbyz3aDiZ"
-    // "An6eCPnnsspFAy5bUrgnNkU4hkedv9ZDRUJazUTG1ewb"
-
-    // "35DNq3ZSomYUDFCA3tGKQNFgmnbRLpYzoioUGo2Pbu6hSzz4uXKLFNMWHnxN3c95yiQooZ3L2gS3yfcpHog5WDB7"
-    // "5uXsgfEWa6LNEMcFd7Box2haMVA5BnBTU26wr26irend"
-
-    // "5pgbqemaPfHvkUP7tKBohFojQtwQ5eRVUGDX5DT9rbhBTx1cGjLi9eCLGQzUuigANBFkihsixn7BKYa1QkMEwjW2"
-    // "H8aGuHSeWFSsStZX1oUyXGsdpDaAdW1EPTKjvJCBQZU6"
-
-    // "2LPw7PJBb9LYsnjDSfquWqUwCUjnCZagTmNu728HCajL3qGWyKsoLCGJhG95FfFD9GjBaunvPUJoe3pHaVi3Rphj"
-    // "DaZEjWGiyhKRNWzRRgkCqVzvF4GXaKRzSpykQ1j1g5id"
-
-    // "2LqYQK6T3vfK2V9bqqMT9UHYzk1zhLqRpzupsDzn5B7ngEU4c17hPzPiP2QEWKKR87p98mK7QdEdCc1xuQkQykBj"
-    // "3PqqfCCyx1gJeH78qVLdXAzzDYifb1MGgUGF3xJZZTnH"
-
-    // "xwc4MbnqQQJP174H34wk4zHFkkkLxxmfWYaZN9rHJ8kRho861SbjZKjRwzWHysjLnWPg5P59GR3se56EeD846X3"
-    // "74CFAjJLQwZ42rLuybcJZsBJ2zWtyhYsJarDp1CiRiFB"
 }
 
-impl ProjectAccount {
+impl AppUser {
     pub fn pubkey(&self) -> Pubkey {
         let str_const = match self {
-            ProjectAccount::Admin => "Fk5wpZL2pV8AYkMKnEo5TAJ1p88FmUxBbKsZLwpiqWqQ",
-            ProjectAccount::Alice => "68ZZmGRDn5971SDrj5Ldj6MUJTeRUdSV1NQUuzsaQ4N3",
-            ProjectAccount::Bob => "FPS369ZvUkQTdsU8pzmypafNnNghiDHi8G6gDCvux5SB",
+            Self::Admin => PUBKEY_ADMIN,
+            Self::Alice => PUBKEY_ALICE,
+            Self::Bob => PUBKEY_BOB,
         };
 
         Pubkey::from_str_const(str_const)
@@ -55,36 +72,36 @@ impl ProjectAccount {
 
     pub fn keypair(&self) -> Keypair {
         let base58_string = match self {
-            ProjectAccount::Admin => "3SKiuW2cbAJH8KDAuhB5cdJnAGU8Y9a95gRWMFB6zPy8XH45HTNebRALhL1EqPv2QkBytb8iTu577TcmLutkzC9g",
-            ProjectAccount::Alice => "4TwYiTAG6eHLznaSGZinmQGSFxKxxmx7DHwKcbs5WkasMmLPP5fv1BYKJjsfmR47KFzmA2gs5DHtsZnR8YvMCinB",
-            ProjectAccount::Bob => "zsbe2oRXt1K3gRNCurjZFTVzQtYqJjhyPAQMk4VsLWe3QoU3pMGZDVVRvmgZXgLtXvAsC9kGi4ShpYpjrQbtaf5"
+            Self::Admin => KEYPAIR_ADMIN,
+            Self::Alice => KEYPAIR_ALICE,
+            Self::Bob => KEYPAIR_BOB,
         };
 
         Keypair::from_base58_string(base58_string)
     }
 
-    pub fn get_initial_sol_amount(&self) -> u64 {
+    pub fn get_initial_asset_amount(&self) -> u64 {
         match self {
-            ProjectAccount::Admin => INCREASED_SOL_AMOUNT,
-            _ => DEFAULT_SOL_AMOUNT,
+            Self::Admin => ASSET_AMOUNT_INCREASED,
+            _ => ASSET_AMOUNT_DEFAULT,
         }
     }
 }
 
-#[derive(Debug, Clone, Copy, Display, IntoStaticStr, EnumIter)]
-pub enum ProjectCoin {
+#[derive(Debug, Clone, Copy, Display, IntoStaticStr, EnumIter, PartialEq)]
+pub enum AppCoin {
     SOL,
 }
 
-#[derive(Debug, Clone, Copy, Display, IntoStaticStr, EnumIter)]
-pub enum ProjectToken {
+#[derive(Debug, Clone, Copy, Display, IntoStaticStr, EnumIter, PartialEq)]
+pub enum AppToken {
     USDC,
     PYTH,
     WBTC,
 }
 
-// #[derive(Debug, Clone, Copy, Display, IntoStaticStr, EnumIter)]
-// pub enum ProjectNft {
+// #[derive(Debug, Clone, Copy, Display, IntoStaticStr, EnumIter, PartialEq)]
+// pub enum AppNft {
 //     Gopniks,
 //     Pigeons,
 // }
@@ -93,30 +110,34 @@ pub trait GetPrice {
     fn get_price(&self) -> Decimal;
 }
 
-impl GetPrice for ProjectAsset {
+impl GetPrice for AppAsset {
     fn get_price(&self) -> Decimal {
         match self {
-            ProjectAsset::Coin(project_coin) => project_coin.get_price(),
-            ProjectAsset::Token(project_token) => project_token.get_price(),
+            Self::Coin(project_coin) => project_coin.get_price(),
+            Self::Token(project_token) => project_token.get_price(),
         }
     }
 }
 
-impl GetPrice for ProjectCoin {
+impl GetPrice for AppCoin {
     fn get_price(&self) -> Decimal {
-        match self {
-            ProjectCoin::SOL => str_to_dec("160"),
-        }
+        let price = match self {
+            Self::SOL => PRICE_COIN_SOL,
+        };
+
+        str_to_dec(price)
     }
 }
 
-impl GetPrice for ProjectToken {
+impl GetPrice for AppToken {
     fn get_price(&self) -> Decimal {
-        match self {
-            ProjectToken::USDC => str_to_dec("1"),
-            ProjectToken::PYTH => str_to_dec("0.1"),
-            ProjectToken::WBTC => str_to_dec("120000"),
-        }
+        let price = match self {
+            Self::USDC => PRICE_TOKEN_USDC,
+            Self::PYTH => PRICE_TOKEN_PYTH,
+            Self::WBTC => PRICE_TOKEN_WBTC,
+        };
+
+        str_to_dec(price)
     }
 }
 
@@ -124,47 +145,47 @@ pub trait GetDecimals {
     fn get_decimals(&self) -> u8;
 }
 
-impl GetDecimals for ProjectAsset {
+impl GetDecimals for AppAsset {
     fn get_decimals(&self) -> u8 {
         match self {
-            ProjectAsset::Coin(project_coin) => project_coin.get_decimals(),
-            ProjectAsset::Token(project_token) => project_token.get_decimals(),
+            Self::Coin(project_coin) => project_coin.get_decimals(),
+            Self::Token(project_token) => project_token.get_decimals(),
         }
     }
 }
 
-impl GetDecimals for ProjectCoin {
+impl GetDecimals for AppCoin {
     fn get_decimals(&self) -> u8 {
         match self {
-            ProjectCoin::SOL => SOL_DECIMALS,
+            Self::SOL => DECIMALS_COIN_SOL,
         }
     }
 }
 
-impl GetDecimals for ProjectToken {
+impl GetDecimals for AppToken {
     fn get_decimals(&self) -> u8 {
         match self {
-            ProjectToken::USDC => DEFAULT_TOKEN_DECIMALS,
-            ProjectToken::PYTH => DEFAULT_TOKEN_DECIMALS,
-            ProjectToken::WBTC => WBTC_TOKEN_DECIMALS,
+            Self::USDC => DECIMALS_TOKEN_DEFAULT,
+            Self::PYTH => DECIMALS_TOKEN_DEFAULT,
+            Self::WBTC => DECIMALS_TOKEN_WBTC,
         }
     }
 }
 
 #[derive(Debug, Clone, Copy, Display)]
-pub enum ProjectAsset {
-    Coin(ProjectCoin),
-    Token(ProjectToken),
+pub enum AppAsset {
+    Coin(AppCoin),
+    Token(AppToken),
 }
 
-impl From<ProjectCoin> for ProjectAsset {
-    fn from(project_coin: ProjectCoin) -> Self {
+impl From<AppCoin> for AppAsset {
+    fn from(project_coin: AppCoin) -> Self {
         Self::Coin(project_coin)
     }
 }
 
-impl From<ProjectToken> for ProjectAsset {
-    fn from(project_token: ProjectToken) -> Self {
+impl From<AppToken> for AppAsset {
+    fn from(project_token: AppToken) -> Self {
         Self::Token(project_token)
     }
 }

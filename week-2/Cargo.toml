@@ -44,3 +44,6 @@ solana-program = "2.2.1"
 spl-associated-token-account = "7.0.0"
 spl-token = "8.0.0"
 solana-kite = "0.1.4"
+
+# contracts
+amm = { path = "./programs/amm" }
