@@ -12,6 +12,7 @@ use solana_kite::{
     SolanaKiteError,
 };
 use solana_program::{msg, native_token::LAMPORTS_PER_SOL};
+use solana_pubkey::Pubkey;
 use solana_signer::Signer;
 use strum::IntoEnumIterator;
 
@@ -29,6 +30,8 @@ fn default() -> Result<()> {
 
     assert_eq!(bob_pyth_balance, 1_000_000_000);
     assert_eq!(bob_sol_balance, 1_000_000_000_000);
+
+    println!("amm_pk {:#?}", app.get_program_amm());
 
     // println!("{:#?}", AppUser::Admin);
     // println!("{:#?}", AppUser::Admin.pubkey());

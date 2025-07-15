@@ -1,3 +1,6 @@
+use std::fs;
+use std::str::FromStr;
+
 use litesvm::LiteSVM;
 use solana_kite::{create_associated_token_account, create_token_mint, mint_tokens_to_account};
 use solana_program::native_token::LAMPORTS_PER_SOL;
@@ -5,7 +8,7 @@ use solana_pubkey::Pubkey;
 use solana_signer::Signer;
 use strum::IntoEnumIterator;
 
-use crate::helpers::suite::types::{AppAsset, AppCoin, AppToken, AppUser, GetDecimals};
+use crate::helpers::suite::types::{AppAsset, AppToken, AppUser, GetDecimals};
 
 pub trait WithTokenPubkey {
     fn pubkey(&self, app: &App) -> Pubkey;
@@ -24,29 +27,11 @@ impl WithTokenPubkey for AppToken {
 pub struct App {
     pub litesvm: LiteSVM,
     token_registry: Vec<(AppToken, Pubkey)>,
-    contract_counter: u16,
-
-    // package code id
-    cw20_base_code_id: u64,
-
-    // contract code id
-    hub_code_id: u64,
-    offer_code_id: u64,
-    profile_code_id: u64,
-    trade_code_id: u64,
-    hash_generator_code_id: u64,
-    chat_code_id: u64,
-    justice_code_id: u64,
+    //
     // package address
 
     // contract address
-    // hub_address: Addr,
-    // offer_address: Addr,
-    // profile_address: Addr,
-    // trade_address: Addr,
-    // hash_generator_address: Addr,
-    // chat_address: Addr,
-    // justice_address: Addr,
+    amm: Pubkey,
     //
     // other
 }
@@ -58,66 +43,24 @@ impl App {
         Self {
             litesvm,
             token_registry,
-            contract_counter: 0,
 
-            cw20_base_code_id: 0,
-
-            hub_code_id: 0,
-            offer_code_id: 0,
-            profile_code_id: 0,
-            trade_code_id: 0,
-            hash_generator_code_id: 0,
-            chat_code_id: 0,
-            justice_code_id: 0,
-            //
-            // hub_address: Addr::unchecked(""),
-            // offer_address: Addr::unchecked(""),
-            // profile_address: Addr::unchecked(""),
-            // trade_address: Addr::unchecked(""),
-            // hash_generator_address: Addr::unchecked(""),
-            // chat_address: Addr::unchecked(""),
-            // justice_address: Addr::unchecked(""),
+            amm: Pubkey::default(),
         }
     }
 
     pub fn new() -> Self {
-        // create app and distribute coins to accounts
+        // create app and distribute assets to accounts
         let mut app = Self::create_app_with_balances();
 
-        // // register contracts code
-        // // packages
-        // let cw20_base_code_id = app.store_cw20_base_code();
+        // upload packages
 
-        // // contracts
-        // let justice_code_id = app.store_justice_code();
+        // upload app contracts
 
-        // // instantiate packages
+        app = Self {
+            amm: app.upload_program("amm"),
 
-        // // instantiate app contracts
-
-        // let offer_address = app.instantiate_offer(offer_code_id);
-
-        // app = Self {
-        //     cw20_base_code_id,
-
-        //     hub_code_id,
-        //     offer_code_id,
-        //     profile_code_id,
-        //     trade_code_id,
-        //     hash_generator_code_id,
-        //     chat_code_id,
-        //     justice_code_id,
-
-        //     hub_address,
-        //     offer_address,
-        //     profile_address,
-        //     trade_address,
-        //     hash_generator_address,
-        //     chat_address,
-        //     justice_address,
-
-        //     ..app
-        // };
+            ..app
+        };
 
         // // prepare contracts
 
@@ -181,27 +124,15 @@ impl App {
         app
     }
 
-    // code id getters
-    pub fn get_hub_code_id(&self) -> u64 {
-        self.hub_code_id
-    }
-
     // package address getters
 
     // contract address getters
 
-    // pub fn get_hub_address(&self) -> Addr {
-    //     self.hub_address.clone()
-    // }
+    pub fn get_program_amm(&self) -> Pubkey {
+        self.amm
+    }
 
     // utils
-    pub fn increase_contract_counter(&mut self, step: u16) {
-        self.contract_counter += step;
-    }
-
-    pub fn get_last_contract_address(&self) -> String {
-        format!("contract{}", self.contract_counter)
-    }
 
     // pub fn get_block_time(&self) -> u64 {
     //     self.app.block_info().time.seconds()
@@ -356,6 +287,21 @@ impl App {
 
         (litesvm, token_registry)
     }
+
+    fn upload_program(&mut self, program: &str) -> solana_pubkey::Pubkey {
+        const CONFIG_PATH: &str = "../Anchor.toml";
+        const PROGRAM_PATH: &str = "../target/deploy/";
+
+        let program_id = read_program_id(CONFIG_PATH, program);
+        solana_kite::deploy_program(
+            &mut self.litesvm,
+            &program_id,
+            &format!("{}{}.so", PROGRAM_PATH, program),
+        )
+        .unwrap();
+
+        program_id
+    }
 }
 
 impl Default for App {
@@ -474,4 +420,43 @@ pub fn to_anchor_err(message: impl ToString) -> anchor_lang::error::Error {
         error_origin: None,
         compared_values: None,
     }))
+}
+
+pub fn read_program_id(file: &str, program: &str) -> solana_pubkey::Pubkey {
+    let content = fs::read_to_string(file).expect("Failed to read file");
+
+    let mut in_localnet_section = false;
+
+    for line in content.lines() {
+        let line = line.trim();
+
+        // Check if we're entering the [programs.localnet] section
+        if line == "[programs.localnet]" {
+            in_localnet_section = true;
+            continue;
+        }
+
+        // Check if we're leaving the section (entering a new section)
+        if line.starts_with('[') && line != "[programs.localnet]" {
+            in_localnet_section = false;
+            continue;
+        }
+
+        // If we're in the localnet section, look for our program
+        if in_localnet_section && !line.is_empty() && !line.starts_with('#') {
+            if let Some((key, value)) = line.split_once('=') {
+                let key = key.trim();
+                let value = value.trim().trim_matches('"');
+
+                if key == program {
+                    return solana_pubkey::Pubkey::from_str(value).expect("Invalid pubkey format");
+                }
+            }
+        }
+    }
+
+    panic!(
+        "Program '{}' not found in [programs.localnet] section",
+        program
+    );
 }
