@@ -26,50 +26,6 @@ use crate::helpers::suite::{
     types::{GetDecimals, ProjectAccount, ProjectToken},
 };
 
-type ContractFn<T, C, E, Q> =
-    fn(deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: T) -> Result<Response<C>, E>;
-type QueryFn<T, E, Q> = fn(deps: Deps<Q>, env: Env, msg: T) -> Result<Binary, E>;
-// type PermissionedFn<T, C, E, Q> = fn(deps: DepsMut<Q>, env: Env, msg: T) -> Result<Response<C>, E>;
-type ReplyFn<C, E, Q> = fn(deps: DepsMut<Q>, env: Env, msg: Reply) -> Result<Response<C>, E>;
-
-pub fn box_contract<T1, T2, T3, E1, E2, E3, CM, CQ>(
-    exec: ContractFn<T1, Empty, E1, Empty>,
-    init: ContractFn<T2, Empty, E2, Empty>,
-    query: QueryFn<T3, E3, Empty>,
-) -> Box<dyn Contract<CM, CQ>>
-where
-    T1: DeserializeOwned + Clone + Debug + 'static,
-    T2: DeserializeOwned + Clone + Debug + 'static,
-    T3: DeserializeOwned + Clone + Debug + 'static,
-    E1: Error + Display + Debug + Send + Sync + 'static,
-    E2: Error + Display + Debug + Send + Sync + 'static,
-    E3: Error + Display + Debug + Send + Sync + 'static,
-    CM: CustomMsg + Clone + Debug + PartialEq + JsonSchema + 'static,
-    CQ: CustomQuery + for<'de> cosmwasm_schema::serde::Deserialize<'de> + 'static,
-{
-    Box::new(ContractWrapper::new_with_empty(exec, init, query))
-}
-
-pub fn box_contract_with_reply<T1, T2, T3, E1, E2, E3, E5A, CM, CQ>(
-    exec: ContractFn<T1, Empty, E1, Empty>,
-    init: ContractFn<T2, Empty, E2, Empty>,
-    query: QueryFn<T3, E3, Empty>,
-    reply: ReplyFn<Empty, E5A, Empty>,
-) -> Box<dyn Contract<CM, CQ>>
-where
-    T1: DeserializeOwned + Clone + Debug + 'static,
-    T2: DeserializeOwned + Clone + Debug + 'static,
-    T3: DeserializeOwned + Clone + Debug + 'static,
-    E1: Error + Display + Debug + Send + Sync + 'static,
-    E2: Error + Display + Debug + Send + Sync + 'static,
-    E3: Error + Display + Debug + Send + Sync + 'static,
-    E5A: Display + Debug + Send + Sync + 'static,
-    CM: CustomMsg + Clone + Debug + PartialEq + JsonSchema + 'static,
-    CQ: CustomQuery + for<'de> cosmwasm_schema::serde::Deserialize<'de> + 'static,
-{
-    Box::new(ContractWrapper::new_with_empty(exec, init, query).with_reply_empty(reply))
-}
-
 pub trait WithCodes {
     // store packages
     fn store_cw20_base_code(&mut self) -> u64;

@@ -7,9 +7,7 @@ use crate::helpers::suite::types::ProjectAccount;
 fn default() {
     // let mut test_environment = setup_escrow_test();
 
-    println!("{:#?}", ProjectAccount::Admin.to_string());
-    println!(
-        "{:#?}\n",
-        ProjectAccount::Admin.keypair().pubkey().to_string()
-    );
+    println!("{:#?}", ProjectAccount::Admin);
+    println!("{:#?}", ProjectAccount::Admin.pubkey());
+    println!("{:#?}\n", ProjectAccount::Admin.keypair().pubkey());
 }

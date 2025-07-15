@@ -2,6 +2,7 @@
 // use cw_multi_test::AppResponse;
 
 use solana_keypair::Keypair;
+use solana_pubkey::Pubkey;
 // use anyhow::Error;
 use strum_macros::{Display, EnumIter, IntoStaticStr};
 
@@ -20,11 +21,8 @@ use strum_macros::{Display, EnumIter, IntoStaticStr};
 
 #[derive(Debug, Clone, Copy, Display, IntoStaticStr, EnumIter)]
 pub enum ProjectAccount {
-    #[strum(serialize = "Fk5wpZL2pV8AYkMKnEo5TAJ1p88FmUxBbKsZLwpiqWqQ")]
     Admin,
-    #[strum(serialize = "68ZZmGRDn5971SDrj5Ldj6MUJTeRUdSV1NQUuzsaQ4N3")]
     Alice,
-    #[strum(serialize = "FPS369ZvUkQTdsU8pzmypafNnNghiDHi8G6gDCvux5SB")]
     Bob,
     //
     // "5gi185z4U57MEkJJTzweNrJQJQftaQH2onL8ZGRyXKWA3zspJWyQfF1J8ZRV7zd3D8aZyZxtaw8MsPZpMLMGh6L2"
@@ -53,6 +51,16 @@ pub enum ProjectAccount {
 }
 
 impl ProjectAccount {
+    pub fn pubkey(&self) -> Pubkey {
+        let str_const = match self {
+            ProjectAccount::Admin => "Fk5wpZL2pV8AYkMKnEo5TAJ1p88FmUxBbKsZLwpiqWqQ",
+            ProjectAccount::Alice => "68ZZmGRDn5971SDrj5Ldj6MUJTeRUdSV1NQUuzsaQ4N3",
+            ProjectAccount::Bob => "FPS369ZvUkQTdsU8pzmypafNnNghiDHi8G6gDCvux5SB",
+        };
+
+        Pubkey::from_str_const(str_const)
+    }
+
     pub fn keypair(&self) -> Keypair {
         let base58_string = match self {
             ProjectAccount::Admin => "3SKiuW2cbAJH8KDAuhB5cdJnAGU8Y9a95gRWMFB6zPy8XH45HTNebRALhL1EqPv2QkBytb8iTu577TcmLutkzC9g",
