@@ -87,7 +87,7 @@ where
     )
 }
 
-// TODO: DON'T FORGET TO INCLUDE BUMP IN SEEDS
+// TODO: specify bump as separate parameter
 pub fn mint_to<'a, T>(
     amount: u64,
     mint: &InterfaceAccount<'a, Mint>,

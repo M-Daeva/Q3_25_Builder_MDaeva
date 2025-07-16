@@ -10,8 +10,7 @@ use crate::{helpers::get_space, state::Config};
 pub struct Init<'info> {
     pub system_program: Program<'info, System>,
     pub token_program: Interface<'info, TokenInterface>,
-    pub associated_token_program: Program<'info, AssociatedToken>,
-
+    // pub associated_token_program: Program<'info, AssociatedToken>,
     #[account(mut)]
     pub admin: Signer<'info>,
 
@@ -36,14 +35,13 @@ pub struct Init<'info> {
     pub rewards_mint: InterfaceAccount<'info, Mint>,
 
     pub nft_mint: InterfaceAccount<'info, Mint>,
-
-    #[account(
-        init,
-        payer = admin,
-        associated_token::mint = nft_mint,
-        associated_token::authority = config
-    )]
-    pub app_nft_ata: InterfaceAccount<'info, TokenAccount>,
+    // #[account(
+    //     init,
+    //     payer = admin,
+    //     associated_token::mint = nft_mint,
+    //     associated_token::authority = config
+    // )]
+    // pub app_nft_ata: InterfaceAccount<'info, TokenAccount>,
 }
 
 impl<'info> Init<'info> {

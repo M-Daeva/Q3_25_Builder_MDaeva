@@ -55,6 +55,7 @@ export class StakingHelpers {
   async tryStake(
     tokens: number[],
     nftMint: PublicKey | string,
+    collectionMint: PublicKey | string,
     userKeypair: Keypair,
     params: TxParams = {},
     isDisplayed: boolean = false
@@ -65,6 +66,7 @@ export class StakingHelpers {
         tokenProgram: spl.TOKEN_PROGRAM_ID,
         nftMint,
         user: userKeypair.publicKey,
+        collectionMint,
       })
       .instruction();
 
@@ -118,6 +120,8 @@ export class StakingHelpers {
 
     return logAndReturn(userVault, isDisplayed);
   }
+
+  // TODO: get rewards
 }
 
 export class ChainHelpers {
