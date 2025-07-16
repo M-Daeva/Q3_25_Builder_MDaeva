@@ -12,11 +12,11 @@ import {
   publicKeyFromString,
 } from "../../common/utils";
 
-import { Amm } from "../schema/types/amm";
+import { Staking } from "../schema/types/staking";
 
-export class AmmHelpers {
+export class StakingHelpers {
   private provider: anchor.AnchorProvider;
-  private program: anchor.Program<Amm>;
+  private program: anchor.Program<Staking>;
 
   private handleTx: (
     instructions: anchor.web3.TransactionInstruction[],
@@ -24,164 +24,99 @@ export class AmmHelpers {
     isDisplayed: boolean
   ) => Promise<anchor.web3.TransactionSignature>;
 
-  constructor(provider: anchor.AnchorProvider, program: anchor.Program<Amm>) {
+  constructor(
+    provider: anchor.AnchorProvider,
+    program: anchor.Program<Staking>
+  ) {
     this.provider = provider;
     this.program = program;
     this.handleTx = getHandleTx(provider);
   }
 
-  async tryCreatePool(
-    id: number,
-    mintX: PublicKey | string,
-    mintY: PublicKey | string,
-    feeBps: number,
+  async tryInit(
+    rewardsRate: number,
+    maxStake: number,
+    nftMint: PublicKey | string,
     params: TxParams = {},
     isDisplayed: boolean = false
   ): Promise<anchor.web3.TransactionSignature> {
     const ix = await this.program.methods
-      .createPool(
-        new anchor.BN(id),
-        publicKeyFromString(mintX),
-        publicKeyFromString(mintY),
-        feeBps
-      )
+      .init(rewardsRate, new anchor.BN(maxStake))
       .accounts({
         tokenProgram: spl.TOKEN_PROGRAM_ID,
-        mintX,
-        mintY,
-        poolCreator: this.provider.wallet.publicKey,
+        nftMint,
+        admin: this.provider.wallet.publicKey,
       })
       .instruction();
 
     return await this.handleTx([ix], params, isDisplayed);
   }
 
-  async tryProvideLiquidity(
-    id: number,
-    mintXAmount: number,
-    mintYAmount: number,
-    liquidityProviderKeypair: Keypair,
+  async tryStake(
+    tokens: number[],
+    nftMint: PublicKey | string,
+    userKeypair: Keypair,
     params: TxParams = {},
     isDisplayed: boolean = false
   ): Promise<anchor.web3.TransactionSignature> {
-    const { mintX, mintY } = await this.getPoolConfig(id);
-
     const ix = await this.program.methods
-      .provideLiquidity(
-        new anchor.BN(id),
-        new anchor.BN(mintXAmount),
-        new anchor.BN(mintYAmount)
-      )
+      .stake(tokens)
       .accounts({
-        mintX,
-        mintY,
         tokenProgram: spl.TOKEN_PROGRAM_ID,
-        liquidityProvider: liquidityProviderKeypair.publicKey,
+        nftMint,
+        user: userKeypair.publicKey,
       })
       .instruction();
 
-    // add liquidityProviderKeypair as signer
     const modifiedParams = {
       ...params,
-      signers: [...(params.signers || []), liquidityProviderKeypair],
+      signers: [...(params.signers || []), userKeypair],
     };
 
     return await this.handleTx([ix], modifiedParams, isDisplayed);
   }
 
-  async tryWithdrawLiquidity(
-    id: number,
-    mintLpAmount: number,
-    liquidityProviderKeypair: Keypair,
+  async tryClaim(
+    userKeypair: Keypair,
     params: TxParams = {},
     isDisplayed: boolean = false
   ): Promise<anchor.web3.TransactionSignature> {
-    const { mintX, mintY } = await this.getPoolConfig(id);
-
     const ix = await this.program.methods
-      .withdrawLiquidity(new anchor.BN(id), new anchor.BN(mintLpAmount))
+      .claim()
       .accounts({
-        mintX,
-        mintY,
         tokenProgram: spl.TOKEN_PROGRAM_ID,
-        liquidityProvider: liquidityProviderKeypair.publicKey,
+        user: userKeypair.publicKey,
       })
       .instruction();
 
-    // add liquidityProviderKeypair as signer
     const modifiedParams = {
       ...params,
-      signers: [...(params.signers || []), liquidityProviderKeypair],
+      signers: [...(params.signers || []), userKeypair],
     };
 
     return await this.handleTx([ix], modifiedParams, isDisplayed);
   }
 
-  async trySwap(
-    id: number,
-    amountIn: number,
-    mintIn: PublicKey | string,
-    traderKeypair: Keypair,
-    params: TxParams = {},
-    isDisplayed: boolean = false
-  ): Promise<anchor.web3.TransactionSignature> {
-    const { mintX, mintY } = await this.getPoolConfig(id);
-
-    const ix = await this.program.methods
-      .swap(
-        new anchor.BN(id),
-        new anchor.BN(amountIn),
-        publicKeyFromString(mintIn)
-      )
-      .accounts({
-        mintX,
-        mintY,
-        tokenProgram: spl.TOKEN_PROGRAM_ID,
-        trader: traderKeypair.publicKey,
-      })
-      .instruction();
-
-    // add traderKeypair as signer
-    const modifiedParams = {
-      ...params,
-      signers: [...(params.signers || []), traderKeypair],
-    };
-
-    return await this.handleTx([ix], modifiedParams, isDisplayed);
-  }
-
-  async getPoolConfigList(isDisplayed: boolean = false) {
-    const poolConfigList = (await this.program.account.poolConfig.all()).map(
-      (x) => x.account
-    );
-
-    return logAndReturn(poolConfigList, isDisplayed);
-  }
-
-  async getPoolConfig(id: number, isDisplayed: boolean = false) {
-    const [poolConfigPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("config"), new anchor.BN(id).toArrayLike(Buffer, "le", 8)],
+  async getConfig(isDisplayed: boolean = false) {
+    const [configPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("config")],
       this.program.programId
     );
 
-    const poolConfig = await this.program.account.poolConfig.fetch(
-      poolConfigPda
-    );
+    const poolConfig = await this.program.account.config.fetch(configPda);
 
     return logAndReturn(poolConfig, isDisplayed);
   }
 
-  async getPoolBalance(id: number, isDisplayed: boolean = false) {
-    const [poolBalancePda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("balance"), new anchor.BN(id).toArrayLike(Buffer, "le", 8)],
+  async getUserVault(user: PublicKey | string, isDisplayed: boolean = false) {
+    const [userVaultPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("user_vault"), publicKeyFromString(user).toBuffer()],
       this.program.programId
     );
 
-    const poolBalance = await this.program.account.poolBalance.fetch(
-      poolBalancePda
-    );
+    const userVault = await this.program.account.vault.fetch(userVaultPda);
 
-    return logAndReturn(poolBalance, isDisplayed);
+    return logAndReturn(userVault, isDisplayed);
   }
 }
 

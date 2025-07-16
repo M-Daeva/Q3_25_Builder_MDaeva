@@ -2,23 +2,22 @@ use anchor_lang::prelude::*;
 
 #[account]
 #[derive(InitSpace)]
-pub struct PoolConfig {
+pub struct Config {
     pub config_bump: u8,
-    pub balance_bump: u8,
-    pub lp_bump: u8,
-    pub id: u64,
-    pub authority: Option<Pubkey>,
-    pub mint_x: Pubkey,
-    pub mint_y: Pubkey,
-    pub mint_lp: Pubkey,
-    pub fee_bps: u16,
-    pub is_locked: bool,
+    pub rewards_bump: u8,
+    /// tokens per second for 1 staked nft
+    pub rewards_rate: u8,
+    pub max_stake: u64,
+    pub nft_mint: Pubkey,
+    pub rewards_mint: Pubkey,
 }
 
 #[account]
-#[derive(InitSpace, Default)]
-pub struct PoolBalance {
-    pub mint_x_amount: u64,
-    pub mint_y_amount: u64,
-    pub mint_lp_amount: u64,
+#[derive(InitSpace)]
+pub struct Vault {
+    pub bump: u8,
+    #[max_len(32)]
+    pub tokens: Vec<u16>,
+    pub updated_at: u64,
+    pub rewards: u64,
 }

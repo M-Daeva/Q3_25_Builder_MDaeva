@@ -1,3 +1,7 @@
-pub mod create_pool;
+pub mod claim;
+pub mod init;
+pub mod stake;
 
-pub use create_pool::*;
+pub use claim::*;
+pub use init::*;
+pub use stake::*;

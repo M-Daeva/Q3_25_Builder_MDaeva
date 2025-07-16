@@ -1,7 +1,7 @@
 import * as anchor from "@coral-xyz/anchor";
 import { NetworkConfig, ProgramAddress } from "../interfaces";
 
-export type ProgramName = "VAULT" | "ESCROW" | "AMM";
+export type ProgramName = "STAKING";
 export const networks = ["LOCALNET", "DEVNET"] as const;
 
 export const NETWORK_CONFIG: NetworkConfig = {

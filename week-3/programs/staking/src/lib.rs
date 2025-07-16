@@ -9,33 +9,30 @@ pub mod instructions;
 pub mod math;
 pub mod state;
 
-use instructions::create_pool::*;
+use instructions::{claim::*, init::*, stake::*};
 
-declare_id!("4v3nEAA9rSjD567AGjeRHLQ77MhYMGzumgXZ3UqZjYnt");
+declare_id!("8Y1PPAsKbeKiT361EbKeCrU9yE1bNLXWNnM7va2PMQ67");
 
 #[program]
-pub mod amm {
+pub mod staking {
     use super::*;
 
-    pub fn create_pool(
-        ctx: Context<CreatePool>,
-        id: u64,
-        mint_x: Pubkey,
-        mint_y: Pubkey,
-        fee_bps: u16,
-    ) -> Result<()> {
-        ctx.accounts.create_pool(
-            id,
-            ctx.bumps.pool_config,
-            ctx.bumps.pool_balance,
-            ctx.bumps.mint_lp,
-            mint_x,
-            mint_y,
-            fee_bps,
+    pub fn init(ctx: Context<Init>, rewards_rate: u8, max_stake: u64) -> Result<()> {
+        ctx.accounts.init(
+            ctx.bumps.config,
+            ctx.bumps.rewards_mint,
+            rewards_rate,
+            max_stake,
         )
+    }
+
+    pub fn stake(ctx: Context<Stake>, tokens: Vec<u16>) -> Result<()> {
+        ctx.accounts.stake(tokens)
+    }
+
+    pub fn claim(ctx: Context<Claim>) -> Result<()> {
+        ctx.accounts.claim()
     }
 }
 
-// TODO: stake
 // TODO: unstake
-// TODO: claim

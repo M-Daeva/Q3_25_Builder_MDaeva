@@ -19,7 +19,7 @@ rm -rf .git && bun install
 
 1. Generate program ID and update it in files
 ```sh
-clear && ./program_id.sh amm
+clear && ./program_id.sh staking
 ```
 
 2. Build programs
