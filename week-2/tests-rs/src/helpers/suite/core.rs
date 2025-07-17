@@ -70,7 +70,7 @@ impl App {
         // upload app contracts
 
         app = Self {
-            amm: app.upload_program("amm"),
+            amm: app.upload_program("amm", &amm::ID),
 
             ..app
         };
@@ -301,20 +301,18 @@ impl App {
         (litesvm, token_registry)
     }
 
-    // TODO: specify ids like amm::ID
-    fn upload_program(&mut self, program: &str) -> solana_pubkey::Pubkey {
-        const CONFIG_PATH: &str = "../Anchor.toml";
+    fn upload_program(&mut self, program: &str, program_id: &Pubkey) -> solana_pubkey::Pubkey {
         const PROGRAM_PATH: &str = "../target/deploy/";
 
-        let program_id = read_program_id(CONFIG_PATH, program);
         solana_kite::deploy_program(
             &mut self.litesvm,
-            &program_id,
+            program_id,
             &format!("{}{}.so", PROGRAM_PATH, program),
         )
         .unwrap();
 
-        program_id
+        // TODO: do we need it?
+        *program_id
     }
 }
 
@@ -434,43 +432,4 @@ pub fn to_anchor_err(message: impl ToString) -> anchor_lang::error::Error {
         error_origin: None,
         compared_values: None,
     }))
-}
-
-pub fn read_program_id(file: &str, program: &str) -> solana_pubkey::Pubkey {
-    let content = fs::read_to_string(file).expect("Failed to read file");
-
-    let mut in_localnet_section = false;
-
-    for line in content.lines() {
-        let line = line.trim();
-
-        // Check if we're entering the [programs.localnet] section
-        if line == "[programs.localnet]" {
-            in_localnet_section = true;
-            continue;
-        }
-
-        // Check if we're leaving the section (entering a new section)
-        if line.starts_with('[') && line != "[programs.localnet]" {
-            in_localnet_section = false;
-            continue;
-        }
-
-        // If we're in the localnet section, look for our program
-        if in_localnet_section && !line.is_empty() && !line.starts_with('#') {
-            if let Some((key, value)) = line.split_once('=') {
-                let key = key.trim();
-                let value = value.trim().trim_matches('"');
-
-                if key == program {
-                    return solana_pubkey::Pubkey::from_str(value).expect("Invalid pubkey format");
-                }
-            }
-        }
-    }
-
-    panic!(
-        "Program '{}' not found in [programs.localnet] section",
-        program
-    );
 }
