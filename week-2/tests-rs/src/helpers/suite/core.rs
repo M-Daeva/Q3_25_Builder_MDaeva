@@ -1,58 +1,24 @@
-use std::fs;
-use std::str::FromStr;
-
-use anchor_lang::AnchorDeserialize;
-use anchor_lang::InstructionData;
-use anchor_lang::ToAccountMetas;
-use anchor_lang::{
-    error::{AnchorError, Error, ProgramErrorWithOrigin},
-    prelude::ProgramError,
-    Id, Result,
+use {
+    crate::helpers::suite::{
+        core::token::WithTokenKeys,
+        types::{AppAsset, AppToken, AppUser, GetDecimals},
+    },
+    anchor_lang::{AnchorDeserialize, Id, InstructionData, Result, ToAccountMetas},
+    anchor_spl::associated_token::AssociatedToken,
+    litesvm::{types::TransactionMetadata, LiteSVM},
+    solana_instruction::Instruction,
+    solana_keypair::Keypair,
+    solana_kite::{
+        create_associated_token_account, create_token_mint, deploy_program, get_pda_and_bump,
+        get_token_account_balance, mint_tokens_to_account, seeds,
+    },
+    solana_program::{native_token::LAMPORTS_PER_SOL, system_program},
+    solana_pubkey::Pubkey,
+    solana_signer::{signers::Signers, Signer},
+    solana_transaction::Transaction,
+    spl_associated_token_account::get_associated_token_address,
+    strum::IntoEnumIterator,
 };
-use anchor_spl::associated_token::AssociatedToken;
-use litesvm::LiteSVM;
-use solana_instruction::AccountMeta;
-use solana_instruction::Instruction;
-use solana_keypair::Keypair;
-use solana_kite::{create_associated_token_account, create_token_mint, mint_tokens_to_account};
-use solana_kite::{
-    deploy_program, get_pda_and_bump, get_token_account_balance, seeds,
-    send_transaction_from_instructions, SolanaKiteError,
-};
-use solana_program::native_token::LAMPORTS_PER_SOL;
-use solana_program::{msg, system_program};
-use solana_pubkey::Pubkey;
-use solana_signer::Signer;
-use solana_transaction::Transaction;
-use strum::IntoEnumIterator;
-
-use crate::helpers::suite::types::{AppAsset, AppToken, AppUser, GetDecimals};
-
-pub trait WithTokenKeys {
-    fn keypair(&self, app: &App) -> Keypair;
-    fn pubkey(&self, app: &App) -> Pubkey;
-}
-
-impl WithTokenKeys for AppToken {
-    fn keypair(&self, app: &App) -> Keypair {
-        let base58_string = app
-            .token_registry
-            .iter()
-            .find(|(token, _)| token == self)
-            .map(|(_, keypair)| keypair.to_base58_string())
-            .unwrap();
-
-        Keypair::from_base58_string(&base58_string)
-    }
-
-    fn pubkey(&self, app: &App) -> Pubkey {
-        app.token_registry
-            .iter()
-            .find(|(token, _)| token == self)
-            .map(|(_, keypair)| keypair.pubkey())
-            .unwrap()
-    }
-}
 
 pub struct ProgramId {
     // standard
@@ -92,8 +58,10 @@ pub struct App {
 
 impl App {
     pub fn create_app_with_programs() -> Self {
+        // prepare environment with balances
         let (mut litesvm, token_registry) = Self::init_env_with_balances();
 
+        // specify programs
         let program_id = ProgramId {
             // standard
             system_program: system_program::ID,
@@ -104,10 +72,12 @@ impl App {
             amm: amm::ID,
         };
 
+        // specify PDA
         let pda = Pda {
             amm_program_id: program_id.amm,
         };
 
+        // upload custom programs
         upload_program(&mut litesvm, "amm", &program_id.amm);
 
         Self {
@@ -122,7 +92,7 @@ impl App {
     pub fn new() -> Self {
         let app = Self::create_app_with_programs();
 
-        // prepare contracts
+        // prepare programs
         // ...
 
         app
@@ -252,12 +222,12 @@ impl App {
     }
 
     pub fn get_token_balance(&self, address: &Pubkey, mint: &Pubkey) -> Result<u64> {
-        solana_kite::get_token_account_balance(&self.litesvm, &Self::get_ata(address, mint))
+        get_token_account_balance(&self.litesvm, &Self::get_ata(address, mint))
             .map_err(to_anchor_err)
     }
 
     pub fn get_ata(owner: &Pubkey, mint: &Pubkey) -> Pubkey {
-        spl_associated_token_account::get_associated_token_address(owner, mint)
+        get_associated_token_address(owner, mint)
     }
 }
 
@@ -376,10 +346,98 @@ pub fn to_anchor_err(message: impl ToString) -> anchor_lang::error::Error {
 fn upload_program(litesvm: &mut LiteSVM, program_name: &str, program_id: &Pubkey) {
     const PROGRAM_PATH: &str = "../target/deploy/";
 
-    solana_kite::deploy_program(
+    deploy_program(
         litesvm,
         program_id,
         &format!("{}{}.so", PROGRAM_PATH, program_name),
     )
     .unwrap();
+}
+
+pub mod token {
+    use super::*;
+
+    pub trait WithTokenKeys {
+        fn keypair(&self, app: &App) -> Keypair;
+        fn pubkey(&self, app: &App) -> Pubkey;
+    }
+
+    impl WithTokenKeys for AppToken {
+        fn keypair(&self, app: &App) -> Keypair {
+            let base58_string = app
+                .token_registry
+                .iter()
+                .find(|(token, _)| token == self)
+                .map(|(_, keypair)| keypair.to_base58_string())
+                .unwrap();
+
+            Keypair::from_base58_string(&base58_string)
+        }
+
+        fn pubkey(&self, app: &App) -> Pubkey {
+            app.token_registry
+                .iter()
+                .find(|(token, _)| token == self)
+                .map(|(_, keypair)| keypair.pubkey())
+                .unwrap()
+        }
+    }
+}
+
+pub mod extension {
+
+    use super::*;
+
+    pub fn get_data<T>(litesvm: &LiteSVM, pda: &Pubkey) -> Result<T>
+    where
+        T: AnchorDeserialize,
+    {
+        const DISCRIMINATOR_SPACE: usize = 8;
+        let data = &mut &litesvm.get_account(pda).unwrap().data[DISCRIMINATOR_SPACE..];
+
+        Ok(T::deserialize(data)?)
+    }
+
+    pub fn send_tx<T>(
+        litesvm: &mut LiteSVM,
+        instructions: &[Instruction],
+        payer: &Pubkey,
+        signing_keypairs: &T,
+    ) -> Result<TransactionMetadata>
+    where
+        T: Signers + ?Sized,
+    {
+        let transaction = Transaction::new_signed_with_payer(
+            instructions,
+            Some(payer),
+            signing_keypairs,
+            litesvm.latest_blockhash(),
+        );
+
+        litesvm
+            .send_transaction(transaction)
+            .map_err(|e| to_anchor_err(e.err))
+    }
+
+    pub fn send_tx_with_ix<A, D, S>(
+        app: &mut App,
+        program_id: &Pubkey,
+        accounts: &A,
+        instruction_data: &D,
+        payer: &Pubkey,
+        signing_keypairs: &S,
+    ) -> Result<TransactionMetadata>
+    where
+        A: ToAccountMetas,
+        D: InstructionData,
+        S: Signers + ?Sized,
+    {
+        let ix = Instruction {
+            program_id: *program_id,
+            accounts: accounts.to_account_metas(None),
+            data: instruction_data.data(),
+        };
+
+        send_tx(&mut app.litesvm, &[ix], payer, signing_keypairs)
+    }
 }

@@ -1,67 +1,70 @@
-use anchor_lang::{
-    error::{AnchorError, Error, ProgramErrorWithOrigin},
-    prelude::ProgramError,
-    system_program, AnchorDeserialize, Id, Result,
+use {
+    crate::helpers::suite::{
+        core::{
+            extension::{get_data, send_tx_with_ix},
+            token::WithTokenKeys,
+            App, ProgramId,
+        },
+        types::{AppToken, AppUser},
+    },
+    amm::{accounts, instruction, state},
+    anchor_lang::Result,
+    litesvm::types::TransactionMetadata,
 };
-use anchor_spl::associated_token::AssociatedToken;
-use litesvm::types::TransactionMetadata;
-use solana_pubkey::Pubkey;
-
-use amm::state::PoolConfig;
-
-use crate::helpers::suite::{
-    core::App,
-    types::{AppToken, AppUser},
-};
-
-const DISCRIMINATOR_SPACE: usize = 8;
 
 pub trait AmmExtension {
-    fn amm_try_create_pool(&mut self) -> Result<TransactionMetadata>;
+    fn amm_try_create_pool(
+        &mut self,
+        sender: AppUser,
+        id: u64,
+        mint_x: AppToken,
+        mint_y: AppToken,
+        fee_bps: u16,
+    ) -> Result<TransactionMetadata>;
 
-    fn amm_query_pool_config(&self, pool_id: u64) -> Result<PoolConfig>;
+    fn amm_query_pool_config(&self, pool_id: u64) -> Result<state::PoolConfig>;
 }
 
 impl AmmExtension for App {
-    fn amm_try_create_pool(&mut self) -> Result<TransactionMetadata> {
-        let program_id = self.program_id.amm;
+    fn amm_try_create_pool(
+        &mut self,
+        sender: AppUser,
+        id: u64,
+        mint_x: AppToken,
+        mint_y: AppToken,
+        fee_bps: u16,
+    ) -> Result<TransactionMetadata> {
+        // programs
+        let ProgramId {
+            amm: program_id,
+            system_program,
+            token_program,
+            associated_token_program,
+        } = self.program_id;
 
-        let pool_creator_keypair = AppUser::Admin.keypair();
-        let mint_x_keypair = AppToken::USDC.keypair(&app);
-        let mint_y_keypair = AppToken::PYTH.keypair(&app);
+        // signers
+        let payer = sender.pubkey();
+        let signing_keypairs = [sender.keypair()];
 
-        let pool_creator = pool_creator_keypair.pubkey();
-        let mint_x = mint_x_keypair.pubkey();
-        let mint_y = mint_y_keypair.pubkey();
+        // mint
+        let mint_x = mint_x.pubkey(&self);
+        let mint_y = mint_y.pubkey(&self);
 
-        // Pool parameters
-        let id: u64 = 1; // pool_id
-        let fee_bps: u16 = 300; // 3%
+        // pda
+        let pool_config = self.pda.amm_pool_config(id);
+        let pool_balance = self.pda.amm_pool_balance(id);
+        let mint_lp = self.pda.amm_mint_lp(id);
 
-        // Derive PDAs
-        let pool_config = app.pda.amm_pool_config(id);
-        let pool_balance = app.pda.amm_pool_balance(id);
-        let mint_lp = app.pda.amm_mint_lp(id);
-
-        // Derive ATAs
+        // ata
         let liquidity_pool_mint_lp_ata = App::get_ata(&pool_config, &mint_lp);
         let liquidity_pool_mint_x_ata = App::get_ata(&pool_config, &mint_x);
         let liquidity_pool_mint_y_ata = App::get_ata(&pool_config, &mint_y);
 
-        // Create instruction data
-        let instruction_data = amm::instruction::CreatePool {
-            id,
-            mint_x,
-            mint_y,
-            fee_bps,
-        };
-
-        // Build accounts for the instruction
-        let accounts = amm::accounts::CreatePool {
-            system_program: system_program::ID,
-            token_program: spl_token::ID,
-            associated_token_program: AssociatedToken::id(),
-            pool_creator,
+        let accounts = accounts::CreatePool {
+            system_program,
+            token_program,
+            associated_token_program,
+            pool_creator: payer,
             pool_config,
             pool_balance,
             mint_lp,
@@ -72,37 +75,24 @@ impl AmmExtension for App {
             liquidity_pool_mint_y_ata,
         };
 
-        // Create the instruction
-        let ix = Instruction {
-            program_id,
-            accounts: accounts.to_account_metas(None),
-            data: instruction_data.data(),
+        let instruction_data = instruction::CreatePool {
+            id,
+            mint_x,
+            mint_y,
+            fee_bps,
         };
 
-        // Create and send transaction
-        let transaction = Transaction::new_signed_with_payer(
-            &[ix],
-            Some(&pool_creator),
-            &[&pool_creator_keypair],
-            app.litesvm.latest_blockhash(),
-        );
-
-        // Execute the transaction
-        let res = app.litesvm.send_transaction(transaction).unwrap();
-
-        unimplemented!()
+        send_tx_with_ix(
+            self,
+            &program_id,
+            &accounts,
+            &instruction_data,
+            &payer,
+            &signing_keypairs,
+        )
     }
 
-    fn amm_query_pool_config(&self, pool_id: u64) -> Result<PoolConfig> {
-        get_data(self, &self.pda.amm_pool_config(pool_id))
+    fn amm_query_pool_config(&self, pool_id: u64) -> Result<state::PoolConfig> {
+        get_data(&self.litesvm, &self.pda.amm_pool_config(pool_id))
     }
-}
-
-fn get_data<T>(app: &App, pda: &Pubkey) -> Result<T>
-where
-    T: AnchorDeserialize,
-{
-    let data = &mut &app.litesvm.get_account(pda).unwrap().data[DISCRIMINATOR_SPACE..];
-
-    Ok(T::deserialize(data)?)
 }

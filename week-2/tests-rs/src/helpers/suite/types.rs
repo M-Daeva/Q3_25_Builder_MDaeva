@@ -1,8 +1,9 @@
-use solana_keypair::Keypair;
-use solana_pubkey::Pubkey;
-use strum_macros::{Display, EnumIter, IntoStaticStr};
-
-use crate::helpers::suite::decimal::{str_to_dec, Decimal};
+use {
+    crate::helpers::suite::decimal::{str_to_dec, Decimal},
+    solana_keypair::Keypair,
+    solana_pubkey::Pubkey,
+    strum_macros::{Display, EnumIter, IntoStaticStr},
+};
 
 const ASSET_AMOUNT_DEFAULT: u64 = 1_000;
 const ASSET_AMOUNT_INCREASED: u64 = 100_000;

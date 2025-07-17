@@ -13,11 +13,6 @@ use instructions::{create_pool::*, liquidity::*, swap::*};
 
 declare_id!("CpuYGzAZWKWBHXUoBSfEg3qnvRd8pMcRa9XV29Xoj3KU");
 
-// to avoid "multiple definition of `entrypoint'"" error
-// also, use in tests Cargo.toml: <program> = { workspace = true, features = ["cpi"] }
-#[cfg(not(feature = "no-entrypoint"))]
-solana_program::entrypoint!(process_instruction);
-
 #[program]
 pub mod amm {
     use super::*;

@@ -1,6 +1,8 @@
-use std::fmt;
-use std::ops::{Add, Div, Mul, Sub};
-use std::str::FromStr;
+use std::{
+    fmt,
+    ops::{Add, Div, Mul, Sub},
+    str::FromStr,
+};
 
 // custom converters
 //
