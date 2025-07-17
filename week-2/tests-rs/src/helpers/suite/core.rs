@@ -1,12 +1,29 @@
 use std::fs;
 use std::str::FromStr;
 
+use anchor_lang::AnchorDeserialize;
+use anchor_lang::InstructionData;
+use anchor_lang::ToAccountMetas;
+use anchor_lang::{
+    error::{AnchorError, Error, ProgramErrorWithOrigin},
+    prelude::ProgramError,
+    Id, Result,
+};
+use anchor_spl::associated_token::AssociatedToken;
 use litesvm::LiteSVM;
+use solana_instruction::AccountMeta;
+use solana_instruction::Instruction;
 use solana_keypair::Keypair;
 use solana_kite::{create_associated_token_account, create_token_mint, mint_tokens_to_account};
+use solana_kite::{
+    deploy_program, get_pda_and_bump, get_token_account_balance, seeds,
+    send_transaction_from_instructions, SolanaKiteError,
+};
 use solana_program::native_token::LAMPORTS_PER_SOL;
+use solana_program::{msg, system_program};
 use solana_pubkey::Pubkey;
 use solana_signer::Signer;
+use solana_transaction::Transaction;
 use strum::IntoEnumIterator;
 
 use crate::helpers::suite::types::{AppAsset, AppToken, AppUser, GetDecimals};
@@ -37,112 +54,129 @@ impl WithTokenKeys for AppToken {
     }
 }
 
+pub struct ProgramId {
+    // standard
+    pub system_program: Pubkey,
+    pub token_program: Pubkey,
+    pub associated_token_program: Pubkey,
+
+    // custom
+    pub amm: Pubkey,
+}
+
+pub struct Pda {
+    amm_program_id: Pubkey,
+}
+
+impl Pda {
+    pub fn amm_pool_config(&self, pool_id: u64) -> Pubkey {
+        get_pda_and_bump(&seeds!["config", pool_id], &self.amm_program_id).0
+    }
+
+    pub fn amm_pool_balance(&self, pool_id: u64) -> Pubkey {
+        get_pda_and_bump(&seeds!["balance", pool_id], &self.amm_program_id).0
+    }
+
+    pub fn amm_mint_lp(&self, pool_id: u64) -> Pubkey {
+        get_pda_and_bump(&seeds!["lp", pool_id], &self.amm_program_id).0
+    }
+}
+
 pub struct App {
     pub litesvm: LiteSVM,
     token_registry: Vec<(AppToken, Keypair)>,
-    //
-    // package address
 
-    // contract address
-    amm: Pubkey,
-    //
-    // other
+    pub program_id: ProgramId,
+    pub pda: Pda,
 }
 
 impl App {
-    pub fn create_app_with_balances() -> Self {
-        let (litesvm, token_registry) = Self::init_app_with_balances();
+    pub fn create_app_with_programs() -> Self {
+        let (mut litesvm, token_registry) = Self::init_env_with_balances();
+
+        let program_id = ProgramId {
+            // standard
+            system_program: system_program::ID,
+            token_program: spl_token::ID,
+            associated_token_program: AssociatedToken::id(),
+
+            // custom
+            amm: amm::ID,
+        };
+
+        let pda = Pda {
+            amm_program_id: program_id.amm,
+        };
+
+        upload_program(&mut litesvm, "amm", &program_id.amm);
 
         Self {
             litesvm,
             token_registry,
 
-            amm: Pubkey::default(),
+            program_id,
+            pda,
         }
     }
 
     pub fn new() -> Self {
-        // create app and distribute assets to accounts
-        let mut app = Self::create_app_with_balances();
+        let app = Self::create_app_with_programs();
 
-        // upload packages
-
-        // upload app contracts
-
-        app = Self {
-            amm: app.upload_program("amm", &amm::ID),
-
-            ..app
-        };
-
-        // // prepare contracts
-
-        // // MUST BE EXECUTED BEFORE UpdateAddressConfig
-        // app
-        //     .hub_try_update_common_config(
-        //         AppAccount::Admin,
-        //         Some(21_600),
-        //         Some(9_000),
-        //         Some(3_000),
-        //         Some(4),
-        //         Some(20),
-        //         Some(Currency::new(
-        //             &TokenUnverified::new_native(&AppCoin::Usdc.to_string()),
-        //             AppCoin::Usdc.get_decimals(),
-        //         )),
-        //         Some(Fee::new(0, "0.01")),
-        //         Some(Fee::new(0, "0.04")),
-        //         Some(Range::new(1_u128, 1_000_000_000_000_u128)),
-        //         None,
-        //         None,
-        //         None,
-        //         None,
-        //     )
-        //     .unwrap();
-
-        // app
-        //     .hub_try_update_address_config(
-        //         AppAccount::Admin,
-        //         None,
-        //         Some(&app.get_offer_address()),
-        //         Some(&app.get_trade_address()),
-        //         Some(&app.get_profile_address()),
-        //         Some(&app.get_hash_generator_address()),
-        //         Some(&app.get_chat_address()),
-        //         Some(&app.get_justice_address()),
-        //         Some(&AppAccount::Treasury.into()),
-        //         Some(&[AppAccount::ArbitratorA]),
-        //     )
-        //     .unwrap();
-
-        // app
-        //     .hub_try_update_common_config(
-        //         AppAccount::Admin,
-        //         None,
-        //         None,
-        //         None,
-        //         None,
-        //         None,
-        //         None,
-        //         None,
-        //         None,
-        //         None,
-        //         None,
-        //         None,
-        //         None,
-        //         Some(1),
-        //     )
-        //     .unwrap();
+        // prepare contracts
+        // ...
 
         app
     }
 
-    // package address getters
+    fn init_env_with_balances() -> (LiteSVM, Vec<(AppToken, Keypair)>) {
+        let mut litesvm = LiteSVM::new();
+        let mut token_registry: Vec<(AppToken, Keypair)> = vec![];
 
-    // contract address getters
+        // airdrop SOL
+        for user in AppUser::iter() {
+            litesvm
+                .airdrop(
+                    &user.pubkey(),
+                    user.get_initial_asset_amount() * LAMPORTS_PER_SOL,
+                )
+                .unwrap();
+        }
 
-    pub fn get_program_amm(&self) -> Pubkey {
-        self.amm
+        // create tokens
+        for token in AppToken::iter() {
+            let mint = create_token_mint(
+                &mut litesvm,
+                &AppUser::Admin.keypair(),
+                token.get_decimals(),
+            )
+            .unwrap();
+
+            token_registry.push((token, mint));
+        }
+
+        // mint tokens
+        for user in AppUser::iter() {
+            for (token, mint) in &token_registry {
+                let ata = create_associated_token_account(
+                    &mut litesvm,
+                    &user.keypair(),
+                    &mint.pubkey(),
+                    &AppUser::Admin.keypair(),
+                )
+                .unwrap();
+
+                mint_tokens_to_account(
+                    &mut litesvm,
+                    &mint.pubkey(),
+                    &ata,
+                    user.get_initial_asset_amount() * 10u64.pow(token.get_decimals() as u32),
+                    &AppUser::Admin.keypair(),
+                )
+                .unwrap();
+            }
+        }
+
+        (litesvm, token_registry)
     }
 
     // utils
@@ -202,11 +236,7 @@ impl App {
     //     }
     // }
 
-    pub fn get_balance(
-        &self,
-        user: AppUser,
-        asset: impl Into<AppAsset>,
-    ) -> Result<u64, anchor_lang::error::Error> {
+    pub fn get_balance(&self, user: AppUser, asset: impl Into<AppAsset>) -> Result<u64> {
         let address = &user.pubkey();
 
         match asset.into() {
@@ -215,110 +245,19 @@ impl App {
         }
     }
 
-    pub fn get_coin_balance(&self, address: &Pubkey) -> Result<u64, anchor_lang::error::Error> {
+    pub fn get_coin_balance(&self, address: &Pubkey) -> Result<u64> {
         self.litesvm
             .get_balance(address)
             .ok_or(to_anchor_err("SOL balance error"))
     }
 
-    pub fn get_token_balance(
-        &self,
-        address: &Pubkey,
-        mint: &Pubkey,
-    ) -> Result<u64, anchor_lang::error::Error> {
-        let ata = spl_associated_token_account::get_associated_token_address(address, mint);
+    pub fn get_token_balance(&self, address: &Pubkey, mint: &Pubkey) -> Result<u64> {
+        let ata = Self::get_ata(address, mint);
         solana_kite::get_token_account_balance(&self.litesvm, &ata).map_err(to_anchor_err)
     }
 
-    // pub fn instantiate_contract(
-    //     &mut self,
-    //     code_id: u64,
-    //     label: &str,
-    //     init_msg: &impl Serialize,
-    // ) -> Addr {
-    //     self.increase_contract_counter(1);
-
-    //     self.app
-    //         .instantiate_contract(
-    //             code_id,
-    //             AppAccount::Admin.into(),
-    //             init_msg,
-    //             &[],
-    //             label,
-    //             Some(AppAccount::Admin.to_string()),
-    //         )
-    //         .unwrap()
-    // }
-
-    fn init_app_with_balances() -> (LiteSVM, Vec<(AppToken, Keypair)>) {
-        let mut litesvm = LiteSVM::new();
-        let mut token_registry: Vec<(AppToken, Keypair)> = vec![];
-
-        // airdrop SOL
-        for user in AppUser::iter() {
-            litesvm
-                .airdrop(
-                    &user.pubkey(),
-                    user.get_initial_asset_amount() * LAMPORTS_PER_SOL,
-                )
-                .unwrap();
-        }
-
-        // create tokens
-        for token in AppToken::iter() {
-            let mint = create_token_mint(
-                &mut litesvm,
-                &AppUser::Admin.keypair(),
-                token.get_decimals(),
-            )
-            .unwrap();
-
-            token_registry.push((token, mint));
-        }
-
-        // mint tokens
-        for user in AppUser::iter() {
-            for (token, mint) in &token_registry {
-                let ata = create_associated_token_account(
-                    &mut litesvm,
-                    &user.keypair(),
-                    &mint.pubkey(),
-                    &AppUser::Admin.keypair(),
-                )
-                .unwrap();
-
-                mint_tokens_to_account(
-                    &mut litesvm,
-                    &mint.pubkey(),
-                    &ata,
-                    user.get_initial_asset_amount() * 10u64.pow(token.get_decimals() as u32),
-                    &AppUser::Admin.keypair(),
-                )
-                .unwrap();
-            }
-        }
-
-        (litesvm, token_registry)
-    }
-
-    fn upload_program(&mut self, program: &str, program_id: &Pubkey) -> solana_pubkey::Pubkey {
-        const PROGRAM_PATH: &str = "../target/deploy/";
-
-        solana_kite::deploy_program(
-            &mut self.litesvm,
-            program_id,
-            &format!("{}{}.so", PROGRAM_PATH, program),
-        )
-        .unwrap();
-
-        // TODO: do we need it?
-        *program_id
-    }
-}
-
-impl Default for App {
-    fn default() -> Self {
-        Self::new()
+    pub fn get_ata(owner: &Pubkey, mint: &Pubkey) -> Pubkey {
+        spl_associated_token_account::get_associated_token_address(owner, mint)
     }
 }
 
@@ -432,4 +371,15 @@ pub fn to_anchor_err(message: impl ToString) -> anchor_lang::error::Error {
         error_origin: None,
         compared_values: None,
     }))
+}
+
+fn upload_program(litesvm: &mut LiteSVM, program_name: &str, program_id: &Pubkey) {
+    const PROGRAM_PATH: &str = "../target/deploy/";
+
+    solana_kite::deploy_program(
+        litesvm,
+        program_id,
+        &format!("{}{}.so", PROGRAM_PATH, program_name),
+    )
+    .unwrap();
 }

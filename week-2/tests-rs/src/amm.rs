@@ -1,32 +1,17 @@
 use anchor_lang::AnchorDeserialize;
 use anchor_lang::InstructionData;
 use anchor_lang::ToAccountMetas;
-use anchor_lang::{
-    error::{AnchorError, Error, ProgramErrorWithOrigin},
-    prelude::ProgramError,
-    Id, Result,
-};
+use anchor_lang::{Id, Result};
 use anchor_spl::associated_token::AssociatedToken;
-use litesvm::LiteSVM;
 use pretty_assertions::assert_eq;
-use solana_instruction::AccountMeta;
 use solana_instruction::Instruction;
-use solana_keypair::Keypair;
-use solana_kite::{
-    create_associated_token_account, create_token_mint, deploy_program, get_pda_and_bump,
-    get_token_account_balance, mint_tokens_to_account, seeds, send_transaction_from_instructions,
-    SolanaKiteError,
-};
-use solana_program::{msg, native_token::LAMPORTS_PER_SOL, system_program};
-use solana_pubkey::Pubkey;
+use solana_program::system_program;
 use solana_signer::Signer;
 use solana_transaction::Transaction;
-use spl_associated_token_account::get_associated_token_address;
-use strum::IntoEnumIterator;
 
 use crate::helpers::suite::{
     core::{App, WithTokenKeys},
-    types::{AppCoin, AppToken, AppUser, GetDecimals},
+    types::{AppCoin, AppToken, AppUser},
 };
 
 #[test]
@@ -39,11 +24,9 @@ fn default() -> Result<()> {
     assert_eq!(bob_pyth_balance, 1_000_000_000);
     assert_eq!(bob_sol_balance, 1_000_000_000_000);
 
-    println!("amm_pk {:#?}", app.get_program_amm());
-
     // ----------------------------------------------------------
 
-    let program_id = amm::ID;
+    let program_id = app.program_id.amm;
 
     let pool_creator_keypair = AppUser::Admin.keypair();
     let mint_x_keypair = AppToken::USDC.keypair(&app);
@@ -58,14 +41,14 @@ fn default() -> Result<()> {
     let fee_bps: u16 = 300; // 3%
 
     // Derive PDAs
-    let (pool_config, _) = get_pda_and_bump(&seeds!["config", id], &program_id);
-    let (pool_balance, _) = get_pda_and_bump(&seeds!["balance", id], &program_id);
-    let (mint_lp, _) = get_pda_and_bump(&seeds!["lp", id], &program_id);
+    let pool_config = app.pda.amm_pool_config(id);
+    let pool_balance = app.pda.amm_pool_balance(id);
+    let mint_lp = app.pda.amm_mint_lp(id);
 
     // Derive ATAs
-    let liquidity_pool_mint_lp_ata = get_associated_token_address(&pool_config, &mint_lp);
-    let liquidity_pool_mint_x_ata = get_associated_token_address(&pool_config, &mint_x);
-    let liquidity_pool_mint_y_ata = get_associated_token_address(&pool_config, &mint_y);
+    let liquidity_pool_mint_lp_ata = App::get_ata(&pool_config, &mint_lp);
+    let liquidity_pool_mint_x_ata = App::get_ata(&pool_config, &mint_x);
+    let liquidity_pool_mint_y_ata = App::get_ata(&pool_config, &mint_y);
 
     // Create instruction data
     let instruction_data = amm::instruction::CreatePool {
