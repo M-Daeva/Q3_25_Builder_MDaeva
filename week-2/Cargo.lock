@@ -96,6 +96,7 @@ version = "1.0.0"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
+ "solana-program",
 ]
 
 [[package]]
@@ -5093,6 +5094,7 @@ version = "1.0.0"
 dependencies = [
  "amm",
  "anchor-lang",
+ "anchor-spl",
  "litesvm",
  "pretty_assertions",
  "solana-account",

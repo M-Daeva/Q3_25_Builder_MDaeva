@@ -2,6 +2,7 @@ use std::fs;
 use std::str::FromStr;
 
 use litesvm::LiteSVM;
+use solana_keypair::Keypair;
 use solana_kite::{create_associated_token_account, create_token_mint, mint_tokens_to_account};
 use solana_program::native_token::LAMPORTS_PER_SOL;
 use solana_pubkey::Pubkey;
@@ -10,23 +11,35 @@ use strum::IntoEnumIterator;
 
 use crate::helpers::suite::types::{AppAsset, AppToken, AppUser, GetDecimals};
 
-pub trait WithTokenPubkey {
+pub trait WithTokenKeys {
+    fn keypair(&self, app: &App) -> Keypair;
     fn pubkey(&self, app: &App) -> Pubkey;
 }
 
-impl WithTokenPubkey for AppToken {
+impl WithTokenKeys for AppToken {
+    fn keypair(&self, app: &App) -> Keypair {
+        let base58_string = app
+            .token_registry
+            .iter()
+            .find(|(token, _)| token == self)
+            .map(|(_, keypair)| keypair.to_base58_string())
+            .unwrap();
+
+        Keypair::from_base58_string(&base58_string)
+    }
+
     fn pubkey(&self, app: &App) -> Pubkey {
         app.token_registry
             .iter()
             .find(|(token, _)| token == self)
-            .map(|(_, pubkey)| *pubkey)
+            .map(|(_, keypair)| keypair.pubkey())
             .unwrap()
     }
 }
 
 pub struct App {
     pub litesvm: LiteSVM,
-    token_registry: Vec<(AppToken, Pubkey)>,
+    token_registry: Vec<(AppToken, Keypair)>,
     //
     // package address
 
@@ -237,9 +250,9 @@ impl App {
     //         .unwrap()
     // }
 
-    fn init_app_with_balances() -> (LiteSVM, Vec<(AppToken, Pubkey)>) {
+    fn init_app_with_balances() -> (LiteSVM, Vec<(AppToken, Keypair)>) {
         let mut litesvm = LiteSVM::new();
-        let mut token_registry: Vec<(AppToken, Pubkey)> = vec![];
+        let mut token_registry: Vec<(AppToken, Keypair)> = vec![];
 
         // airdrop SOL
         for user in AppUser::iter() {
@@ -260,7 +273,7 @@ impl App {
             )
             .unwrap();
 
-            token_registry.push((token, mint.pubkey()));
+            token_registry.push((token, mint));
         }
 
         // mint tokens
@@ -269,14 +282,14 @@ impl App {
                 let ata = create_associated_token_account(
                     &mut litesvm,
                     &user.keypair(),
-                    mint,
+                    &mint.pubkey(),
                     &AppUser::Admin.keypair(),
                 )
                 .unwrap();
 
                 mint_tokens_to_account(
                     &mut litesvm,
-                    mint,
+                    &mint.pubkey(),
                     &ata,
                     user.get_initial_asset_amount() * 10u64.pow(token.get_decimals() as u32),
                     &AppUser::Admin.keypair(),
@@ -288,6 +301,7 @@ impl App {
         (litesvm, token_registry)
     }
 
+    // TODO: specify ids like amm::ID
     fn upload_program(&mut self, program: &str) -> solana_pubkey::Pubkey {
         const CONFIG_PATH: &str = "../Anchor.toml";
         const PROGRAM_PATH: &str = "../target/deploy/";
