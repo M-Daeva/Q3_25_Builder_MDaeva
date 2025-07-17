@@ -398,19 +398,19 @@ pub mod extension {
         Ok(T::deserialize(data)?)
     }
 
-    pub fn send_tx<T>(
+    pub fn send_tx<S>(
         litesvm: &mut LiteSVM,
         instructions: &[Instruction],
         payer: &Pubkey,
-        signing_keypairs: &T,
+        signers: &S,
     ) -> Result<TransactionMetadata>
     where
-        T: Signers + ?Sized,
+        S: Signers + ?Sized,
     {
         let transaction = Transaction::new_signed_with_payer(
             instructions,
             Some(payer),
-            signing_keypairs,
+            signers,
             litesvm.latest_blockhash(),
         );
 
@@ -425,7 +425,7 @@ pub mod extension {
         accounts: &A,
         instruction_data: &D,
         payer: &Pubkey,
-        signing_keypairs: &S,
+        signers: &S,
     ) -> Result<TransactionMetadata>
     where
         A: ToAccountMetas,
@@ -438,6 +438,6 @@ pub mod extension {
             data: instruction_data.data(),
         };
 
-        send_tx(&mut app.litesvm, &[ix], payer, signing_keypairs)
+        send_tx(&mut app.litesvm, &[ix], payer, signers)
     }
 }
