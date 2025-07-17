@@ -1,4 +1,3 @@
-use anchor_lang::AnchorDeserialize;
 use anchor_lang::InstructionData;
 use anchor_lang::ToAccountMetas;
 use anchor_lang::{Id, Result};
@@ -9,9 +8,14 @@ use solana_program::system_program;
 use solana_signer::Signer;
 use solana_transaction::Transaction;
 
-use crate::helpers::suite::{
-    core::{App, WithTokenKeys},
-    types::{AppCoin, AppToken, AppUser},
+use amm::state::PoolConfig;
+
+use crate::helpers::{
+    amm::AppExtension,
+    suite::{
+        core::{App, WithTokenKeys},
+        types::{AppCoin, AppToken, AppUser},
+    },
 };
 
 #[test]
@@ -93,13 +97,11 @@ fn default() -> Result<()> {
     let res = app.litesvm.send_transaction(transaction).unwrap();
 
     // Verify the pool config account was created correctly
-    // Deserialize and verify pool config data
-    let mut pool_config_data = &app.litesvm.get_account(&pool_config).unwrap().data[8..]; // Skip discriminator
-    let pool_config_struct = amm::state::PoolConfig::deserialize(&mut pool_config_data).unwrap();
+    let pool_config = app.amm_query_pool_config(id)?;
 
     assert_eq!(
-        pool_config_struct,
-        amm::state::PoolConfig {
+        pool_config,
+        PoolConfig {
             config_bump: 251,
             balance_bump: 255,
             lp_bump: 253,
@@ -115,7 +117,7 @@ fn default() -> Result<()> {
 
     println!("{:#?}", res.compute_units_consumed);
     println!("{:#?}", res.logs);
-    println!("{:#?}", &pool_config_struct);
+    println!("{:#?}", &pool_config);
 
     Ok(())
 }

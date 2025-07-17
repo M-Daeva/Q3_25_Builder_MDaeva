@@ -181,8 +181,8 @@ impl App {
 
     // utils
 
-    // pub fn get_block_time(&self) -> u64 {
-    //     self.app.block_info().time.seconds()
+    // pub fn get_clock_time(&self) -> u64 {
+    //     self.litesvm.get_sysvar()
     // }
 
     // pub fn reset_time(&mut self) {
@@ -252,8 +252,8 @@ impl App {
     }
 
     pub fn get_token_balance(&self, address: &Pubkey, mint: &Pubkey) -> Result<u64> {
-        let ata = Self::get_ata(address, mint);
-        solana_kite::get_token_account_balance(&self.litesvm, &ata).map_err(to_anchor_err)
+        solana_kite::get_token_account_balance(&self.litesvm, &Self::get_ata(address, mint))
+            .map_err(to_anchor_err)
     }
 
     pub fn get_ata(owner: &Pubkey, mint: &Pubkey) -> Pubkey {
