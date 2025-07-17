@@ -11,7 +11,7 @@ use solana_transaction::Transaction;
 use amm::state::PoolConfig;
 
 use crate::helpers::{
-    amm::AppExtension,
+    amm::AmmExtension,
     suite::{
         core::{App, WithTokenKeys},
         types::{AppCoin, AppToken, AppUser},
