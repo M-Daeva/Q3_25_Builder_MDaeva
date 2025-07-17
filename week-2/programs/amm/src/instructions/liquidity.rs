@@ -151,11 +151,8 @@ impl<'info> Liquidity<'info> {
             mint_lp_amount,
             mint_lp,
             liquidity_provider_mint_lp_ata,
-            &[
-                b"lp",
-                pool_config.id.to_le_bytes().as_ref(),
-                &[pool_config.lp_bump],
-            ],
+            &[b"lp", pool_config.id.to_le_bytes().as_ref()],
+            pool_config.lp_bump,
             mint_lp,
             token_program,
         )?;
@@ -234,11 +231,8 @@ impl<'info> Liquidity<'info> {
                 mint,
                 from,
                 to,
-                &[
-                    b"config",
-                    pool_config.id.to_le_bytes().as_ref(),
-                    &[pool_config.config_bump],
-                ],
+                &[b"config", pool_config.id.to_le_bytes().as_ref()],
+                pool_config.config_bump,
                 pool_config,
                 token_program,
             )?;

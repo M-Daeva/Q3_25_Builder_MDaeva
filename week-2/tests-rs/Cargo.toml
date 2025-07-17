@@ -21,8 +21,6 @@ no-log-ix-name = []
 anchor-lang = { workspace = true }
 anchor-spl = { workspace = true }
 
-# tokio = { workspace = true }
-# rand = { workspace = true }
 strum = { workspace = true }
 strum_macros = { workspace = true }
 pretty_assertions = { workspace = true }

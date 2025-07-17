@@ -12,6 +12,8 @@
     "start": "bun run scripts/backend/app.ts",
     "dev": "bun run --watch scripts/backend/app.ts",
     "test-local": "anchor test --provider.cluster localnet",
+    "test-rs": "./build.sh && cd tests-rs && clear && cargo show && cd ..",
+    "test-rs-light": "cd tests-rs && clear && cargo show && cd ..",
     "initialize": "bun run scripts/backend/initialize.ts",
     "set-node-version": "volta pin node@lts"
   },
