@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 #[account]
-#[derive(InitSpace)]
+#[derive(InitSpace, Debug, PartialEq)]
 pub struct PoolConfig {
     pub config_bump: u8,
     pub balance_bump: u8,
@@ -16,7 +16,7 @@ pub struct PoolConfig {
 }
 
 #[account]
-#[derive(InitSpace, Default)]
+#[derive(InitSpace, Debug, PartialEq, Default)]
 pub struct PoolBalance {
     pub mint_x_amount: u64,
     pub mint_y_amount: u64,

@@ -36,6 +36,7 @@ pub fn transfer_from_program<'a, T>(
     from: &InterfaceAccount<'a, TokenAccount>,
     to: &InterfaceAccount<'a, TokenAccount>,
     seeds: &[&[u8]],
+    bump: u8,
     authority: &Account<'a, T>,
     token_program: &Interface<'a, TokenInterface>,
 ) -> Result<()>
@@ -50,8 +51,12 @@ where
         authority: authority.to_account_info(),
     };
 
+    let mut seeds_with_bump = seeds.to_vec();
+    let binding = [bump];
+    seeds_with_bump.push(&binding);
+
     token_interface::transfer_checked(
-        CpiContext::new_with_signer(cpi_program, cpi_accounts, &[&seeds[..]]),
+        CpiContext::new_with_signer(cpi_program, cpi_accounts, &[&seeds_with_bump]),
         amount,
         mint.decimals,
     )
@@ -62,6 +67,7 @@ pub fn mint_to<'a, T>(
     mint: &InterfaceAccount<'a, Mint>,
     to: &InterfaceAccount<'a, TokenAccount>,
     seeds: &[&[u8]],
+    bump: u8,
     authority: &InterfaceAccount<'a, T>,
     token_program: &Interface<'a, TokenInterface>,
 ) -> Result<()>
@@ -75,8 +81,12 @@ where
         authority: authority.to_account_info(),
     };
 
+    let mut seeds_with_bump = seeds.to_vec();
+    let binding = [bump];
+    seeds_with_bump.push(&binding);
+
     token_interface::mint_to_checked(
-        CpiContext::new_with_signer(cpi_program, cpi_accounts, &[&seeds[..]]),
+        CpiContext::new_with_signer(cpi_program, cpi_accounts, &[&seeds_with_bump]),
         amount,
         mint.decimals,
     )
