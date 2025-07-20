@@ -1,23 +1,26 @@
-use anchor_lang::prelude::*;
-use anchor_spl::{
-    metadata::{
-        mpl_token_metadata::instructions::FreezeDelegatedAccountCpi, MasterEditionAccount,
-        Metadata, MetadataAccount,
+use {
+    crate::{
+        error::ProgError,
+        helpers::{get_space, has_duplicates},
+        math::get_updated_vault,
+        state::{Config, Vault},
     },
-    token_interface::{self, Mint, TokenAccount, TokenInterface},
-};
-
-use crate::{
-    error::ProgError,
-    helpers::{get_space, has_duplicates},
-    math::get_updated_vault,
-    state::{Config, Vault},
+    anchor_lang::prelude::*,
+    anchor_spl::{
+        metadata::{
+            mpl_token_metadata::instructions::{
+                FreezeDelegatedAccountCpi, FreezeDelegatedAccountCpiAccounts,
+            },
+            MasterEditionAccount, Metadata, MetadataAccount,
+        },
+        token::{approve, Approve, Mint, Token, TokenAccount},
+    },
 };
 
 #[derive(Accounts)]
 pub struct Stake<'info> {
     pub system_program: Program<'info, System>,
-    pub token_program: Interface<'info, TokenInterface>,
+    pub token_program: Program<'info, Token>,
     pub metadata_program: Program<'info, Metadata>,
 
     #[account(mut)]
@@ -38,45 +41,35 @@ pub struct Stake<'info> {
     )]
     pub config: Account<'info, Config>,
 
-    pub nft_mint: InterfaceAccount<'info, Mint>,
-    pub collection_mint: InterfaceAccount<'info, Mint>,
+    pub nft_mint: Account<'info, Mint>,
+    pub collection_mint: Account<'info, Mint>,
+    //
+    // #[account(
+    //     mut,
+    //     associated_token::mint = nft_mint,
+    //     associated_token::authority = user
+    // )]
+    // pub user_nft_ata: Account<'info, TokenAccount>,
+    #[account(
+        constraint = metadata.collection.as_ref().unwrap().key.as_ref() == collection_mint.key().as_ref(),
+        constraint = metadata.collection.as_ref().unwrap().verified == true,
+        seeds = [b"metadata", metadata_program.key().as_ref(), nft_mint.key().as_ref()],
+        seeds::program = metadata_program.key(), // TODO: do we need it?
+        bump
+    )]
+    pub metadata: Account<'info, MetadataAccount>,
 
     #[account(
-        mut,
-        associated_token::mint = nft_mint,
-        associated_token::authority = user
+        seeds = [b"metadata", metadata_program.key().as_ref(), nft_mint.key().as_ref(), b"edition"],
+        seeds::program = metadata_program.key(),
+        bump
     )]
-    pub user_nft_ata: InterfaceAccount<'info, TokenAccount>,
-    //
-    // #[account(
-    //     seeds = [
-    //         b"metadata",
-    //         metadata_program.key().as_ref(),
-    //         nft_mint.key().as_ref(),
-    //     ],
-    //     seeds::program = metadata_program.key(), // TODO
-    //     constraint = metadata.collection.as_ref().unwrap().key.as_ref() == collection_mint.key().as_ref(),
-    //     constraint = metadata.collection.as_ref().unwrap().verified == true,
-    //     bump,
-    // )]
-    // pub metadata: Account<'info, MetadataAccount>,
-    //
-    // #[account(
-    //         seeds = [
-    //             b"metadata",
-    //             metadata_program.key().as_ref(),
-    //             nft_mint.key().as_ref(),
-    //             b"edition"
-    //         ],
-    //         seeds::program = metadata_program.key(), // TODO
-    //         bump,
-    //     )]
-    // pub edition: Account<'info, MasterEditionAccount>,
+    pub edition: Account<'info, MetadataAccount>,
 }
 
 impl<'info> Stake<'info> {
     pub fn stake(&mut self, tokens: Vec<u16>) -> Result<()> {
-        let clock_time = Clock::get()?.unix_timestamp as u64;
+        // let clock_time = Clock::get()?.unix_timestamp as u64;
         // let Stake {
         //     system_program,
         //     token_program,

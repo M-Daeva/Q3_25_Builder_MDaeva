@@ -28,6 +28,7 @@
   "homepage": "https://github.com/M-Daeva/solana-boilerplate#readme",
   "dependencies": {
     "@coral-xyz/anchor": "0.30.1",
+    "@metaplex-foundation/mpl-token-metadata": "^3.4.0",
     "@solana-developers/helpers": "2.8.0",
     "@solana-program/system": "^0.7.0",
     "@solana/kit": "^2.1.1",

@@ -1,16 +1,14 @@
-use anchor_lang::prelude::*;
-use anchor_spl::{
-    associated_token::AssociatedToken,
-    token_interface::{Mint, TokenAccount, TokenInterface},
+use {
+    crate::{helpers::get_space, state::Config},
+    anchor_lang::prelude::*,
+    anchor_spl::token::{Mint, Token},
 };
-
-use crate::{helpers::get_space, state::Config};
 
 #[derive(Accounts)]
 pub struct Init<'info> {
     pub system_program: Program<'info, System>,
-    pub token_program: Interface<'info, TokenInterface>,
-    // pub associated_token_program: Program<'info, AssociatedToken>,
+    pub token_program: Program<'info, Token>, // TODO: use Interface<'info, TokenInterface>,
+
     #[account(mut)]
     pub admin: Signer<'info>,
 
@@ -32,16 +30,9 @@ pub struct Init<'info> {
         seeds = [b"rewards_mint"],
         bump
     )]
-    pub rewards_mint: InterfaceAccount<'info, Mint>,
+    pub rewards_mint: Account<'info, Mint>,
 
-    pub nft_mint: InterfaceAccount<'info, Mint>,
-    // #[account(
-    //     init,
-    //     payer = admin,
-    //     associated_token::mint = nft_mint,
-    //     associated_token::authority = config
-    // )]
-    // pub app_nft_ata: InterfaceAccount<'info, TokenAccount>,
+    pub nft_mint: Account<'info, Mint>,
 }
 
 impl<'info> Init<'info> {

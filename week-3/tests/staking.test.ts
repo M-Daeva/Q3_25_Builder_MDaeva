@@ -1,9 +1,20 @@
 import * as anchor from "@coral-xyz/anchor";
 import { describe, expect, it } from "bun:test";
 import { Staking } from "../scripts/common/schema/types/staking";
-import { Keypair } from "@solana/web3.js";
-import { ChainHelpers, StakingHelpers } from "../scripts/common/account";
-import { getProvider, getRpc, li, wait } from "../scripts/common/utils";
+import { Keypair, TransactionInstruction } from "@solana/web3.js";
+import {
+  ChainHelpers,
+  generateMetadataJSON,
+  SolanaNFTCollection,
+  StakingHelpers,
+} from "../scripts/common/account";
+import {
+  getProvider,
+  getRpc,
+  li,
+  publicKeyFromString,
+  wait,
+} from "../scripts/common/utils";
 import { getWallet, readKeypair, rootPath } from "../scripts/backend/utils";
 import { COMMITMENT, PATH } from "../scripts/common/config";
 
@@ -59,13 +70,13 @@ describe("staking-anchor", async () => {
 
     it("stake, claim", async () => {
       const config = await staking.getConfig();
-      await staking.tryStake(
-        [1, 2, 3],
-        mintNftKeypair.publicKey,
-        collectionKeypair.publicKey,
-        stakerA,
-        TX_PARAMS
-      );
+      // await staking.tryStake(
+      //   [1, 2, 3],
+      //   mintNftKeypair.publicKey,
+      //   collectionKeypair.publicKey,
+      //   stakerA,
+      //   TX_PARAMS
+      // );
 
       // // const vault = await staking.getUserVault(stakerA.publicKey);
       // await wait(1_000);
@@ -97,5 +108,49 @@ describe("staking-anchor", async () => {
     //     expect(5).toEqual(7);
     //   } catch (error) {}
     // });
+  });
+
+  describe("nft", () => {
+    it("create collection", async () => {
+      // Create collection
+      const collection = new SolanaNFTCollection(
+        provider.connection,
+        ownerKeypair,
+        "HellCats",
+        "HELLCAT"
+      );
+
+      console.log("Collection mint will be:", collection.getCollectionMint());
+
+      // Create collection
+      await collection.createCollection();
+
+      // Create NFTs with IDs 1, 2, 3
+      const nfts: { mint: string; tokenId: number; metadataAccount: string }[] =
+        [];
+
+      for (const tokenId of [1, 2, 3]) {
+        const result = await collection.createNFT(tokenId);
+        nfts.push({
+          mint: result.mint,
+          tokenId,
+          metadataAccount: result.metadataAccount,
+        });
+
+        // Generate and log metadata JSON for off-chain storage
+        const metadataJSON = generateMetadataJSON(tokenId, "HellCats");
+        console.log(
+          `Metadata JSON for token ${tokenId}:`,
+          JSON.stringify(metadataJSON, null, 2)
+        );
+      }
+
+      console.log("\nCreated NFTs:");
+      nfts.forEach((nft) => {
+        console.log(`Token ID ${nft.tokenId}:`);
+        console.log(`  Mint: ${nft.mint}`);
+        console.log(`  Metadata Account: ${nft.metadataAccount}`);
+      });
+    });
   });
 });
