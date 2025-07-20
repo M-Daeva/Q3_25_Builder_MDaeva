@@ -1,8 +1,13 @@
 import * as anchor from "@coral-xyz/anchor";
 import { describe, expect, it } from "bun:test";
 import { Staking } from "../scripts/common/schema/types/staking";
+import { Nft } from "../scripts/common/schema/types/nft";
 import { Keypair } from "@solana/web3.js";
-import { ChainHelpers, StakingHelpers } from "../scripts/common/account";
+import {
+  ChainHelpers,
+  StakingHelpers,
+  NftHelpers,
+} from "../scripts/common/account";
 import { getProvider, getRpc, li, wait } from "../scripts/common/utils";
 import { getWallet, readKeypair, rootPath } from "../scripts/backend/utils";
 import { COMMITMENT, PATH } from "../scripts/common/config";
@@ -19,6 +24,7 @@ describe("staking-anchor", async () => {
 
   const chain = new ChainHelpers(provider);
   const stakingProgram = anchor.workspace.Staking as anchor.Program<Staking>;
+  const nftProgram = anchor.workspace.Nft as anchor.Program<Nft>;
   const TX_PARAMS = {
     cpu: { k: 1, b: 150 },
   };
@@ -30,6 +36,7 @@ describe("staking-anchor", async () => {
   await chain.createMint(mintNftWrongKeypair, 6, TX_PARAMS);
 
   const staking = new StakingHelpers(provider, stakingProgram);
+  const nft = new NftHelpers(provider, nftProgram);
 
   // generate new keypairs for each test
   const admin = Keypair.generate();
@@ -49,6 +56,30 @@ describe("staking-anchor", async () => {
   );
 
   describe("instructions", () => {
+    it("mint nft", async () => {
+      const COLLECTION_ID = 0;
+      const COLLECTION_METADATA = "HellCats";
+
+      await nft.tryCreateCollection(
+        COLLECTION_ID,
+        COLLECTION_METADATA,
+        TX_PARAMS
+      );
+      await nft.tryMintToken(COLLECTION_ID, "", stakerA.publicKey, TX_PARAMS);
+
+      const collection = await nft.getCollection(
+        ownerKeypair.publicKey,
+        COLLECTION_ID
+      );
+      const token = await nft.getToken(
+        collection.address,
+        collection.nextTokenId - 1
+      );
+
+      expect(collection.metadata).toEqual(COLLECTION_METADATA);
+      expect(token.id).toEqual(0);
+    });
+
     it("init", async () => {
       await staking.tryInit(10, 5, mintNftKeypair.publicKey, TX_PARAMS);
 

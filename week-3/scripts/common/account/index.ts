@@ -13,6 +13,7 @@ import {
 } from "../../common/utils";
 
 import { Staking } from "../schema/types/staking";
+import { Nft } from "../schema/types/nft";
 
 export class StakingHelpers {
   private provider: anchor.AnchorProvider;
@@ -66,7 +67,7 @@ export class StakingHelpers {
         tokenProgram: spl.TOKEN_PROGRAM_ID,
         nftMint,
         user: userKeypair.publicKey,
-        collectionMint,
+        //  collectionMint,
       })
       .instruction();
 
@@ -120,8 +121,96 @@ export class StakingHelpers {
 
     return logAndReturn(userVault, isDisplayed);
   }
+}
 
-  // TODO: get rewards
+export class NftHelpers {
+  private provider: anchor.AnchorProvider;
+  private program: anchor.Program<Nft>;
+
+  private handleTx: (
+    instructions: anchor.web3.TransactionInstruction[],
+    params: TxParams,
+    isDisplayed: boolean
+  ) => Promise<anchor.web3.TransactionSignature>;
+
+  constructor(provider: anchor.AnchorProvider, program: anchor.Program<Nft>) {
+    this.provider = provider;
+    this.program = program;
+    this.handleTx = getHandleTx(provider);
+  }
+
+  async tryCreateCollection(
+    id: number,
+    metadata: string,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const ix = await this.program.methods
+      .createCollection(id, metadata)
+      .accounts({
+        admin: this.provider.wallet.publicKey,
+      })
+      .instruction();
+
+    return await this.handleTx([ix], params, isDisplayed);
+  }
+
+  async tryMintToken(
+    id: number,
+    metadata: string,
+    recipient: PublicKey | string,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const ix = await this.program.methods
+      .mintToken(id, metadata)
+      .accounts({
+        admin: this.provider.wallet.publicKey,
+        recipient: publicKeyFromString(recipient),
+        tokenProgram: spl.TOKEN_PROGRAM_ID,
+      })
+      .instruction();
+
+    return await this.handleTx([ix], params, isDisplayed);
+  }
+
+  async getCollection(
+    admin: PublicKey | string,
+    id: number,
+    isDisplayed: boolean = false
+  ) {
+    const [pda] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("collection"),
+        publicKeyFromString(admin).toBuffer(),
+        Buffer.from([id]),
+      ],
+      this.program.programId
+    );
+
+    const res = await this.program.account.collection.fetch(pda);
+
+    return logAndReturn(res, isDisplayed);
+  }
+
+  async getToken(
+    collection: PublicKey | string,
+    id: number,
+    isDisplayed: boolean = false
+  ) {
+    const [pda] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("token"),
+        publicKeyFromString(collection).toBuffer(),
+        new anchor.BN(id).toArrayLike(Buffer, "le", 2), // TODO: create a helper
+      ],
+      this.program.programId
+    );
+
+    const res = await this.program.account.token.fetch(pda);
+
+    return logAndReturn(res, isDisplayed);
+  }
 }
 
 export class ChainHelpers {
