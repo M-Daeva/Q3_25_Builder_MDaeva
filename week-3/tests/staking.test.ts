@@ -17,7 +17,7 @@ import {
 import { getWallet, readKeypair, rootPath } from "../scripts/backend/utils";
 import { COMMITMENT, PATH } from "../scripts/common/config";
 
-describe("staking-anchor", async () => {
+describe("staking", async () => {
   // configure the client to use the local cluster
   const ownerKeypair = await readKeypair(rootPath(PATH.OWNER_KEYPAIR));
   const provider = getProvider(

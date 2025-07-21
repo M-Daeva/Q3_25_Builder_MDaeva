@@ -12,8 +12,106 @@ import {
   publicKeyFromString,
 } from "../../common/utils";
 
-import { Staking } from "../schema/types/staking";
 import { Nft } from "../schema/types/nft";
+import { Staking } from "../schema/types/staking";
+import { Marketplace } from "../schema/types/marketplace";
+
+export type Asset = "sol" | PublicKey;
+export type IdlAsset = { sol: {} } | { mint: { 0: PublicKey } };
+
+function getAssets(assets: Asset[]): IdlAsset[] {
+  return assets.map((x) => (x === "sol" ? { sol: {} } : { mint: { 0: x } }));
+}
+
+export class NftHelpers {
+  private provider: anchor.AnchorProvider;
+  private program: anchor.Program<Nft>;
+
+  private handleTx: (
+    instructions: anchor.web3.TransactionInstruction[],
+    params: TxParams,
+    isDisplayed: boolean
+  ) => Promise<anchor.web3.TransactionSignature>;
+
+  constructor(provider: anchor.AnchorProvider, program: anchor.Program<Nft>) {
+    this.provider = provider;
+    this.program = program;
+    this.handleTx = getHandleTx(provider);
+  }
+
+  async tryCreateCollection(
+    id: number,
+    metadata: string,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const ix = await this.program.methods
+      .createCollection(id, metadata)
+      .accounts({
+        admin: this.provider.wallet.publicKey,
+      })
+      .instruction();
+
+    return await this.handleTx([ix], params, isDisplayed);
+  }
+
+  async tryMintToken(
+    id: number,
+    metadata: string,
+    recipient: PublicKey | string,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const ix = await this.program.methods
+      .mintToken(id, metadata)
+      .accounts({
+        admin: this.provider.wallet.publicKey,
+        recipient: publicKeyFromString(recipient),
+        tokenProgram: spl.TOKEN_PROGRAM_ID,
+      })
+      .instruction();
+
+    return await this.handleTx([ix], params, isDisplayed);
+  }
+
+  async getCollection(
+    admin: PublicKey | string,
+    id: number,
+    isDisplayed: boolean = false
+  ) {
+    const [pda] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("collection"),
+        publicKeyFromString(admin).toBuffer(),
+        Buffer.from([id]),
+      ],
+      this.program.programId
+    );
+
+    const res = await this.program.account.collection.fetch(pda);
+
+    return logAndReturn(res, isDisplayed);
+  }
+
+  async getToken(
+    collection: PublicKey | string,
+    id: number,
+    isDisplayed: boolean = false
+  ) {
+    const [pda] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("token"),
+        publicKeyFromString(collection).toBuffer(),
+        new anchor.BN(id).toArrayLike(Buffer, "le", 2), // TODO: create a helper
+      ],
+      this.program.programId
+    );
+
+    const res = await this.program.account.token.fetch(pda);
+
+    return logAndReturn(res, isDisplayed);
+  }
+}
 
 export class StakingHelpers {
   private provider: anchor.AnchorProvider;
@@ -152,9 +250,9 @@ export class StakingHelpers {
   }
 }
 
-export class NftHelpers {
+export class MarketplaceHelpers {
   private provider: anchor.AnchorProvider;
-  private program: anchor.Program<Nft>;
+  private program: anchor.Program<Marketplace>;
 
   private handleTx: (
     instructions: anchor.web3.TransactionInstruction[],
@@ -162,81 +260,38 @@ export class NftHelpers {
     isDisplayed: boolean
   ) => Promise<anchor.web3.TransactionSignature>;
 
-  constructor(provider: anchor.AnchorProvider, program: anchor.Program<Nft>) {
+  constructor(
+    provider: anchor.AnchorProvider,
+    program: anchor.Program<Marketplace>
+  ) {
     this.provider = provider;
     this.program = program;
     this.handleTx = getHandleTx(provider);
   }
 
-  async tryCreateCollection(
-    id: number,
-    metadata: string,
+  async tryInit(
+    feeBps: number,
+    collectionWhitelist: PublicKey[],
+    assetWhitelist: Asset[],
+    name: string,
     params: TxParams = {},
     isDisplayed: boolean = false
   ): Promise<anchor.web3.TransactionSignature> {
     const ix = await this.program.methods
-      .createCollection(id, metadata)
-      .accounts({
-        admin: this.provider.wallet.publicKey,
-      })
+      .init(feeBps, collectionWhitelist, getAssets(assetWhitelist), name)
+      .accounts({})
       .instruction();
 
     return await this.handleTx([ix], params, isDisplayed);
   }
 
-  async tryMintToken(
-    id: number,
-    metadata: string,
-    recipient: PublicKey | string,
-    params: TxParams = {},
-    isDisplayed: boolean = false
-  ): Promise<anchor.web3.TransactionSignature> {
-    const ix = await this.program.methods
-      .mintToken(id, metadata)
-      .accounts({
-        admin: this.provider.wallet.publicKey,
-        recipient: publicKeyFromString(recipient),
-        tokenProgram: spl.TOKEN_PROGRAM_ID,
-      })
-      .instruction();
-
-    return await this.handleTx([ix], params, isDisplayed);
-  }
-
-  async getCollection(
-    admin: PublicKey | string,
-    id: number,
-    isDisplayed: boolean = false
-  ) {
+  async getMarketplace(isDisplayed: boolean = false) {
     const [pda] = PublicKey.findProgramAddressSync(
-      [
-        Buffer.from("collection"),
-        publicKeyFromString(admin).toBuffer(),
-        Buffer.from([id]),
-      ],
+      [Buffer.from("marketplace"), this.provider.wallet.publicKey.toBuffer()],
       this.program.programId
     );
 
-    const res = await this.program.account.collection.fetch(pda);
-
-    return logAndReturn(res, isDisplayed);
-  }
-
-  async getToken(
-    collection: PublicKey | string,
-    id: number,
-    isDisplayed: boolean = false
-  ) {
-    const [pda] = PublicKey.findProgramAddressSync(
-      [
-        Buffer.from("token"),
-        publicKeyFromString(collection).toBuffer(),
-        new anchor.BN(id).toArrayLike(Buffer, "le", 2), // TODO: create a helper
-      ],
-      this.program.programId
-    );
-
-    const res = await this.program.account.token.fetch(pda);
+    const res = await this.program.account.marketplace.fetch(pda);
 
     return logAndReturn(res, isDisplayed);
   }

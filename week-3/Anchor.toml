@@ -7,10 +7,12 @@ skip-lint = false
 [programs.localnet]
 nft = "7sHJDPbAHy5uj7Guz5XD2AgRFKp3KMvYYvNwwTvyw9Lg"
 staking = "FS3fX9yzYMkurJPXsPeFY1mt8pCQtbTQSDQqpR61wkhb"
+marketplace = "DWTez7iNT13kaqEEZfzFQb5Msv7JdF9EFKRize99wQTi"
 
 [programs.devnet]
 nft = "7sHJDPbAHy5uj7Guz5XD2AgRFKp3KMvYYvNwwTvyw9Lg"
 staking = "FS3fX9yzYMkurJPXsPeFY1mt8pCQtbTQSDQqpR61wkhb"
+marketplace = "DWTez7iNT13kaqEEZfzFQb5Msv7JdF9EFKRize99wQTi"
 
 [registry]
 url = "https://api.apr.dev"
@@ -20,5 +22,5 @@ cluster = "localnet"
 wallet = "~/dev/.test-wallets/solana/dev-keypair.json"
 
 [scripts]
-test = "bun test"
-# test = "bun test --test-name-pattern staking"
+# test = "bun test"
+test = "bun test marketplace"
