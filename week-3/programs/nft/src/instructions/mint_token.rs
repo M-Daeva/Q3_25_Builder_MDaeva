@@ -87,6 +87,7 @@ impl<'info> MintToken<'info> {
             mint_bump,
             id: collection.next_token_id,
             collection: collection.address,
+            mint: mint.key(),
             metadata,
         });
 

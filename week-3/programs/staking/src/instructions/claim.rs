@@ -72,7 +72,8 @@ impl<'info> Claim<'info> {
             amount_to_mint,
             rewards_mint,
             user_rewards_ata,
-            &[b"rewards_mint", &[config.rewards_bump]],
+            &[b"rewards_mint"],
+            config.rewards_bump,
             rewards_mint,
             token_program,
         )?;

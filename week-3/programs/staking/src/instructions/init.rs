@@ -53,6 +53,7 @@ impl<'info> Init<'info> {
         rewards_bump: u8,
         rewards_rate: u8,
         max_stake: u64,
+        collection: Pubkey,
     ) -> Result<()> {
         let Init {
             config,
@@ -66,6 +67,7 @@ impl<'info> Init<'info> {
             rewards_bump,
             rewards_rate,
             max_stake,
+            collection,
             nft_mint: nft_mint.key(),
             rewards_mint: rewards_mint.key(),
         });

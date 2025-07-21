@@ -37,12 +37,17 @@ export class StakingHelpers {
   async tryInit(
     rewardsRate: number,
     maxStake: number,
+    collection: PublicKey | string,
     nftMint: PublicKey | string,
     params: TxParams = {},
     isDisplayed: boolean = false
   ): Promise<anchor.web3.TransactionSignature> {
     const ix = await this.program.methods
-      .init(rewardsRate, new anchor.BN(maxStake))
+      .init(
+        rewardsRate,
+        new anchor.BN(maxStake),
+        publicKeyFromString(collection)
+      )
       .accounts({
         tokenProgram: spl.TOKEN_PROGRAM_ID,
         nftMint,
@@ -54,20 +59,20 @@ export class StakingHelpers {
   }
 
   async tryStake(
-    tokens: number[],
+    tokenId: number,
     nftMint: PublicKey | string,
-    collectionMint: PublicKey | string,
+    nftProgram: anchor.Address,
     userKeypair: Keypair,
     params: TxParams = {},
     isDisplayed: boolean = false
   ): Promise<anchor.web3.TransactionSignature> {
     const ix = await this.program.methods
-      .stake(tokens)
+      .stake(tokenId)
       .accounts({
         tokenProgram: spl.TOKEN_PROGRAM_ID,
         nftMint,
         user: userKeypair.publicKey,
-        //  collectionMint,
+        nftProgram,
       })
       .instruction();
 

@@ -525,6 +525,10 @@ export type Nft = {
             "type": "pubkey"
           },
           {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
             "name": "metadata",
             "type": "string"
           }

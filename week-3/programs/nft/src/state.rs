@@ -19,6 +19,7 @@ pub struct Token {
     pub mint_bump: u8,
     pub id: u16,
     pub collection: Pubkey,
+    pub mint: Pubkey,
     #[max_len(32)]
     pub metadata: String,
 }

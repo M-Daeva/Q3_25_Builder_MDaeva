@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/staking.json`.
  */
 export type Staking = {
-  "address": "8Y1PPAsKbeKiT361EbKeCrU9yE1bNLXWNnM7va2PMQ67",
+  "address": "FS3fX9yzYMkurJPXsPeFY1mt8pCQtbTQSDQqpR61wkhb",
   "metadata": {
     "name": "staking",
     "version": "1.0.0",
@@ -381,6 +381,10 @@ export type Staking = {
         {
           "name": "maxStake",
           "type": "u64"
+        },
+        {
+          "name": "collection",
+          "type": "pubkey"
         }
       ]
     },
@@ -407,6 +411,9 @@ export type Staking = {
         {
           "name": "associatedTokenProgram",
           "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "nftProgram"
         },
         {
           "name": "user",
@@ -456,6 +463,36 @@ export type Staking = {
                 ]
               }
             ]
+          }
+        },
+        {
+          "name": "tokenAccount",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  107,
+                  101,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config.collection",
+                "account": "config"
+              },
+              {
+                "kind": "arg",
+                "path": "tokenId"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "nftProgram"
+            }
           }
         },
         {
@@ -644,10 +681,8 @@ export type Staking = {
       ],
       "args": [
         {
-          "name": "tokens",
-          "type": {
-            "vec": "u16"
-          }
+          "name": "tokenId",
+          "type": "u16"
         }
       ]
     }
@@ -756,6 +791,10 @@ export type Staking = {
           {
             "name": "maxStake",
             "type": "u64"
+          },
+          {
+            "name": "collection",
+            "type": "pubkey"
           },
           {
             "name": "nftMint",

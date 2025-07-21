@@ -11,23 +11,29 @@ pub mod state;
 
 use instructions::{claim::*, init::*, stake::*};
 
-declare_id!("8Y1PPAsKbeKiT361EbKeCrU9yE1bNLXWNnM7va2PMQ67");
+declare_id!("FS3fX9yzYMkurJPXsPeFY1mt8pCQtbTQSDQqpR61wkhb");
 
 #[program]
 pub mod staking {
     use super::*;
 
-    pub fn init(ctx: Context<Init>, rewards_rate: u8, max_stake: u64) -> Result<()> {
+    pub fn init(
+        ctx: Context<Init>,
+        rewards_rate: u8,
+        max_stake: u64,
+        collection: Pubkey,
+    ) -> Result<()> {
         ctx.accounts.init(
             ctx.bumps.config,
             ctx.bumps.rewards_mint,
             rewards_rate,
             max_stake,
+            collection,
         )
     }
 
-    pub fn stake(ctx: Context<Stake>, tokens: Vec<u16>) -> Result<()> {
-        ctx.accounts.stake(tokens)
+    pub fn stake(ctx: Context<Stake>, token_id: u16) -> Result<()> {
+        ctx.accounts.stake(token_id)
     }
 
     pub fn claim(ctx: Context<Claim>) -> Result<()> {

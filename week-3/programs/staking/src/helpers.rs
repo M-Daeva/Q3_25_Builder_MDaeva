@@ -3,6 +3,8 @@ use std::{collections::HashSet, hash::Hash};
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface};
 
+const DISCRIMINATOR_SPACE: usize = 8;
+
 /// checks if a list has duplicates
 pub fn has_duplicates<T: Eq + Hash>(list: &[T]) -> bool {
     let mut set = HashSet::with_capacity(list.len());
@@ -31,9 +33,15 @@ pub fn deduplicate<T: Eq + Hash + Clone>(list: &[T]) -> Vec<T> {
         .collect()
 }
 
-pub fn get_space(struct_space: usize) -> usize {
-    const DISCRIMINATOR_SPACE: usize = 8;
+pub fn deserialize_account<T>(account: &mut AccountInfo) -> Result<T>
+where
+    T: AnchorSerialize + AnchorDeserialize,
+{
+    let data = &account.try_borrow_data()?;
+    Ok(T::deserialize(&mut &data[DISCRIMINATOR_SPACE..])?)
+}
 
+pub fn get_space(struct_space: usize) -> usize {
     DISCRIMINATOR_SPACE + struct_space
 }
 
@@ -66,6 +74,7 @@ pub fn transfer_from_program<'a, T>(
     from: &InterfaceAccount<'a, TokenAccount>,
     to: &InterfaceAccount<'a, TokenAccount>,
     seeds: &[&[u8]],
+    bump: u8,
     authority: &Account<'a, T>,
     token_program: &Interface<'a, TokenInterface>,
 ) -> Result<()>
@@ -80,19 +89,23 @@ where
         authority: authority.to_account_info(),
     };
 
+    let mut seeds_with_bump = seeds.to_vec();
+    let binding = [bump];
+    seeds_with_bump.push(&binding);
+
     token_interface::transfer_checked(
-        CpiContext::new_with_signer(cpi_program, cpi_accounts, &[&seeds[..]]),
+        CpiContext::new_with_signer(cpi_program, cpi_accounts, &[&seeds_with_bump]),
         amount,
         mint.decimals,
     )
 }
 
-// TODO: specify bump as separate parameter
 pub fn mint_to<'a, T>(
     amount: u64,
     mint: &InterfaceAccount<'a, Mint>,
     to: &InterfaceAccount<'a, TokenAccount>,
     seeds: &[&[u8]],
+    bump: u8,
     authority: &InterfaceAccount<'a, T>,
     token_program: &Interface<'a, TokenInterface>,
 ) -> Result<()>
@@ -106,8 +119,12 @@ where
         authority: authority.to_account_info(),
     };
 
+    let mut seeds_with_bump = seeds.to_vec();
+    let binding = [bump];
+    seeds_with_bump.push(&binding);
+
     token_interface::mint_to_checked(
-        CpiContext::new_with_signer(cpi_program, cpi_accounts, &[&seeds[..]]),
+        CpiContext::new_with_signer(cpi_program, cpi_accounts, &[&seeds_with_bump]),
         amount,
         mint.decimals,
     )

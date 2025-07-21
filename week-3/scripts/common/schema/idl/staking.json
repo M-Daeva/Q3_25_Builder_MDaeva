@@ -1,5 +1,5 @@
 {
-  "address": "8Y1PPAsKbeKiT361EbKeCrU9yE1bNLXWNnM7va2PMQ67",
+  "address": "FS3fX9yzYMkurJPXsPeFY1mt8pCQtbTQSDQqpR61wkhb",
   "metadata": {
     "name": "staking",
     "version": "1.0.0",
@@ -375,6 +375,10 @@
         {
           "name": "max_stake",
           "type": "u64"
+        },
+        {
+          "name": "collection",
+          "type": "pubkey"
         }
       ]
     },
@@ -401,6 +405,9 @@
         {
           "name": "associated_token_program",
           "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "nft_program"
         },
         {
           "name": "user",
@@ -450,6 +457,36 @@
                 ]
               }
             ]
+          }
+        },
+        {
+          "name": "token_account",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  107,
+                  101,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config.collection",
+                "account": "Config"
+              },
+              {
+                "kind": "arg",
+                "path": "token_id"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "nft_program"
+            }
           }
         },
         {
@@ -638,10 +675,8 @@
       ],
       "args": [
         {
-          "name": "tokens",
-          "type": {
-            "vec": "u16"
-          }
+          "name": "token_id",
+          "type": "u16"
         }
       ]
     }
@@ -750,6 +785,10 @@
           {
             "name": "max_stake",
             "type": "u64"
+          },
+          {
+            "name": "collection",
+            "type": "pubkey"
           },
           {
             "name": "nft_mint",

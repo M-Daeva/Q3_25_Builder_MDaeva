@@ -5,10 +5,12 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-staking = "8Y1PPAsKbeKiT361EbKeCrU9yE1bNLXWNnM7va2PMQ67"
+nft = "7sHJDPbAHy5uj7Guz5XD2AgRFKp3KMvYYvNwwTvyw9Lg"
+staking = "FS3fX9yzYMkurJPXsPeFY1mt8pCQtbTQSDQqpR61wkhb"
 
 [programs.devnet]
-staking = "8Y1PPAsKbeKiT361EbKeCrU9yE1bNLXWNnM7va2PMQ67"
+nft = "7sHJDPbAHy5uj7Guz5XD2AgRFKp3KMvYYvNwwTvyw9Lg"
+staking = "FS3fX9yzYMkurJPXsPeFY1mt8pCQtbTQSDQqpR61wkhb"
 
 [registry]
 url = "https://api.apr.dev"
