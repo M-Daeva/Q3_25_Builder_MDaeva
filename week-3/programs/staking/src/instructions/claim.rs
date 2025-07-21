@@ -1,13 +1,14 @@
-use anchor_lang::prelude::*;
-use anchor_spl::{
-    associated_token::AssociatedToken,
-    token_interface::{Mint, TokenAccount, TokenInterface},
-};
-
-use crate::{
-    helpers::mint_to,
-    math::get_updated_vault,
-    state::{Config, Vault},
+use {
+    crate::{
+        math::get_updated_vault,
+        state::{Config, Vault},
+    },
+    anchor_lang::prelude::*,
+    anchor_spl::{
+        associated_token::AssociatedToken,
+        token_interface::{Mint, TokenAccount, TokenInterface},
+    },
+    base::helpers::mint_to,
 };
 
 #[derive(Accounts)]
@@ -72,7 +73,8 @@ impl<'info> Claim<'info> {
             amount_to_mint,
             rewards_mint,
             user_rewards_ata,
-            &[b"rewards_mint", &[config.rewards_bump]],
+            &[b"rewards_mint"],
+            config.rewards_bump,
             rewards_mint,
             token_program,
         )?;

@@ -1,0 +1,11 @@
+{
+  "address": "8Y1PPAsKbeKiT361EbKeCrU9yE1bNLXWNnM7va2PMQ67",
+  "metadata": {
+    "name": "marketplace",
+    "version": "1.0.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor",
+    "repository": "https://github.com/M-Daeva/solana-boilerplate"
+  },
+  "instructions": []
+}

@@ -29,6 +29,9 @@ clear && ./build.sh
 
 3. Test programs (stop local validator if required)
 ```sh
+# litesvm testing (rebuilds programs to update files)
+bun test-rs
+
 clear && bun test-local
 ```
 

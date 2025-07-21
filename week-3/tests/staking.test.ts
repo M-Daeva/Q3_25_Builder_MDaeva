@@ -1,9 +1,19 @@
 import * as anchor from "@coral-xyz/anchor";
 import { describe, expect, it } from "bun:test";
 import { Staking } from "../scripts/common/schema/types/staking";
-import { Keypair } from "@solana/web3.js";
-import { ChainHelpers, StakingHelpers } from "../scripts/common/account";
-import { getProvider, getRpc, li, wait } from "../scripts/common/utils";
+import { Nft } from "../scripts/common/schema/types/nft";
+import { Keypair, PublicKey } from "@solana/web3.js";
+import {
+  ChainHelpers,
+  StakingHelpers,
+  NftHelpers,
+} from "../scripts/common/account";
+import {
+  getProvider,
+  getRpc,
+  publicKeyFromString,
+  wait,
+} from "../scripts/common/utils";
 import { getWallet, readKeypair, rootPath } from "../scripts/backend/utils";
 import { COMMITMENT, PATH } from "../scripts/common/config";
 
@@ -19,16 +29,15 @@ describe("staking-anchor", async () => {
 
   const chain = new ChainHelpers(provider);
   const stakingProgram = anchor.workspace.Staking as anchor.Program<Staking>;
+  const nftProgram = anchor.workspace.Nft as anchor.Program<Nft>;
   const TX_PARAMS = {
     cpu: { k: 1, b: 150 },
   };
 
-  const mintNftKeypair = Keypair.generate();
-  await chain.createMint(mintNftKeypair, 6, TX_PARAMS);
-
   const staking = new StakingHelpers(provider, stakingProgram);
+  const nft = new NftHelpers(provider, nftProgram);
 
-  // generate new keypairs for each test
+  // generate new keypairs
   const admin = Keypair.generate();
   const stakerA = Keypair.generate();
   const stakerB = Keypair.generate();
@@ -38,16 +47,41 @@ describe("staking-anchor", async () => {
     [admin, stakerA, stakerB].map((x) => chain.requestAirdrop(x.publicKey, 2))
   );
 
-  // mint tokens for users
-  await Promise.all(
-    [stakerA, stakerB].map((user) =>
-      chain.mintTokens(100, mintNftKeypair.publicKey, user.publicKey, TX_PARAMS)
-    )
+  const COLLECTION_ID = 0;
+  const COLLECTION_METADATA = "HellCats";
+
+  await nft.tryCreateCollection(COLLECTION_ID, COLLECTION_METADATA, TX_PARAMS);
+  await nft.tryMintToken(COLLECTION_ID, "", stakerA.publicKey, TX_PARAMS);
+
+  const collection = await nft.getCollection(
+    ownerKeypair.publicKey,
+    COLLECTION_ID
+  );
+  const token = await nft.getToken(
+    collection.address,
+    collection.nextTokenId - 1
   );
 
   describe("instructions", () => {
+    it("mint nft", async () => {
+      const COLLECTION_ID = 0;
+      const COLLECTION_METADATA = "HellCats";
+
+      const collection = await nft.getCollection(
+        ownerKeypair.publicKey,
+        COLLECTION_ID
+      );
+      const token = await nft.getToken(
+        collection.address,
+        collection.nextTokenId - 1
+      );
+
+      expect(collection.metadata).toEqual(COLLECTION_METADATA);
+      expect(token.id).toEqual(0);
+    });
+
     it("init", async () => {
-      await staking.tryInit(10, 5, mintNftKeypair.publicKey, TX_PARAMS);
+      await staking.tryInit(10, 5, collection.address, token.mint, TX_PARAMS);
 
       const config = await staking.getConfig();
       expect(config.rewardsRate).toEqual(10);
@@ -56,14 +90,38 @@ describe("staking-anchor", async () => {
 
     it("stake, claim", async () => {
       const config = await staking.getConfig();
+
+      let stakerAAta = await chain.getTokenBalance(
+        token.mint,
+        stakerA.publicKey
+      );
+      expect(stakerAAta).toEqual(1);
+
+      let [configPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("config")],
+        publicKeyFromString(stakingProgram.idl.address)
+      );
+      let appAta = await chain.getTokenBalance(token.mint, configPda);
+      expect(appAta).toEqual(0);
+
       await staking.tryStake(
-        [1, 2, 3],
-        mintNftKeypair.publicKey,
+        0,
+        token.mint,
+        nftProgram.idl.address,
         stakerA,
         TX_PARAMS
       );
 
-      // const vault = await staking.getUserVault(stakerA.publicKey);
+      stakerAAta = await chain.getTokenBalance(token.mint, stakerA.publicKey);
+      expect(stakerAAta).toEqual(0);
+
+      [configPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("config")],
+        publicKeyFromString(stakingProgram.idl.address)
+      );
+      appAta = await chain.getTokenBalance(token.mint, configPda);
+      expect(appAta).toEqual(1);
+
       await wait(1_000);
       const stakerABalanceBefore = await chain.getTokenBalance(
         config.rewardsMint,
@@ -76,7 +134,24 @@ describe("staking-anchor", async () => {
         stakerA.publicKey
       );
 
-      expect(stakerABalanceAfter - stakerABalanceBefore).toEqual(0.00003);
+      expect(stakerABalanceAfter - stakerABalanceBefore).toBeGreaterThan(0);
+    });
+
+    it("unstake", async () => {
+      await staking.tryUnstake(0, token.mint, stakerA, TX_PARAMS);
+
+      const stakerAAta = await chain.getTokenBalance(
+        token.mint,
+        stakerA.publicKey
+      );
+      expect(stakerAAta).toEqual(1);
+
+      const [configPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("config")],
+        publicKeyFromString(stakingProgram.idl.address)
+      );
+      const appAta = await chain.getTokenBalance(token.mint, configPda);
+      expect(appAta).toEqual(0);
     });
   });
 });

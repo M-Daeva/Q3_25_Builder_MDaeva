@@ -1,5 +1,5 @@
 {
-  "address": "8Y1PPAsKbeKiT361EbKeCrU9yE1bNLXWNnM7va2PMQ67",
+  "address": "FS3fX9yzYMkurJPXsPeFY1mt8pCQtbTQSDQqpR61wkhb",
   "metadata": {
     "name": "staking",
     "version": "1.0.0",
@@ -375,6 +375,10 @@
         {
           "name": "max_stake",
           "type": "u64"
+        },
+        {
+          "name": "collection",
+          "type": "pubkey"
         }
       ]
     },
@@ -399,8 +403,298 @@
           "name": "token_program"
         },
         {
-          "name": "associated_token_program",
-          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+          "name": "nft_program"
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "user_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_account",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  107,
+                  101,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "config.collection",
+                "account": "Config"
+              },
+              {
+                "kind": "arg",
+                "path": "token_id"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "nft_program"
+            }
+          }
+        },
+        {
+          "name": "nft_mint"
+        },
+        {
+          "name": "user_nft_ata",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "user"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "nft_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "app_nft_ata",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "nft_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "token_id",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "unstake",
+      "discriminator": [
+        90,
+        95,
+        107,
+        42,
+        205,
+        124,
+        50,
+        225
+      ],
+      "accounts": [
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "token_program"
         },
         {
           "name": "user",
@@ -638,10 +932,8 @@
       ],
       "args": [
         {
-          "name": "tokens",
-          "type": {
-            "vec": "u16"
-          }
+          "name": "token_id",
+          "type": "u16"
         }
       ]
     }
@@ -677,53 +969,8 @@
   "errors": [
     {
       "code": 6000,
-      "name": "NftIsNotFound",
-      "msg": "NFT isn't found!"
-    },
-    {
-      "code": 6001,
-      "name": "CollectionIsNotFound",
-      "msg": "Collection isn't found!"
-    },
-    {
-      "code": 6002,
-      "name": "EmptyTokenList",
-      "msg": "Empty token list!"
-    },
-    {
-      "code": 6003,
-      "name": "EmptyCollectionList",
-      "msg": "Empty collection list!"
-    },
-    {
-      "code": 6004,
-      "name": "NftDuplication",
-      "msg": "NFT list has duplications!"
-    },
-    {
-      "code": 6005,
-      "name": "CollectionDuplication",
-      "msg": "Collection already exists!"
-    },
-    {
-      "code": 6006,
-      "name": "IncorrectTokenList",
-      "msg": "Incorrect token list!"
-    },
-    {
-      "code": 6007,
-      "name": "IncorrectCollectionList",
-      "msg": "Incorrect token list!"
-    },
-    {
-      "code": 6008,
-      "name": "ExceededTokenLimit",
-      "msg": "Max token amount per tx is exceeded!"
-    },
-    {
-      "code": 6009,
-      "name": "CollectionIsNotAdded",
-      "msg": "Collection isn't added!"
+      "name": "Unathorized",
+      "msg": "Incorrect sender!"
     }
   ],
   "types": [
@@ -750,6 +997,10 @@
           {
             "name": "max_stake",
             "type": "u64"
+          },
+          {
+            "name": "collection",
+            "type": "pubkey"
           },
           {
             "name": "nft_mint",

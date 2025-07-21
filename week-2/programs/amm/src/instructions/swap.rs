@@ -134,11 +134,8 @@ impl<'info> Swap<'info> {
             mint,
             from,
             to,
-            &[
-                b"config",
-                pool_config.id.to_le_bytes().as_ref(),
-                &[pool_config.config_bump],
-            ],
+            &[b"config", pool_config.id.to_le_bytes().as_ref()],
+            pool_config.config_bump,
             pool_config,
             token_program,
         )?;

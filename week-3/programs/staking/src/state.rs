@@ -8,6 +8,7 @@ pub struct Config {
     /// tokens per second for 1 staked nft
     pub rewards_rate: u8,
     pub max_stake: u64,
+    pub collection: Pubkey,
     pub nft_mint: Pubkey,
     pub rewards_mint: Pubkey,
 }
@@ -20,4 +21,16 @@ pub struct Vault {
     pub tokens: Vec<u16>,
     pub updated_at: u64,
     pub rewards: u64,
+}
+
+// nft program
+//
+#[derive(AnchorSerialize, AnchorDeserialize)]
+pub struct Token {
+    pub token_bump: u8,
+    pub mint_bump: u8,
+    pub id: u16,
+    pub collection: Pubkey,
+    pub mint: Pubkey,
+    pub metadata: String,
 }

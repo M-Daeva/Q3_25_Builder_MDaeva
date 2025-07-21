@@ -1,21 +1,23 @@
-use anchor_lang::prelude::*;
-use anchor_spl::{
-    associated_token::AssociatedToken,
-    token_interface::{Mint, TokenAccount, TokenInterface},
-};
-
-use crate::{
-    error::ProgError,
-    helpers::{get_space, has_duplicates},
-    math::get_updated_vault,
-    state::{Config, Vault},
+use {
+    crate::{
+        math::get_updated_vault,
+        state::{Config, Vault},
+    },
+    anchor_lang::prelude::*,
+    anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface},
+    base::{
+        error::NftError,
+        helpers::{deserialize_account, get_space, has_duplicates, transfer_to_program},
+    },
 };
 
 #[derive(Accounts)]
+#[instruction(token_id: u16)]
 pub struct Stake<'info> {
     pub system_program: Program<'info, System>,
     pub token_program: Interface<'info, TokenInterface>,
-    pub associated_token_program: Program<'info, AssociatedToken>,
+    /// CHECK: nft_program
+    pub nft_program: AccountInfo<'info>,
 
     #[account(mut)]
     pub user: Signer<'info>,
@@ -35,6 +37,14 @@ pub struct Stake<'info> {
     )]
     pub config: Account<'info, Config>,
 
+    /// CHECK: token_account
+    #[account(
+        seeds = [b"token", config.collection.as_ref(), token_id.to_le_bytes().as_ref()],
+        seeds::program = nft_program.key(),
+        bump
+    )]
+    pub token_account: AccountInfo<'info>,
+
     pub nft_mint: InterfaceAccount<'info, Mint>,
 
     #[account(
@@ -53,22 +63,28 @@ pub struct Stake<'info> {
 }
 
 impl<'info> Stake<'info> {
-    pub fn stake(&mut self, tokens: Vec<u16>) -> Result<()> {
+    pub fn stake(&mut self, token_id: u16) -> Result<()> {
         let clock_time = Clock::get()?.unix_timestamp as u64;
         let Stake {
-            system_program,
             token_program,
-            associated_token_program,
             user,
             user_vault,
             config,
+            token_account,
             nft_mint,
             user_nft_ata,
             app_nft_ata,
+            ..
         } = self;
 
-        if tokens.is_empty() {
-            Err(ProgError::EmptyTokenList)?;
+        let nft_token: crate::state::Token = deserialize_account(token_account)?;
+
+        if nft_token.collection != config.collection {
+            Err(NftError::CollectionIsNotFound)?;
+        }
+
+        if nft_token.mint != nft_mint.key() {
+            Err(ProgramError::InvalidAccountData)?;
         }
 
         user_vault.set_inner(get_updated_vault(
@@ -76,17 +92,24 @@ impl<'info> Stake<'info> {
             config.rewards_rate,
             clock_time,
         ));
-        user_vault.tokens.extend(tokens);
+        user_vault.tokens.push(token_id);
 
         if has_duplicates(&user_vault.tokens) {
-            Err(ProgError::NftDuplication)?;
+            Err(NftError::NftDuplication)?;
         }
 
         if user_vault.rewards > config.max_stake {
-            Err(ProgError::ExceededTokenLimit)?;
+            Err(NftError::ExceededTokenLimit)?;
         }
 
-        // TODO: handle nft
+        transfer_to_program(
+            1,
+            nft_mint,
+            &user_nft_ata,
+            &app_nft_ata,
+            &user,
+            token_program,
+        )?;
 
         Ok(())
     }

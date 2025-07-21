@@ -13,6 +13,7 @@ import {
 } from "../../common/utils";
 
 import { Staking } from "../schema/types/staking";
+import { Nft } from "../schema/types/nft";
 
 export class StakingHelpers {
   private provider: anchor.AnchorProvider;
@@ -36,12 +37,17 @@ export class StakingHelpers {
   async tryInit(
     rewardsRate: number,
     maxStake: number,
+    collection: PublicKey | string,
     nftMint: PublicKey | string,
     params: TxParams = {},
     isDisplayed: boolean = false
   ): Promise<anchor.web3.TransactionSignature> {
     const ix = await this.program.methods
-      .init(rewardsRate, new anchor.BN(maxStake))
+      .init(
+        rewardsRate,
+        new anchor.BN(maxStake),
+        publicKeyFromString(collection)
+      )
       .accounts({
         tokenProgram: spl.TOKEN_PROGRAM_ID,
         nftMint,
@@ -53,14 +59,40 @@ export class StakingHelpers {
   }
 
   async tryStake(
-    tokens: number[],
+    tokenId: number,
+    nftMint: PublicKey | string,
+    nftProgram: anchor.Address,
+    userKeypair: Keypair,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const ix = await this.program.methods
+      .stake(tokenId)
+      .accounts({
+        tokenProgram: spl.TOKEN_PROGRAM_ID,
+        nftMint,
+        user: userKeypair.publicKey,
+        nftProgram,
+      })
+      .instruction();
+
+    const modifiedParams = {
+      ...params,
+      signers: [...(params.signers || []), userKeypair],
+    };
+
+    return await this.handleTx([ix], modifiedParams, isDisplayed);
+  }
+
+  async tryUnstake(
+    tokenId: number,
     nftMint: PublicKey | string,
     userKeypair: Keypair,
     params: TxParams = {},
     isDisplayed: boolean = false
   ): Promise<anchor.web3.TransactionSignature> {
     const ix = await this.program.methods
-      .stake(tokens)
+      .unstake(tokenId)
       .accounts({
         tokenProgram: spl.TOKEN_PROGRAM_ID,
         nftMint,
@@ -117,6 +149,96 @@ export class StakingHelpers {
     const userVault = await this.program.account.vault.fetch(userVaultPda);
 
     return logAndReturn(userVault, isDisplayed);
+  }
+}
+
+export class NftHelpers {
+  private provider: anchor.AnchorProvider;
+  private program: anchor.Program<Nft>;
+
+  private handleTx: (
+    instructions: anchor.web3.TransactionInstruction[],
+    params: TxParams,
+    isDisplayed: boolean
+  ) => Promise<anchor.web3.TransactionSignature>;
+
+  constructor(provider: anchor.AnchorProvider, program: anchor.Program<Nft>) {
+    this.provider = provider;
+    this.program = program;
+    this.handleTx = getHandleTx(provider);
+  }
+
+  async tryCreateCollection(
+    id: number,
+    metadata: string,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const ix = await this.program.methods
+      .createCollection(id, metadata)
+      .accounts({
+        admin: this.provider.wallet.publicKey,
+      })
+      .instruction();
+
+    return await this.handleTx([ix], params, isDisplayed);
+  }
+
+  async tryMintToken(
+    id: number,
+    metadata: string,
+    recipient: PublicKey | string,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const ix = await this.program.methods
+      .mintToken(id, metadata)
+      .accounts({
+        admin: this.provider.wallet.publicKey,
+        recipient: publicKeyFromString(recipient),
+        tokenProgram: spl.TOKEN_PROGRAM_ID,
+      })
+      .instruction();
+
+    return await this.handleTx([ix], params, isDisplayed);
+  }
+
+  async getCollection(
+    admin: PublicKey | string,
+    id: number,
+    isDisplayed: boolean = false
+  ) {
+    const [pda] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("collection"),
+        publicKeyFromString(admin).toBuffer(),
+        Buffer.from([id]),
+      ],
+      this.program.programId
+    );
+
+    const res = await this.program.account.collection.fetch(pda);
+
+    return logAndReturn(res, isDisplayed);
+  }
+
+  async getToken(
+    collection: PublicKey | string,
+    id: number,
+    isDisplayed: boolean = false
+  ) {
+    const [pda] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("token"),
+        publicKeyFromString(collection).toBuffer(),
+        new anchor.BN(id).toArrayLike(Buffer, "le", 2), // TODO: create a helper
+      ],
+      this.program.programId
+    );
+
+    const res = await this.program.account.token.fetch(pda);
+
+    return logAndReturn(res, isDisplayed);
   }
 }
 
