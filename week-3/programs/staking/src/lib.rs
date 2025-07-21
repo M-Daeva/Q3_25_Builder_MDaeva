@@ -8,7 +8,7 @@ pub mod instructions;
 pub mod math;
 pub mod state;
 
-use instructions::{claim::*, init::*, stake::*};
+use instructions::{claim::*, init::*, stake::*, unstake::*};
 
 declare_id!("FS3fX9yzYMkurJPXsPeFY1mt8pCQtbTQSDQqpR61wkhb");
 
@@ -35,9 +35,11 @@ pub mod staking {
         ctx.accounts.stake(token_id)
     }
 
+    pub fn unstake(ctx: Context<Unstake>, token_id: u16) -> Result<()> {
+        ctx.accounts.unstake(token_id)
+    }
+
     pub fn claim(ctx: Context<Claim>) -> Result<()> {
         ctx.accounts.claim()
     }
 }
-
-// TODO: unstake

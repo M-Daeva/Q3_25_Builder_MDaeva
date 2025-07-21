@@ -37,7 +37,7 @@ describe("staking-anchor", async () => {
   const staking = new StakingHelpers(provider, stakingProgram);
   const nft = new NftHelpers(provider, nftProgram);
 
-  // generate new keypairs for each test
+  // generate new keypairs
   const admin = Keypair.generate();
   const stakerA = Keypair.generate();
   const stakerB = Keypair.generate();
@@ -135,6 +135,23 @@ describe("staking-anchor", async () => {
       );
 
       expect(stakerABalanceAfter - stakerABalanceBefore).toBeGreaterThan(0);
+    });
+
+    it("unstake", async () => {
+      await staking.tryUnstake(0, token.mint, stakerA, TX_PARAMS);
+
+      const stakerAAta = await chain.getTokenBalance(
+        token.mint,
+        stakerA.publicKey
+      );
+      expect(stakerAAta).toEqual(1);
+
+      const [configPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("config")],
+        publicKeyFromString(stakingProgram.idl.address)
+      );
+      const appAta = await chain.getTokenBalance(token.mint, configPda);
+      expect(appAta).toEqual(0);
     });
   });
 });

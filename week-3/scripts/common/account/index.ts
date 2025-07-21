@@ -84,6 +84,30 @@ export class StakingHelpers {
     return await this.handleTx([ix], modifiedParams, isDisplayed);
   }
 
+  async tryUnstake(
+    tokenId: number,
+    nftMint: PublicKey | string,
+    userKeypair: Keypair,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const ix = await this.program.methods
+      .unstake(tokenId)
+      .accounts({
+        tokenProgram: spl.TOKEN_PROGRAM_ID,
+        nftMint,
+        user: userKeypair.publicKey,
+      })
+      .instruction();
+
+    const modifiedParams = {
+      ...params,
+      signers: [...(params.signers || []), userKeypair],
+    };
+
+    return await this.handleTx([ix], modifiedParams, isDisplayed);
+  }
+
   async tryClaim(
     userKeypair: Keypair,
     params: TxParams = {},
