@@ -1,9 +1,10 @@
-use std::{collections::HashSet, hash::Hash};
+use {
+    anchor_lang::prelude::*,
+    anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface},
+    std::{collections::HashSet, hash::Hash},
+};
 
-use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface};
-
-const DISCRIMINATOR_SPACE: usize = 8;
+pub const DISCRIMINATOR_SPACE: usize = 8;
 
 /// checks if a list has duplicates
 pub fn has_duplicates<T: Eq + Hash>(list: &[T]) -> bool {

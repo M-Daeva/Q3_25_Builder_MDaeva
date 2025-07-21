@@ -1,34 +1,24 @@
-use anchor_lang::prelude::*;
+use {anchor_lang::prelude::*, base::error::NftError};
+
+pub enum ProgError {
+    Cusom(CustomError),
+    Nft(NftError),
+}
 
 #[error_code]
-pub enum ProgError {
-    #[msg("NFT isn't found!")]
-    NftIsNotFound,
+pub enum CustomError {
+    #[msg("Incorrect sender!")]
+    Unathorized,
+}
 
-    #[msg("Collection isn't found!")]
-    CollectionIsNotFound,
+impl From<CustomError> for ProgError {
+    fn from(error: CustomError) -> Self {
+        Self::Cusom(error)
+    }
+}
 
-    #[msg("Empty token list!")]
-    EmptyTokenList,
-
-    #[msg("Empty collection list!")]
-    EmptyCollectionList,
-
-    #[msg("NFT list has duplications!")]
-    NftDuplication,
-
-    #[msg("Collection already exists!")]
-    CollectionDuplication,
-
-    #[msg("Incorrect token list!")]
-    IncorrectTokenList,
-
-    #[msg("Incorrect token list!")]
-    IncorrectCollectionList,
-
-    #[msg("Max token amount per tx is exceeded!")]
-    ExceededTokenLimit,
-
-    #[msg("Collection isn't added!")]
-    CollectionIsNotAdded,
+impl From<NftError> for ProgError {
+    fn from(error: NftError) -> Self {
+        Self::Nft(error)
+    }
 }

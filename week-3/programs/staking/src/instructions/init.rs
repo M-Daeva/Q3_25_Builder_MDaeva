@@ -1,10 +1,12 @@
-use anchor_lang::prelude::*;
-use anchor_spl::{
-    associated_token::AssociatedToken,
-    token_interface::{Mint, TokenAccount, TokenInterface},
+use {
+    crate::state::Config,
+    anchor_lang::prelude::*,
+    anchor_spl::{
+        associated_token::AssociatedToken,
+        token_interface::{Mint, TokenAccount, TokenInterface},
+    },
+    base::helpers::get_space,
 };
-
-use crate::{helpers::get_space, state::Config};
 
 #[derive(Accounts)]
 pub struct Init<'info> {

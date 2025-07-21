@@ -1,6 +1,4 @@
-use anchor_lang::prelude::*;
-
-use crate::{helpers::get_space, state::Collection};
+use {crate::state::Collection, anchor_lang::prelude::*, base::helpers::get_space};
 
 #[derive(Accounts)]
 #[instruction(id: u8)]

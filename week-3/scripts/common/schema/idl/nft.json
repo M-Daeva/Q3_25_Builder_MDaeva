@@ -412,58 +412,6 @@
       ]
     }
   ],
-  "errors": [
-    {
-      "code": 6000,
-      "name": "NftIsNotFound",
-      "msg": "NFT isn't found!"
-    },
-    {
-      "code": 6001,
-      "name": "CollectionIsNotFound",
-      "msg": "Collection isn't found!"
-    },
-    {
-      "code": 6002,
-      "name": "EmptyTokenList",
-      "msg": "Empty token list!"
-    },
-    {
-      "code": 6003,
-      "name": "EmptyCollectionList",
-      "msg": "Empty collection list!"
-    },
-    {
-      "code": 6004,
-      "name": "NftDuplication",
-      "msg": "NFT list has duplications!"
-    },
-    {
-      "code": 6005,
-      "name": "CollectionDuplication",
-      "msg": "Collection already exists!"
-    },
-    {
-      "code": 6006,
-      "name": "IncorrectTokenList",
-      "msg": "Incorrect token list!"
-    },
-    {
-      "code": 6007,
-      "name": "IncorrectCollectionList",
-      "msg": "Incorrect token list!"
-    },
-    {
-      "code": 6008,
-      "name": "ExceededTokenLimit",
-      "msg": "Max token amount per tx is exceeded!"
-    },
-    {
-      "code": 6009,
-      "name": "CollectionIsNotAdded",
-      "msg": "Collection isn't added!"
-    }
-  ],
   "types": [
     {
       "name": "Collection",

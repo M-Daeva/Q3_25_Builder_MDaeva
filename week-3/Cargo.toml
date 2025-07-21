@@ -5,7 +5,7 @@ authors = ["M. Daeva <embedmad@gmail.com>"]
 license = "Apache-2.0"
 
 [workspace]
-members = ["programs/*"]
+members = ["programs/*", "packages/*"]
 exclude = []
 resolver = "2"
 
@@ -23,3 +23,5 @@ overflow-checks = true
 [workspace.dependencies]
 anchor-lang = { version = "0.31.1", features = ["init-if-needed"] }
 anchor-spl = { version = "0.31.1", features = ["token", "metadata"] }
+
+base = { path = "./packages/base" }

@@ -1,14 +1,17 @@
-use anchor_lang::prelude::*;
-use anchor_spl::{
-    associated_token::AssociatedToken,
-    token_interface::{Mint, TokenAccount, TokenInterface},
-};
-
-use crate::{
-    error::ProgError,
-    helpers::{deserialize_account, get_space, has_duplicates, transfer_to_program},
-    math::get_updated_vault,
-    state::{Config, Vault},
+use {
+    crate::{
+        math::get_updated_vault,
+        state::{Config, Vault},
+    },
+    anchor_lang::prelude::*,
+    anchor_spl::{
+        associated_token::AssociatedToken,
+        token_interface::{Mint, TokenAccount, TokenInterface},
+    },
+    base::{
+        error::NftError,
+        helpers::{deserialize_account, get_space, has_duplicates, transfer_to_program},
+    },
 };
 
 #[derive(Accounts)]
@@ -81,7 +84,7 @@ impl<'info> Stake<'info> {
         let nft_token: crate::state::Token = deserialize_account(token_account)?;
 
         if nft_token.collection != config.collection {
-            Err(ProgError::CollectionIsNotFound)?;
+            Err(NftError::CollectionIsNotFound)?;
         }
 
         if nft_token.mint != nft_mint.key() {
@@ -96,11 +99,11 @@ impl<'info> Stake<'info> {
         user_vault.tokens.push(token_id);
 
         if has_duplicates(&user_vault.tokens) {
-            Err(ProgError::NftDuplication)?;
+            Err(NftError::NftDuplication)?;
         }
 
         if user_vault.rewards > config.max_stake {
-            Err(ProgError::ExceededTokenLimit)?;
+            Err(NftError::ExceededTokenLimit)?;
         }
 
         transfer_to_program(

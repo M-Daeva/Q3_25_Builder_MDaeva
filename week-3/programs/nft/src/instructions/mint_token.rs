@@ -1,12 +1,11 @@
-use anchor_lang::prelude::*;
-use anchor_spl::{
-    associated_token::AssociatedToken,
-    token_interface::{Mint, TokenAccount, TokenInterface},
-};
-
-use crate::{
-    helpers::{get_space, mint_to},
-    state::{Collection, Token},
+use {
+    crate::state::{Collection, Token},
+    anchor_lang::prelude::*,
+    anchor_spl::{
+        associated_token::AssociatedToken,
+        token_interface::{Mint, TokenAccount, TokenInterface},
+    },
+    base::helpers::{get_space, mint_to},
 };
 
 #[derive(Accounts)]

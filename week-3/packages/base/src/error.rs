@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 #[error_code]
-pub enum ProgError {
+pub enum NftError {
     #[msg("NFT isn't found!")]
     NftIsNotFound,
 

@@ -718,53 +718,8 @@ export type Staking = {
   "errors": [
     {
       "code": 6000,
-      "name": "nftIsNotFound",
-      "msg": "NFT isn't found!"
-    },
-    {
-      "code": 6001,
-      "name": "collectionIsNotFound",
-      "msg": "Collection isn't found!"
-    },
-    {
-      "code": 6002,
-      "name": "emptyTokenList",
-      "msg": "Empty token list!"
-    },
-    {
-      "code": 6003,
-      "name": "emptyCollectionList",
-      "msg": "Empty collection list!"
-    },
-    {
-      "code": 6004,
-      "name": "nftDuplication",
-      "msg": "NFT list has duplications!"
-    },
-    {
-      "code": 6005,
-      "name": "collectionDuplication",
-      "msg": "Collection already exists!"
-    },
-    {
-      "code": 6006,
-      "name": "incorrectTokenList",
-      "msg": "Incorrect token list!"
-    },
-    {
-      "code": 6007,
-      "name": "incorrectCollectionList",
-      "msg": "Incorrect token list!"
-    },
-    {
-      "code": 6008,
-      "name": "exceededTokenLimit",
-      "msg": "Max token amount per tx is exceeded!"
-    },
-    {
-      "code": 6009,
-      "name": "collectionIsNotAdded",
-      "msg": "Collection isn't added!"
+      "name": "unathorized",
+      "msg": "Incorrect sender!"
     }
   ],
   "types": [
