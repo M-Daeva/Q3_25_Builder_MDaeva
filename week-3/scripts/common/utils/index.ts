@@ -315,3 +315,16 @@ export async function getOrCreateAtaInstructions(
     };
   }
 }
+
+export function getTokenProgramFactory(provider: anchor.AnchorProvider) {
+  return async (mint: anchor.web3.PublicKey) => {
+    // get the mint account to determine which token program owns it
+    const mintAccount = await provider.connection.getAccountInfo(mint);
+    if (!mintAccount) {
+      throw new Error(`Mint account ${mint.toString()} not found`);
+    }
+
+    // the token program is the owner of the mint account
+    return mintAccount.owner;
+  };
+}

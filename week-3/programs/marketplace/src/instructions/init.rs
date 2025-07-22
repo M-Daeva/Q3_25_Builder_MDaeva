@@ -1,5 +1,5 @@
 use {
-    crate::state::{Asset, BalanceItem, Balances, Marketplace},
+    crate::state::{AssetItem, Balances, Bump, Marketplace},
     anchor_lang::prelude::*,
     base::helpers::get_space,
 };
@@ -10,6 +10,12 @@ pub struct Init<'info> {
 
     #[account(mut)]
     pub admin: Signer<'info>,
+
+    #[account(
+        seeds = [b"treasury", admin.key().as_ref()],
+        bump
+    )]
+    pub treasury: SystemAccount<'info>,
 
     // data storages
     //
@@ -35,11 +41,10 @@ pub struct Init<'info> {
 impl<'info> Init<'info> {
     pub fn init(
         &mut self,
-        marketplace_bump: u8,
-        balances_bump: u8,
+        bump: Bump,
         fee_bps: u16,
         collection_whitelist: Vec<Pubkey>,
-        asset_whitelist: Vec<Asset>,
+        asset_whitelist: Vec<Pubkey>,
         name: String,
     ) -> Result<()> {
         let Init {
@@ -57,7 +62,7 @@ impl<'info> Init<'info> {
         balances.set_inner(Balances {
             value: asset_whitelist
                 .iter()
-                .map(|x| BalanceItem {
+                .map(|x| AssetItem {
                     amount: 0,
                     asset: x.clone(),
                 })
@@ -65,8 +70,7 @@ impl<'info> Init<'info> {
         });
 
         marketplace.set_inner(Marketplace {
-            marketplace_bump,
-            balances_bump,
+            bump,
             admin: admin.key(),
             fee_bps,
             collection_whitelist,

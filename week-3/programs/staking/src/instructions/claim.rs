@@ -8,7 +8,7 @@ use {
         associated_token::AssociatedToken,
         token_interface::{Mint, TokenAccount, TokenInterface},
     },
-    base::helpers::mint_to,
+    base::helpers::mint_token_to,
 };
 
 #[derive(Accounts)]
@@ -69,7 +69,7 @@ impl<'info> Claim<'info> {
         let amount_to_mint = user_vault.rewards;
         user_vault.rewards = 0;
 
-        mint_to(
+        mint_token_to(
             amount_to_mint,
             rewards_mint,
             user_rewards_ata,

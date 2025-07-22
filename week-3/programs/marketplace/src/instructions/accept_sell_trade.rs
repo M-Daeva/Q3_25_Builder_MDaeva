@@ -1,27 +1,24 @@
 use {
     crate::{
         error::CustomError,
-        state::{Asset, Balances, Marketplace, Trade},
+        state::{Balances, Marketplace, Trade},
     },
     anchor_lang::prelude::*,
     anchor_spl::{
         associated_token::AssociatedToken,
         token_interface::{Mint, TokenAccount, TokenInterface},
     },
-    base::{
-        error::NftError,
-        helpers::{deserialize_account, get_space, transfer_from_program, transfer_from_user},
+    base::helpers::{
+        transfer_sol_from_user, transfer_token_from_program, transfer_token_from_user,
     },
 };
 
 #[derive(Accounts)]
 #[instruction(collection: Pubkey, token_id: u16)]
-pub struct AcceptSellTrade<'info> {
+pub struct AcceptSellForTokenTrade<'info> {
     pub system_program: Program<'info, System>,
     pub token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>,
-    /// CHECK: nft_program
-    pub nft_program: AccountInfo<'info>,
 
     #[account(mut)]
     pub buyer: Signer<'info>,
@@ -35,14 +32,14 @@ pub struct AcceptSellTrade<'info> {
     //
     #[account(
         seeds = [b"marketplace", admin.key().as_ref()],
-        bump = marketplace.marketplace_bump
+        bump = marketplace.bump.marketplace
     )]
     pub marketplace: Account<'info, Marketplace>,
 
     #[account(
         mut,
         seeds = [b"balances", admin.key().as_ref()],
-        bump = marketplace.balances_bump
+        bump = marketplace.bump.balances
     )]
     pub balances: Account<'info, Balances>,
 
@@ -53,14 +50,6 @@ pub struct AcceptSellTrade<'info> {
         bump
     )]
     pub trade: Account<'info, Trade>,
-
-    /// CHECK: token_account
-    #[account(
-        seeds = [b"token", collection.as_ref(), token_id.to_le_bytes().as_ref()],
-        seeds::program = nft_program.key(),
-        bump
-    )]
-    pub token_account: AccountInfo<'info>,
 
     // mint
     //
@@ -107,20 +96,19 @@ pub struct AcceptSellTrade<'info> {
     pub app_nft_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 }
 
-impl<'info> AcceptSellTrade<'info> {
-    pub fn accept_sell_trade(&mut self, collection: Pubkey, token_id: u16) -> Result<()> {
-        let AcceptSellTrade {
-            system_program,
+impl<'info> AcceptSellForTokenTrade<'info> {
+    pub fn accept_sell_for_token_trade(
+        &mut self,
+        _collection: Pubkey,
+        _token_id: u16,
+    ) -> Result<()> {
+        let AcceptSellForTokenTrade {
             token_program,
-            associated_token_program,
-            nft_program,
             buyer,
-            seller,
             admin,
             marketplace,
             balances,
             trade,
-            token_account,
             nft_mint,
             token_mint,
             seller_token_ata,
@@ -128,39 +116,22 @@ impl<'info> AcceptSellTrade<'info> {
             buyer_nft_ata,
             app_token_ata,
             app_nft_ata,
+            ..
         } = self;
 
-        let nft_token: crate::state::Token = deserialize_account(token_account)?;
-
-        if !marketplace.asset_whitelist.contains(&trade.price_asset) {
+        if token_mint.key() != trade.price.asset || trade.price.asset == Pubkey::default() {
             Err(CustomError::AssetIsNotFound)?;
         }
 
-        if !marketplace
-            .collection_whitelist
-            .contains(&nft_token.collection)
-        {
-            Err(NftError::CollectionIsNotFound)?;
-        }
-
-        let is_asset_correct = match trade.price_asset {
-            Asset::Sol => false, // TODO
-            Asset::Mint(token) => token == token_mint.key(),
-        };
-
-        if !is_asset_correct {
-            Err(CustomError::AssetIsNotFound)?;
-        }
-
-        let fee = (trade.price_amount as u128 * marketplace.fee_bps as u128 / 10_000_u128) as u64;
-        let amount_to_seller = trade.price_amount - fee;
+        let fee = (trade.price.amount as u128 * marketplace.fee_bps as u128 / 10_000_u128) as u64;
+        let amount_to_seller = trade.price.amount - fee;
 
         balances.value = balances
             .value
             .iter()
             .cloned()
             .map(|mut x| {
-                if x.asset == trade.price_asset {
+                if x.asset == trade.price.asset {
                     x.amount += fee;
                 }
 
@@ -169,7 +140,7 @@ impl<'info> AcceptSellTrade<'info> {
             .collect();
 
         // transfer to seller
-        transfer_from_user(
+        transfer_token_from_user(
             amount_to_seller,
             token_mint,
             buyer_token_ata,
@@ -179,7 +150,7 @@ impl<'info> AcceptSellTrade<'info> {
         )?;
 
         // pay fee
-        transfer_from_user(
+        transfer_token_from_user(
             fee,
             token_mint,
             buyer_token_ata,
@@ -189,13 +160,139 @@ impl<'info> AcceptSellTrade<'info> {
         )?;
 
         // receive nft
-        transfer_from_program(
+        transfer_token_from_program(
             1,
             nft_mint,
             app_nft_ata,
             buyer_nft_ata,
             &[b"marketplace", admin.key().as_ref()],
-            marketplace.marketplace_bump,
+            marketplace.bump.marketplace,
+            marketplace,
+            token_program,
+        )?;
+
+        Ok(())
+    }
+}
+
+#[derive(Accounts)]
+#[instruction(collection: Pubkey, token_id: u16)]
+pub struct AcceptSellForSolTrade<'info> {
+    pub system_program: Program<'info, System>,
+    pub token_program: Interface<'info, TokenInterface>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+
+    #[account(mut)]
+    pub buyer: Signer<'info>,
+
+    #[account(mut)]
+    pub seller: SystemAccount<'info>,
+
+    pub admin: SystemAccount<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"treasury", admin.key().as_ref()],
+        bump = marketplace.bump.treasury
+    )]
+    pub treasury: SystemAccount<'info>,
+
+    // data storage
+    //
+    #[account(
+        seeds = [b"marketplace", admin.key().as_ref()],
+        bump = marketplace.bump.marketplace
+    )]
+    pub marketplace: Account<'info, Marketplace>,
+
+    #[account(
+        mut,
+        seeds = [b"balances", admin.key().as_ref()],
+        bump = marketplace.bump.balances
+    )]
+    pub balances: Account<'info, Balances>,
+
+    #[account(
+        mut,
+        close = seller,
+        seeds = [b"trade", seller.key().as_ref(), collection.as_ref(), token_id.to_le_bytes().as_ref()],
+        bump
+    )]
+    pub trade: Account<'info, Trade>,
+
+    // mint
+    //
+    pub nft_mint: InterfaceAccount<'info, Mint>,
+
+    // ata
+    //
+    #[account(
+        init_if_needed,
+        payer = buyer,
+        associated_token::mint = nft_mint,
+        associated_token::authority = buyer
+    )]
+    pub buyer_nft_ata: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    #[account(
+        mut,
+        associated_token::mint = nft_mint,
+        associated_token::authority = marketplace
+    )]
+    pub app_nft_ata: Box<InterfaceAccount<'info, TokenAccount>>,
+}
+
+impl<'info> AcceptSellForSolTrade<'info> {
+    pub fn accept_sell_for_sol_trade(&mut self, _collection: Pubkey, _token_id: u16) -> Result<()> {
+        let AcceptSellForSolTrade {
+            system_program,
+            token_program,
+            buyer,
+            seller,
+            admin,
+            marketplace,
+            balances,
+            trade,
+            nft_mint,
+            buyer_nft_ata,
+            app_nft_ata,
+            ..
+        } = self;
+
+        if trade.price.asset != Pubkey::default() {
+            Err(CustomError::AssetIsNotFound)?;
+        }
+
+        let fee = (trade.price.amount as u128 * marketplace.fee_bps as u128 / 10_000_u128) as u64;
+        let amount_to_seller = trade.price.amount - fee;
+
+        balances.value = balances
+            .value
+            .iter()
+            .cloned()
+            .map(|mut x| {
+                if x.asset == trade.price.asset {
+                    x.amount += fee;
+                }
+
+                x
+            })
+            .collect();
+
+        // transfer to seller
+        transfer_sol_from_user(amount_to_seller, buyer, seller, system_program)?;
+
+        // pay fee
+        transfer_sol_from_user(fee, buyer, &marketplace.to_account_info(), system_program)?;
+
+        // receive nft
+        transfer_token_from_program(
+            1,
+            nft_mint,
+            app_nft_ata,
+            buyer_nft_ata,
+            &[b"marketplace", admin.key().as_ref()],
+            marketplace.bump.marketplace,
             marketplace,
             token_program,
         )?;

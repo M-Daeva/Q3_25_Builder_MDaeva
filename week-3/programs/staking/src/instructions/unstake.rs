@@ -5,7 +5,7 @@ use {
     },
     anchor_lang::prelude::*,
     anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface},
-    base::{error::NftError, helpers::transfer_from_program},
+    base::{error::NftError, helpers::transfer_token_from_program},
 };
 
 #[derive(Accounts)]
@@ -71,7 +71,7 @@ impl<'info> Unstake<'info> {
         ));
         user_vault.tokens.retain(|x| x != &token_id);
 
-        transfer_from_program(
+        transfer_token_from_program(
             1,
             nft_mint,
             &app_nft_ata,

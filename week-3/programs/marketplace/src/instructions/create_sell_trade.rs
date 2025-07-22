@@ -1,7 +1,7 @@
 use {
     crate::{
         error::CustomError,
-        state::{Asset, Marketplace, Trade},
+        state::{AssetItem, Marketplace, Trade},
     },
     anchor_lang::prelude::*,
     anchor_spl::{
@@ -10,7 +10,7 @@ use {
     },
     base::{
         error::NftError,
-        helpers::{deserialize_account, get_space, transfer_from_user},
+        helpers::{deserialize_account, get_space, transfer_token_from_user},
     },
 };
 
@@ -32,7 +32,7 @@ pub struct CreateSellTrade<'info> {
     //
     #[account(
         seeds = [b"marketplace", admin.key().as_ref()],
-        bump = marketplace.marketplace_bump
+        bump = marketplace.bump.marketplace
     )]
     pub marketplace: Account<'info, Marketplace>,
 
@@ -90,29 +90,27 @@ impl<'info> CreateSellTrade<'info> {
         bump: u8,
         collection: Pubkey,
         token_id: u16,
-        price_amount: u64,
-        price_asset: Asset,
+        price: AssetItem,
     ) -> Result<()> {
         let CreateSellTrade {
-            system_program,
             token_program,
-            associated_token_program,
-            nft_program,
             seller,
-            admin,
             marketplace,
             trade,
             token_account,
             nft_mint,
-            token_mint,
             seller_nft_ata,
-            seller_token_ata,
             app_nft_ata,
+            ..
         } = self;
+
+        if !marketplace.asset_whitelist.contains(&price.asset) {
+            Err(CustomError::AssetIsNotFound)?;
+        }
 
         let nft_token: crate::state::Token = deserialize_account(token_account)?;
 
-        if !marketplace.asset_whitelist.contains(&price_asset) {
+        if nft_mint.key() != nft_token.mint {
             Err(CustomError::AssetIsNotFound)?;
         }
 
@@ -123,21 +121,16 @@ impl<'info> CreateSellTrade<'info> {
             Err(NftError::CollectionIsNotFound)?;
         }
 
-        if nft_token.mint != nft_mint.key() {
-            Err(CustomError::AssetIsNotFound)?;
-        }
-
         trade.set_inner(Trade {
             bump,
             is_sell_nft_trade: true,
             creator: seller.key(),
             collection,
             token_id,
-            price_asset,
-            price_amount,
+            price,
         });
 
-        transfer_from_user(
+        transfer_token_from_user(
             1,
             nft_mint,
             seller_nft_ata,

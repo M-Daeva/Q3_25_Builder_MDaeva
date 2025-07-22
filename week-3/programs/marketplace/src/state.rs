@@ -3,8 +3,7 @@ use anchor_lang::prelude::*;
 #[account]
 #[derive(InitSpace)]
 pub struct Marketplace {
-    pub marketplace_bump: u8,
-    pub balances_bump: u8,
+    pub bump: Bump,
     /// The wallet address of the marketplace administrator/authority
     pub admin: Pubkey,
     /// The marketplace fee percentage in basis points (e.g., 250 = 2.5%)
@@ -12,23 +11,31 @@ pub struct Marketplace {
     #[max_len(32)]
     pub collection_whitelist: Vec<Pubkey>,
     #[max_len(32)]
-    pub asset_whitelist: Vec<Asset>,
+    pub asset_whitelist: Vec<Pubkey>,
     /// The name of the marketplace used for branding and identification
     #[max_len(32)]
     pub name: String,
+}
+
+#[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone)]
+pub struct Bump {
+    pub marketplace: u8,
+    pub balances: u8,
+    pub treasury: u8,
 }
 
 #[account]
 #[derive(InitSpace)]
 pub struct Balances {
     #[max_len(32)]
-    pub value: Vec<BalanceItem>,
+    pub value: Vec<AssetItem>,
 }
 
 #[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Debug)]
-pub struct BalanceItem {
+pub struct AssetItem {
     pub amount: u64,
-    pub asset: Asset,
+    /// Sol is Pubkey::default()
+    pub asset: Pubkey,
 }
 
 #[account]
@@ -39,14 +46,7 @@ pub struct Trade {
     pub creator: Pubkey,
     pub collection: Pubkey,
     pub token_id: u16,
-    pub price_amount: u64,
-    pub price_asset: Asset,
-}
-
-#[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Debug)]
-pub enum Asset {
-    Sol, // TODO: use Pubkey::default
-    Mint(Pubkey),
+    pub price: AssetItem,
 }
 
 // nft program

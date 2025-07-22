@@ -272,13 +272,13 @@ export class MarketplaceHelpers {
   async tryInit(
     feeBps: number,
     collectionWhitelist: PublicKey[],
-    assetWhitelist: Asset[],
+    assetWhitelist: PublicKey[],
     name: string,
     params: TxParams = {},
     isDisplayed: boolean = false
   ): Promise<anchor.web3.TransactionSignature> {
     const ix = await this.program.methods
-      .init(feeBps, collectionWhitelist, getAssets(assetWhitelist), name)
+      .init(feeBps, collectionWhitelist, assetWhitelist, name)
       .accounts({})
       .instruction();
 
@@ -294,36 +294,54 @@ export class MarketplaceHelpers {
     collection: PublicKey,
     tokenId: number,
     priceAmount: number,
-    priceAsset: Asset,
+    priceAsset: PublicKey,
     params: TxParams = {},
     isDisplayed: boolean = false
   ): Promise<anchor.web3.TransactionSignature> {
     const { admin } = await this.getMarketplace();
 
-    const ix = isSellNftTrade
-      ? await this.program.methods
-          .createSellTrade(
-            collection,
-            tokenId,
-            new anchor.BN(priceAmount),
-            getAssets([priceAsset])[0]
-          )
+    let instructions: anchor.web3.TransactionInstruction[] = [];
+
+    if (isSellNftTrade) {
+      const ix = await this.program.methods
+        .createSellTrade(collection, tokenId, {
+          amount: new anchor.BN(priceAmount),
+          asset: priceAsset,
+        })
+        .accounts({
+          admin,
+          seller: userKeypair.publicKey,
+          tokenProgram: spl.TOKEN_PROGRAM_ID,
+          nftProgram,
+          nftMint,
+          tokenMint,
+        })
+        .instruction();
+
+      instructions.push(ix);
+    } else {
+      if (priceAsset === PublicKey.default) {
+        const ix = await this.program.methods
+          .createBuyWithSolTrade(collection, tokenId, {
+            amount: new anchor.BN(priceAmount),
+            asset: priceAsset,
+          })
           .accounts({
             admin,
-            seller: userKeypair.publicKey,
+            buyer: userKeypair.publicKey,
             tokenProgram: spl.TOKEN_PROGRAM_ID,
             nftProgram,
             nftMint,
-            tokenMint,
           })
-          .instruction()
-      : await this.program.methods
-          .createBuyTrade(
-            collection,
-            tokenId,
-            new anchor.BN(priceAmount),
-            getAssets([priceAsset])[0]
-          )
+          .instruction();
+
+        instructions.push(ix);
+      } else {
+        const ix = await this.program.methods
+          .createBuyWithTokenTrade(collection, tokenId, {
+            amount: new anchor.BN(priceAmount),
+            asset: priceAsset,
+          })
           .accounts({
             admin,
             buyer: userKeypair.publicKey,
@@ -334,12 +352,16 @@ export class MarketplaceHelpers {
           })
           .instruction();
 
+        instructions.push(ix);
+      }
+    }
+
     const modifiedParams = {
       ...params,
       signers: [...(params.signers || []), userKeypair],
     };
 
-    return await this.handleTx([ix], modifiedParams, isDisplayed);
+    return await this.handleTx(instructions, modifiedParams, isDisplayed);
   }
 
   async tryAcceptTrade(
@@ -356,21 +378,55 @@ export class MarketplaceHelpers {
     const { admin } = await this.getMarketplace();
     const trade = await this.getTrade(creator, collection, tokenId);
 
-    const ix = trade.isSellNftTrade
-      ? await this.program.methods
-          .acceptSellTrade(collection, tokenId)
+    let instructions: anchor.web3.TransactionInstruction[] = [];
+
+    if (trade.isSellNftTrade) {
+      if (trade.price.asset === PublicKey.default) {
+        const ix = await this.program.methods
+          .acceptSellForSolTrade(collection, tokenId)
           .accounts({
             admin,
             buyer: userKeypair.publicKey,
             seller: creator,
             tokenProgram: spl.TOKEN_PROGRAM_ID,
-            nftProgram,
+            nftMint,
+          })
+          .instruction();
+
+        instructions.push(ix);
+      } else {
+        const ix = await this.program.methods
+          .acceptSellForTokenTrade(collection, tokenId)
+          .accounts({
+            admin,
+            buyer: userKeypair.publicKey,
+            seller: creator,
+            tokenProgram: spl.TOKEN_PROGRAM_ID,
             nftMint,
             tokenMint,
           })
-          .instruction()
-      : await this.program.methods
-          .acceptBuyTrade(collection, tokenId)
+          .instruction();
+
+        instructions.push(ix);
+      }
+    } else {
+      if (trade.price.asset === PublicKey.default) {
+        const ix = await this.program.methods
+          .acceptBuyWithSolTrade(collection, tokenId)
+          .accounts({
+            admin,
+            buyer: creator,
+            seller: userKeypair.publicKey,
+            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            nftProgram,
+            nftMint,
+          })
+          .instruction();
+
+        instructions.push(ix);
+      } else {
+        const ix = await this.program.methods
+          .acceptBuyWithTokenTrade(collection, tokenId)
           .accounts({
             admin,
             buyer: creator,
@@ -382,12 +438,16 @@ export class MarketplaceHelpers {
           })
           .instruction();
 
+        instructions.push(ix);
+      }
+    }
+
     const modifiedParams = {
       ...params,
       signers: [...(params.signers || []), userKeypair],
     };
 
-    return await this.handleTx([ix], modifiedParams, isDisplayed);
+    return await this.handleTx(instructions, modifiedParams, isDisplayed);
   }
 
   async tryWithdrawFee(
@@ -400,14 +460,35 @@ export class MarketplaceHelpers {
     let promiseList: Promise<anchor.web3.TransactionInstruction>[] = [];
 
     for (const { asset } of balances) {
-      if (!("sol" in asset)) {
+      if (asset === PublicKey.default) {
         const ix = this.program.methods
-          .withdrawFee()
+          .withdrawSolFee()
           .accounts({
             admin,
             sender: this.provider.wallet.publicKey,
-            tokenProgram: spl.TOKEN_PROGRAM_ID,
-            tokenMint: asset?.mint[0],
+          })
+          .instruction();
+
+        promiseList.push(ix);
+      } else {
+        // get the mint account to determine which token program owns it
+        const mintAccount = await this.provider.connection.getAccountInfo(
+          asset
+        );
+        if (!mintAccount) {
+          throw new Error(`Mint account ${asset.toString()} not found`);
+        }
+
+        // the token program is the owner of the mint account
+        const tokenProgram = mintAccount.owner;
+
+        const ix = this.program.methods
+          .withdrawTokenFee()
+          .accounts({
+            admin,
+            sender: this.provider.wallet.publicKey,
+            tokenProgram,
+            tokenMint: asset,
           })
           .instruction();
 

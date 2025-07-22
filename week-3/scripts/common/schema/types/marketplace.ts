@@ -15,16 +15,385 @@ export type Marketplace = {
   },
   "instructions": [
     {
-      "name": "acceptBuyTrade",
+      "name": "acceptBuyWithSolTrade",
       "discriminator": [
-        202,
-        198,
+        26,
+        146,
+        224,
         147,
+        36,
+        115,
+        30,
+        148
+      ],
+      "accounts": [
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "tokenProgram"
+        },
+        {
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "nftProgram"
+        },
+        {
+          "name": "seller",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "admin"
+        },
+        {
+          "name": "buyer"
+        },
+        {
+          "name": "treasury",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  101,
+                  97,
+                  115,
+                  117,
+                  114,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "admin"
+              }
+            ]
+          }
+        },
+        {
+          "name": "marketplace",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116,
+                  112,
+                  108,
+                  97,
+                  99,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "admin"
+              }
+            ]
+          }
+        },
+        {
+          "name": "balances",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  97,
+                  108,
+                  97,
+                  110,
+                  99,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "admin"
+              }
+            ]
+          }
+        },
+        {
+          "name": "trade",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  97,
+                  100,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "buyer"
+              },
+              {
+                "kind": "arg",
+                "path": "collection"
+              },
+              {
+                "kind": "arg",
+                "path": "tokenId"
+              }
+            ]
+          }
+        },
+        {
+          "name": "tokenAccount",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  107,
+                  101,
+                  110
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "collection"
+              },
+              {
+                "kind": "arg",
+                "path": "tokenId"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "nftProgram"
+            }
+          }
+        },
+        {
+          "name": "nftMint"
+        },
+        {
+          "name": "buyerNftAta",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "buyer"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "nftMint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "sellerNftAta",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "seller"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "nftMint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "collection",
+          "type": "pubkey"
+        },
+        {
+          "name": "tokenId",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "acceptBuyWithTokenTrade",
+      "discriminator": [
+        98,
+        95,
+        18,
+        119,
         233,
-        105,
-        160,
-        235,
-        37
+        192,
+        198,
+        160
       ],
       "accounts": [
         {
@@ -542,16 +911,16 @@ export type Marketplace = {
       ]
     },
     {
-      "name": "acceptSellTrade",
+      "name": "acceptSellForSolTrade",
       "discriminator": [
-        180,
-        95,
-        161,
-        32,
-        227,
-        117,
-        128,
-        212
+        140,
+        52,
+        224,
+        171,
+        131,
+        39,
+        21,
+        211
       ],
       "accounts": [
         {
@@ -566,7 +935,342 @@ export type Marketplace = {
           "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
-          "name": "nftProgram"
+          "name": "buyer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "seller",
+          "writable": true
+        },
+        {
+          "name": "admin"
+        },
+        {
+          "name": "treasury",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  101,
+                  97,
+                  115,
+                  117,
+                  114,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "admin"
+              }
+            ]
+          }
+        },
+        {
+          "name": "marketplace",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116,
+                  112,
+                  108,
+                  97,
+                  99,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "admin"
+              }
+            ]
+          }
+        },
+        {
+          "name": "balances",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  97,
+                  108,
+                  97,
+                  110,
+                  99,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "admin"
+              }
+            ]
+          }
+        },
+        {
+          "name": "trade",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  97,
+                  100,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "seller"
+              },
+              {
+                "kind": "arg",
+                "path": "collection"
+              },
+              {
+                "kind": "arg",
+                "path": "tokenId"
+              }
+            ]
+          }
+        },
+        {
+          "name": "nftMint"
+        },
+        {
+          "name": "buyerNftAta",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "buyer"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "nftMint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "appNftAta",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "marketplace"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "nftMint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "collection",
+          "type": "pubkey"
+        },
+        {
+          "name": "tokenId",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "acceptSellForTokenTrade",
+      "discriminator": [
+        221,
+        23,
+        86,
+        210,
+        15,
+        179,
+        241,
+        229
+      ],
+      "accounts": [
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "tokenProgram"
+        },
+        {
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
           "name": "buyer",
@@ -660,35 +1364,6 @@ export type Marketplace = {
                 "path": "tokenId"
               }
             ]
-          }
-        },
-        {
-          "name": "tokenAccount",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  116,
-                  111,
-                  107,
-                  101,
-                  110
-                ]
-              },
-              {
-                "kind": "arg",
-                "path": "collection"
-              },
-              {
-                "kind": "arg",
-                "path": "tokenId"
-              }
-            ],
-            "program": {
-              "kind": "account",
-              "path": "nftProgram"
-            }
           }
         },
         {
@@ -1160,16 +1835,275 @@ export type Marketplace = {
       ]
     },
     {
-      "name": "createBuyTrade",
+      "name": "createBuyWithSolTrade",
       "discriminator": [
-        135,
-        51,
-        88,
-        58,
-        109,
-        53,
-        6,
-        167
+        54,
+        90,
+        19,
+        112,
+        82,
+        180,
+        24,
+        122
+      ],
+      "accounts": [
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "tokenProgram"
+        },
+        {
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "nftProgram"
+        },
+        {
+          "name": "buyer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "admin"
+        },
+        {
+          "name": "treasury",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  101,
+                  97,
+                  115,
+                  117,
+                  114,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "admin"
+              }
+            ]
+          }
+        },
+        {
+          "name": "marketplace",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116,
+                  112,
+                  108,
+                  97,
+                  99,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "admin"
+              }
+            ]
+          }
+        },
+        {
+          "name": "trade",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  97,
+                  100,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "buyer"
+              },
+              {
+                "kind": "arg",
+                "path": "collection"
+              },
+              {
+                "kind": "arg",
+                "path": "tokenId"
+              }
+            ]
+          }
+        },
+        {
+          "name": "tokenAccount",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  107,
+                  101,
+                  110
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "collection"
+              },
+              {
+                "kind": "arg",
+                "path": "tokenId"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "nftProgram"
+            }
+          }
+        },
+        {
+          "name": "nftMint"
+        },
+        {
+          "name": "buyerNftAta",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "buyer"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "nftMint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "collection",
+          "type": "pubkey"
+        },
+        {
+          "name": "tokenId",
+          "type": "u16"
+        },
+        {
+          "name": "price",
+          "type": {
+            "defined": {
+              "name": "assetItem"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "createBuyWithTokenTrade",
+      "discriminator": [
+        205,
+        252,
+        121,
+        16,
+        94,
+        239,
+        27,
+        180
       ],
       "accounts": [
         {
@@ -1567,14 +2501,10 @@ export type Marketplace = {
           "type": "u16"
         },
         {
-          "name": "priceAmount",
-          "type": "u64"
-        },
-        {
-          "name": "priceAsset",
+          "name": "price",
           "type": {
             "defined": {
-              "name": "asset"
+              "name": "assetItem"
             }
           }
         }
@@ -1988,14 +2918,10 @@ export type Marketplace = {
           "type": "u16"
         },
         {
-          "name": "priceAmount",
-          "type": "u64"
-        },
-        {
-          "name": "priceAsset",
+          "name": "price",
           "type": {
             "defined": {
-              "name": "asset"
+              "name": "assetItem"
             }
           }
         }
@@ -2022,6 +2948,30 @@ export type Marketplace = {
           "name": "admin",
           "writable": true,
           "signer": true
+        },
+        {
+          "name": "treasury",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  101,
+                  97,
+                  115,
+                  117,
+                  114,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "admin"
+              }
+            ]
+          }
         },
         {
           "name": "marketplace",
@@ -2091,11 +3041,7 @@ export type Marketplace = {
         {
           "name": "assetWhitelist",
           "type": {
-            "vec": {
-              "defined": {
-                "name": "asset"
-              }
-            }
+            "vec": "pubkey"
           }
         },
         {
@@ -2105,16 +3051,122 @@ export type Marketplace = {
       ]
     },
     {
-      "name": "withdrawFee",
+      "name": "withdrawSolFee",
       "discriminator": [
-        14,
-        122,
-        231,
-        218,
-        31,
-        238,
-        223,
-        150
+        47,
+        35,
+        105,
+        219,
+        190,
+        149,
+        186,
+        185
+      ],
+      "accounts": [
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "sender",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "admin"
+        },
+        {
+          "name": "treasury",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  101,
+                  97,
+                  115,
+                  117,
+                  114,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "admin"
+              }
+            ]
+          }
+        },
+        {
+          "name": "marketplace",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116,
+                  112,
+                  108,
+                  97,
+                  99,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "admin"
+              }
+            ]
+          }
+        },
+        {
+          "name": "balances",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  97,
+                  108,
+                  97,
+                  110,
+                  99,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "admin"
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "withdrawTokenFee",
+      "discriminator": [
+        52,
+        183,
+        125,
+        234,
+        165,
+        30,
+        67,
+        19
       ],
       "accounts": [
         {
@@ -2430,24 +3482,7 @@ export type Marketplace = {
   ],
   "types": [
     {
-      "name": "asset",
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "sol"
-          },
-          {
-            "name": "mint",
-            "fields": [
-              "pubkey"
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "name": "balanceItem",
+      "name": "assetItem",
       "type": {
         "kind": "struct",
         "fields": [
@@ -2457,11 +3492,10 @@ export type Marketplace = {
           },
           {
             "name": "asset",
-            "type": {
-              "defined": {
-                "name": "asset"
-              }
-            }
+            "docs": [
+              "Sol is Pubkey::default()"
+            ],
+            "type": "pubkey"
           }
         ]
       }
@@ -2476,10 +3510,30 @@ export type Marketplace = {
             "type": {
               "vec": {
                 "defined": {
-                  "name": "balanceItem"
+                  "name": "assetItem"
                 }
               }
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "bump",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "marketplace",
+            "type": "u8"
+          },
+          {
+            "name": "balances",
+            "type": "u8"
+          },
+          {
+            "name": "treasury",
+            "type": "u8"
           }
         ]
       }
@@ -2490,12 +3544,12 @@ export type Marketplace = {
         "kind": "struct",
         "fields": [
           {
-            "name": "marketplaceBump",
-            "type": "u8"
-          },
-          {
-            "name": "balancesBump",
-            "type": "u8"
+            "name": "bump",
+            "type": {
+              "defined": {
+                "name": "bump"
+              }
+            }
           },
           {
             "name": "admin",
@@ -2520,11 +3574,7 @@ export type Marketplace = {
           {
             "name": "assetWhitelist",
             "type": {
-              "vec": {
-                "defined": {
-                  "name": "asset"
-                }
-              }
+              "vec": "pubkey"
             }
           },
           {
@@ -2563,14 +3613,10 @@ export type Marketplace = {
             "type": "u16"
           },
           {
-            "name": "priceAmount",
-            "type": "u64"
-          },
-          {
-            "name": "priceAsset",
+            "name": "price",
             "type": {
               "defined": {
-                "name": "asset"
+                "name": "assetItem"
               }
             }
           }

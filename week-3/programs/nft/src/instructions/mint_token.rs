@@ -5,7 +5,7 @@ use {
         associated_token::AssociatedToken,
         token_interface::{Mint, TokenAccount, TokenInterface},
     },
-    base::helpers::{get_space, mint_to},
+    base::helpers::{get_space, mint_token_to},
 };
 
 #[derive(Accounts)]
@@ -90,7 +90,7 @@ impl<'info> MintToken<'info> {
             metadata,
         });
 
-        mint_to(
+        mint_token_to(
             1,
             mint,
             &recipient_mint_ata,
