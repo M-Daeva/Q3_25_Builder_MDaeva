@@ -10,7 +10,7 @@ pub mod state;
 use {
     instructions::{
         accept_buy_trade::*, accept_sell_trade::*, create_buy_trade::*, create_sell_trade::*,
-        init::*,
+        init::*, withdraw_fee::*,
     },
     state::*,
 };
@@ -30,6 +30,7 @@ pub mod marketplace {
     ) -> Result<()> {
         ctx.accounts.init(
             ctx.bumps.marketplace,
+            ctx.bumps.balances,
             fee_bps,
             collection_whitelist,
             asset_whitelist,
@@ -84,7 +85,10 @@ pub mod marketplace {
     ) -> Result<()> {
         ctx.accounts.accept_buy_trade(collection, token_id)
     }
+
+    pub fn withdraw_fee(ctx: Context<WithdrawFee>) -> Result<()> {
+        ctx.accounts.withdraw_fee()
+    }
 }
 
 // TODO: remove_trade
-// TODO: withdraw_fee

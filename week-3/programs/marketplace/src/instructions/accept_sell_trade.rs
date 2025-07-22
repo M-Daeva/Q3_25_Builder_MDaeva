@@ -35,7 +35,7 @@ pub struct AcceptSellTrade<'info> {
     //
     #[account(
         seeds = [b"marketplace", admin.key().as_ref()],
-        bump = marketplace.bump
+        bump = marketplace.marketplace_bump
     )]
     pub marketplace: Account<'info, Marketplace>,
 
@@ -174,7 +174,7 @@ impl<'info> AcceptSellTrade<'info> {
             app_nft_ata,
             buyer_nft_ata,
             &[b"marketplace", admin.key().as_ref()],
-            marketplace.bump,
+            marketplace.marketplace_bump,
             marketplace,
             token_program,
         )?;

@@ -1,5 +1,5 @@
 use {
-    crate::state::{Asset, Marketplace},
+    crate::state::{Asset, Balances, Marketplace},
     anchor_lang::prelude::*,
     base::helpers::get_space,
 };
@@ -21,19 +21,32 @@ pub struct Init<'info> {
         bump
     )]
     pub marketplace: Account<'info, Marketplace>,
+
+    #[account(
+        init,
+        payer = admin,
+        space = get_space(Balances::INIT_SPACE),
+        seeds = [b"balances", admin.key().as_ref()],
+        bump
+    )]
+    pub balances: Account<'info, Balances>,
 }
 
 impl<'info> Init<'info> {
     pub fn init(
         &mut self,
-        bump: u8,
+        marketplace_bump: u8,
+        balances_bump: u8,
         fee_bps: u16,
         collection_whitelist: Vec<Pubkey>,
         asset_whitelist: Vec<Asset>,
         name: String,
     ) -> Result<()> {
         let Init {
-            admin, marketplace, ..
+            admin,
+            marketplace,
+            balances,
+            ..
         } = self;
 
         // TODO: guards:
@@ -42,13 +55,16 @@ impl<'info> Init<'info> {
         // asset_whitelist
 
         marketplace.set_inner(Marketplace {
-            bump,
+            marketplace_bump,
+            balances_bump,
             admin: admin.key(),
             fee_bps,
             collection_whitelist,
             asset_whitelist,
             name,
         });
+
+        balances.set_inner(Balances { value: vec![] });
 
         Ok(())
     }
