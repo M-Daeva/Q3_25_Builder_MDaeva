@@ -17,18 +17,8 @@ pub struct Marketplace {
     pub name: String,
 }
 
-// #[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone)]
-// pub struct BumpA {
-//     /// PDA bump seed for the marketplace account
-//     pub marketplace: u8,
-//     /// PDA bump seed for the marketplace treasury account
-//     pub treasury: u8,
-//     /// PDA bump seed for the marketplace rewards distribution account
-//     pub rewards: u8,
-// }
-
 #[account]
-#[derive(InitSpace)]
+#[derive(InitSpace, Debug)]
 pub struct Trade {
     pub bump: u8,
     pub is_sell_nft_trade: bool,
@@ -39,9 +29,9 @@ pub struct Trade {
     pub price_asset: Asset,
 }
 
-#[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone, PartialEq)]
+#[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Debug)]
 pub enum Asset {
-    Sol,
+    Sol, // TODO: use Pubkey::default
     Mint(Pubkey),
 }
 

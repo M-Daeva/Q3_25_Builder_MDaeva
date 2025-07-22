@@ -4,39 +4,43 @@ use {
         state::{Asset, Marketplace, Trade},
     },
     anchor_lang::prelude::*,
-    anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface},
+    anchor_spl::{
+        associated_token::AssociatedToken,
+        token_interface::{Mint, TokenAccount, TokenInterface},
+    },
     base::{
         error::NftError,
-        helpers::{deserialize_account, get_space, transfer_to_program},
+        helpers::{deserialize_account, get_space, transfer_from_user},
     },
 };
 
 #[derive(Accounts)]
-#[instruction(is_sell_nft_trade: bool, collection: Pubkey, token_id: u16)]
-pub struct CreateTrade<'info> {
+#[instruction(collection: Pubkey, token_id: u16)]
+pub struct CreateSellTrade<'info> {
     pub system_program: Program<'info, System>,
     pub token_program: Interface<'info, TokenInterface>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
     /// CHECK: nft_program
     pub nft_program: AccountInfo<'info>,
 
     #[account(mut)]
-    pub user: Signer<'info>,
+    pub seller: Signer<'info>,
 
     pub admin: SystemAccount<'info>,
 
-    // data storages
+    // data storage
     //
     #[account(
         seeds = [b"marketplace", admin.key().as_ref()],
-        bump
+        bump = marketplace.bump
     )]
     pub marketplace: Account<'info, Marketplace>,
 
     #[account(
         init,
-        payer = user,
+        payer = seller,
         space = get_space(Trade::INIT_SPACE),
-        seeds = [b"trade", user.key().as_ref(), collection.as_ref(), token_id.to_le_bytes().as_ref()],
+        seeds = [b"trade", seller.key().as_ref(), collection.as_ref(), token_id.to_le_bytes().as_ref()],
         bump
     )]
     pub trade: Account<'info, Trade>,
@@ -52,49 +56,65 @@ pub struct CreateTrade<'info> {
     // mint
     //
     pub nft_mint: InterfaceAccount<'info, Mint>,
+    pub token_mint: InterfaceAccount<'info, Mint>,
 
     // ata
     //
     #[account(
         mut,
         associated_token::mint = nft_mint,
-        associated_token::authority = user
+        associated_token::authority = seller
     )]
-    pub user_nft_ata: InterfaceAccount<'info, TokenAccount>,
+    pub seller_nft_ata: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
-        mut,
+        init_if_needed,
+        payer = seller,
+        associated_token::mint = token_mint,
+        associated_token::authority = seller
+    )]
+    pub seller_token_ata: InterfaceAccount<'info, TokenAccount>,
+
+    #[account(
+        init_if_needed,
+        payer = seller,
         associated_token::mint = nft_mint,
         associated_token::authority = marketplace
     )]
     pub app_nft_ata: InterfaceAccount<'info, TokenAccount>,
 }
 
-impl<'info> CreateTrade<'info> {
-    pub fn create_trade(
+impl<'info> CreateSellTrade<'info> {
+    pub fn create_sell_trade(
         &mut self,
         bump: u8,
-        is_sell_nft_trade: bool,
         collection: Pubkey,
         token_id: u16,
         price_amount: u64,
         price_asset: Asset,
     ) -> Result<()> {
-        let CreateTrade {
+        let CreateSellTrade {
             system_program,
             token_program,
+            associated_token_program,
             nft_program,
-            user,
+            seller,
             admin,
             marketplace,
             trade,
             token_account,
             nft_mint,
-            user_nft_ata,
+            token_mint,
+            seller_nft_ata,
+            seller_token_ata,
             app_nft_ata,
         } = self;
 
         let nft_token: crate::state::Token = deserialize_account(token_account)?;
+
+        if !marketplace.asset_whitelist.contains(&price_asset) {
+            Err(CustomError::AssetIsNotFound)?;
+        }
 
         if !marketplace
             .collection_whitelist
@@ -104,35 +124,27 @@ impl<'info> CreateTrade<'info> {
         }
 
         if nft_token.mint != nft_mint.key() {
-            Err(ProgramError::InvalidAccountData)?;
-        }
-
-        if !marketplace.asset_whitelist.contains(&price_asset) {
             Err(CustomError::AssetIsNotFound)?;
         }
 
         trade.set_inner(Trade {
             bump,
-            is_sell_nft_trade,
-            creator: user.key(),
+            is_sell_nft_trade: true,
+            creator: seller.key(),
             collection,
             token_id,
-            price_amount,
             price_asset,
+            price_amount,
         });
 
-        if is_sell_nft_trade {
-            transfer_to_program(
-                1,
-                nft_mint,
-                &user_nft_ata,
-                &app_nft_ata,
-                &user,
-                token_program,
-            )?;
-        }
-
-        // TODO: add else branch
+        transfer_from_user(
+            1,
+            nft_mint,
+            seller_nft_ata,
+            app_nft_ata,
+            seller,
+            token_program,
+        )?;
 
         Ok(())
     }

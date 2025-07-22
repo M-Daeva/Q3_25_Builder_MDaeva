@@ -285,6 +285,111 @@ export class MarketplaceHelpers {
     return await this.handleTx([ix], params, isDisplayed);
   }
 
+  async tryCreateTrade(
+    userKeypair: Keypair,
+    nftProgram: anchor.Address,
+    nftMint: PublicKey,
+    tokenMint: PublicKey,
+    isSellNftTrade: boolean,
+    collection: PublicKey,
+    tokenId: number,
+    priceAmount: number,
+    priceAsset: Asset,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const { admin } = await this.getMarketplace();
+
+    const ix = isSellNftTrade
+      ? await this.program.methods
+          .createSellTrade(
+            collection,
+            tokenId,
+            new anchor.BN(priceAmount),
+            getAssets([priceAsset])[0]
+          )
+          .accounts({
+            admin,
+            seller: userKeypair.publicKey,
+            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            nftProgram,
+            nftMint,
+            tokenMint,
+          })
+          .instruction()
+      : await this.program.methods
+          .createBuyTrade(
+            collection,
+            tokenId,
+            new anchor.BN(priceAmount),
+            getAssets([priceAsset])[0]
+          )
+          .accounts({
+            admin,
+            buyer: userKeypair.publicKey,
+            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            nftProgram,
+            nftMint,
+            tokenMint,
+          })
+          .instruction();
+
+    const modifiedParams = {
+      ...params,
+      signers: [...(params.signers || []), userKeypair],
+    };
+
+    return await this.handleTx([ix], modifiedParams, isDisplayed);
+  }
+
+  async tryAcceptTrade(
+    userKeypair: Keypair,
+    nftProgram: anchor.Address,
+    nftMint: PublicKey,
+    tokenMint: PublicKey,
+    creator: PublicKey,
+    collection: PublicKey,
+    tokenId: number,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const { admin } = await this.getMarketplace();
+    const trade = await this.getTrade(creator, collection, tokenId);
+
+    const ix = trade.isSellNftTrade
+      ? await this.program.methods
+          .acceptSellTrade(collection, tokenId)
+          .accounts({
+            admin,
+            buyer: userKeypair.publicKey,
+            seller: creator,
+            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            nftProgram,
+            nftMint,
+            tokenMint,
+          })
+          .instruction()
+      : await this.program.methods
+          .acceptBuyTrade(collection, tokenId)
+          .accounts({
+            admin,
+            buyer: creator,
+            seller: userKeypair.publicKey,
+            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            nftProgram,
+            nftMint,
+            tokenMint,
+          })
+          .instruction();
+
+    const modifiedParams = {
+      ...params,
+      signers: [...(params.signers || []), userKeypair],
+    };
+
+    return await this.handleTx([ix], modifiedParams, isDisplayed);
+  }
+
   async getMarketplace(isDisplayed: boolean = false) {
     const [pda] = PublicKey.findProgramAddressSync(
       [Buffer.from("marketplace"), this.provider.wallet.publicKey.toBuffer()],
@@ -292,6 +397,27 @@ export class MarketplaceHelpers {
     );
 
     const res = await this.program.account.marketplace.fetch(pda);
+
+    return logAndReturn(res, isDisplayed);
+  }
+
+  async getTrade(
+    user: PublicKey,
+    collection: PublicKey,
+    tokenId: number,
+    isDisplayed: boolean = false
+  ) {
+    const [pda] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("trade"),
+        user.toBuffer(),
+        collection.toBuffer(),
+        new anchor.BN(tokenId).toArrayLike(Buffer, "le", 2),
+      ],
+      this.program.programId
+    );
+
+    const res = await this.program.account.trade.fetch(pda);
 
     return logAndReturn(res, isDisplayed);
   }

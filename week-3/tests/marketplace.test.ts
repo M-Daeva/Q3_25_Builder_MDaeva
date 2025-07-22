@@ -1,4 +1,5 @@
 import * as anchor from "@coral-xyz/anchor";
+import * as spl from "@solana/spl-token";
 import { describe, expect, it } from "bun:test";
 import { Marketplace } from "../scripts/common/schema/types/marketplace";
 import { Nft } from "../scripts/common/schema/types/nft";
@@ -40,6 +41,11 @@ describe("marketplace", async () => {
   const marketplace = new MarketplaceHelpers(provider, marketplaceProgram);
 
   // generate new keypairs
+  const mintXKeypair = Keypair.generate();
+  const mintYKeypair = Keypair.generate();
+  await chain.createMint(mintXKeypair, 6, TX_PARAMS);
+  await chain.createMint(mintYKeypair, 6, TX_PARAMS);
+
   const admin = Keypair.generate();
   const seller = Keypair.generate();
   const buyer = Keypair.generate();
@@ -49,7 +55,18 @@ describe("marketplace", async () => {
     [admin, seller, buyer].map((x) => chain.requestAirdrop(x.publicKey, 2))
   );
 
-  // mint 2 tokens of each collection
+  // mint tokens for users
+  let promiseList = [];
+  for (const mintKeypair of [mintXKeypair, mintYKeypair]) {
+    for (const user of [admin, seller, buyer]) {
+      promiseList.push(
+        chain.mintTokens(100, mintKeypair.publicKey, user.publicKey, TX_PARAMS)
+      );
+    }
+  }
+  await Promise.all(promiseList);
+
+  // mint 2 nft tokens of each collection
   for (const [id, metadata] of [
     [0, "HellCats"],
     [1, "GalacticPunks"],
@@ -64,15 +81,10 @@ describe("marketplace", async () => {
     [0, 1, 2].map((x) => nft.getCollection(ownerKeypair.publicKey, x))
   );
 
-  // const token = await nft.getToken(
-  //   collection.address,
-  //   collection.nextTokenId - 1
-  // );
-
   await marketplace.tryInit(
     500,
     [hellCats, galacticPunks].map((x) => x.address),
-    ["sol"],
+    ["sol", mintXKeypair.publicKey],
     "Flip Guru",
     TX_PARAMS
   );
@@ -83,70 +95,53 @@ describe("marketplace", async () => {
       expect(config.feeBps).toEqual(500);
     });
 
-    // it("stake, claim", async () => {
-    //   const config = await staking.getConfig();
+    it("create and accept sell trade", async () => {
+      const hellCatsTokenA = await nft.getToken(hellCats.address, 0);
+      await marketplace.tryCreateTrade(
+        seller,
+        nftProgram.idl.address,
+        hellCatsTokenA.mint,
+        mintXKeypair.publicKey,
+        true,
+        hellCats.address,
+        hellCatsTokenA.id,
+        42_000,
+        mintXKeypair.publicKey,
+        TX_PARAMS
+      );
 
-    //   let stakerAAta = await chain.getTokenBalance(
-    //     token.mint,
-    //     stakerA.publicKey
-    //   );
-    //   expect(stakerAAta).toEqual(1);
+      const trade = await marketplace.getTrade(
+        seller.publicKey,
+        hellCats.address,
+        hellCatsTokenA.id
+      );
+      expect(trade.collection).toEqual(hellCats.address);
+      expect(trade.tokenId).toEqual(hellCatsTokenA.id);
 
-    //   let [configPda] = PublicKey.findProgramAddressSync(
-    //     [Buffer.from("config")],
-    //     publicKeyFromString(stakingProgram.idl.address)
-    //   );
-    //   let appAta = await chain.getTokenBalance(token.mint, configPda);
-    //   expect(appAta).toEqual(0);
+      const buyerTokensBefore = await chain.getTokenBalance(
+        mintXKeypair.publicKey,
+        buyer.publicKey
+      );
 
-    //   await staking.tryStake(
-    //     0,
-    //     token.mint,
-    //     nftProgram.idl.address,
-    //     stakerA,
-    //     TX_PARAMS
-    //   );
+      await marketplace.tryAcceptTrade(
+        buyer,
+        nftProgram.idl.address,
+        hellCatsTokenA.mint,
+        mintXKeypair.publicKey,
+        seller.publicKey,
+        hellCats.address,
+        hellCatsTokenA.id,
+        TX_PARAMS
+      );
 
-    //   stakerAAta = await chain.getTokenBalance(token.mint, stakerA.publicKey);
-    //   expect(stakerAAta).toEqual(0);
+      const buyerTokensAfter = await chain.getTokenBalance(
+        mintXKeypair.publicKey,
+        buyer.publicKey
+      );
 
-    //   [configPda] = PublicKey.findProgramAddressSync(
-    //     [Buffer.from("config")],
-    //     publicKeyFromString(stakingProgram.idl.address)
-    //   );
-    //   appAta = await chain.getTokenBalance(token.mint, configPda);
-    //   expect(appAta).toEqual(1);
-
-    //   await wait(1_000);
-    //   const stakerABalanceBefore = await chain.getTokenBalance(
-    //     config.rewardsMint,
-    //     stakerA.publicKey
-    //   );
-
-    //   await staking.tryClaim(stakerA, TX_PARAMS);
-    //   const stakerABalanceAfter = await chain.getTokenBalance(
-    //     config.rewardsMint,
-    //     stakerA.publicKey
-    //   );
-
-    //   expect(stakerABalanceAfter - stakerABalanceBefore).toBeGreaterThan(0);
-    // });
-
-    // it("unstake", async () => {
-    //   await staking.tryUnstake(0, token.mint, stakerA, TX_PARAMS);
-
-    //   const stakerAAta = await chain.getTokenBalance(
-    //     token.mint,
-    //     stakerA.publicKey
-    //   );
-    //   expect(stakerAAta).toEqual(1);
-
-    //   const [configPda] = PublicKey.findProgramAddressSync(
-    //     [Buffer.from("config")],
-    //     publicKeyFromString(stakingProgram.idl.address)
-    //   );
-    //   const appAta = await chain.getTokenBalance(token.mint, configPda);
-    //   expect(appAta).toEqual(0);
-    // });
+      expect(
+        Math.round(1_000 * (buyerTokensBefore - buyerTokensAfter))
+      ).toEqual(42);
+    });
   });
 });

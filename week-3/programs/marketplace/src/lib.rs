@@ -8,7 +8,10 @@ pub mod instructions;
 pub mod state;
 
 use {
-    instructions::{create_trade::*, init::*},
+    instructions::{
+        accept_buy_trade::*, accept_sell_trade::*, create_buy_trade::*, create_sell_trade::*,
+        init::*,
+    },
     state::*,
 };
 
@@ -34,25 +37,54 @@ pub mod marketplace {
         )
     }
 
-    pub fn create_trade(
-        ctx: Context<CreateTrade>,
-        is_sell_nft_trade: bool,
+    pub fn create_sell_trade(
+        ctx: Context<CreateSellTrade>,
         collection: Pubkey,
         token_id: u16,
         price_amount: u64,
         price_asset: Asset,
     ) -> Result<()> {
-        ctx.accounts.create_trade(
+        ctx.accounts.create_sell_trade(
             ctx.bumps.trade,
-            is_sell_nft_trade,
             collection,
             token_id,
             price_amount,
             price_asset,
         )
     }
+
+    pub fn create_buy_trade(
+        ctx: Context<CreateBuyTrade>,
+        collection: Pubkey,
+        token_id: u16,
+        price_amount: u64,
+        price_asset: Asset,
+    ) -> Result<()> {
+        ctx.accounts.create_buy_trade(
+            ctx.bumps.trade,
+            collection,
+            token_id,
+            price_amount,
+            price_asset,
+        )
+    }
+
+    pub fn accept_sell_trade(
+        ctx: Context<AcceptSellTrade>,
+        collection: Pubkey,
+        token_id: u16,
+    ) -> Result<()> {
+        ctx.accounts.accept_sell_trade(collection, token_id)
+    }
+
+    pub fn accept_buy_trade(
+        ctx: Context<AcceptBuyTrade>,
+        collection: Pubkey,
+        token_id: u16,
+    ) -> Result<()> {
+        ctx.accounts.accept_buy_trade(collection, token_id)
+    }
 }
 
 // TODO: remove_trade
-// TODO: accept_trade
 // TODO: withdraw_fee
