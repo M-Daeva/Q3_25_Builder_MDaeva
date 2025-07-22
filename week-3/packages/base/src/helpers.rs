@@ -46,7 +46,7 @@ pub fn get_space(struct_space: usize) -> usize {
     DISCRIMINATOR_SPACE + struct_space
 }
 
-pub fn transfer_to_program<'a>(
+pub fn transfer_from_user<'a>(
     amount: u64,
     mint: &InterfaceAccount<'a, Mint>,
     from: &InterfaceAccount<'a, TokenAccount>,

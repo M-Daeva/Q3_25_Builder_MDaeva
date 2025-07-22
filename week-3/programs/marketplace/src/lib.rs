@@ -4,20 +4,87 @@
 use anchor_lang::prelude::*;
 
 pub mod error;
-pub mod helpers;
 pub mod instructions;
 pub mod state;
 
-use instructions::{delist::*, init::*, list::*, purchase::*};
+use {
+    instructions::{
+        accept_buy_trade::*, accept_sell_trade::*, create_buy_trade::*, create_sell_trade::*,
+        init::*,
+    },
+    state::*,
+};
 
-declare_id!("8Y1PPAsKbeKiT361EbKeCrU9yE1bNLXWNnM7va2PMQ67");
+declare_id!("DWTez7iNT13kaqEEZfzFQb5Msv7JdF9EFKRize99wQTi");
 
 #[program]
 pub mod marketplace {
     use super::*;
 
-    //     pub fn init(ctx: Context<Init>, rewards_rate: u8, max_stake: u64) -> Result<()> {
-    //         unimplemented!()
-    //     }
-    // }
+    pub fn init(
+        ctx: Context<Init>,
+        fee_bps: u16,
+        collection_whitelist: Vec<Pubkey>,
+        asset_whitelist: Vec<Asset>,
+        name: String,
+    ) -> Result<()> {
+        ctx.accounts.init(
+            ctx.bumps.marketplace,
+            fee_bps,
+            collection_whitelist,
+            asset_whitelist,
+            name,
+        )
+    }
+
+    pub fn create_sell_trade(
+        ctx: Context<CreateSellTrade>,
+        collection: Pubkey,
+        token_id: u16,
+        price_amount: u64,
+        price_asset: Asset,
+    ) -> Result<()> {
+        ctx.accounts.create_sell_trade(
+            ctx.bumps.trade,
+            collection,
+            token_id,
+            price_amount,
+            price_asset,
+        )
+    }
+
+    pub fn create_buy_trade(
+        ctx: Context<CreateBuyTrade>,
+        collection: Pubkey,
+        token_id: u16,
+        price_amount: u64,
+        price_asset: Asset,
+    ) -> Result<()> {
+        ctx.accounts.create_buy_trade(
+            ctx.bumps.trade,
+            collection,
+            token_id,
+            price_amount,
+            price_asset,
+        )
+    }
+
+    pub fn accept_sell_trade(
+        ctx: Context<AcceptSellTrade>,
+        collection: Pubkey,
+        token_id: u16,
+    ) -> Result<()> {
+        ctx.accounts.accept_sell_trade(collection, token_id)
+    }
+
+    pub fn accept_buy_trade(
+        ctx: Context<AcceptBuyTrade>,
+        collection: Pubkey,
+        token_id: u16,
+    ) -> Result<()> {
+        ctx.accounts.accept_buy_trade(collection, token_id)
+    }
 }
+
+// TODO: remove_trade
+// TODO: withdraw_fee

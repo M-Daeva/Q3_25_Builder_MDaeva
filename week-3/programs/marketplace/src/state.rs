@@ -1,45 +1,48 @@
 use anchor_lang::prelude::*;
 
 #[account]
-// #[derive(InitSpace)] // Commented out but could be used for automatic space calculation
+#[derive(InitSpace)]
 pub struct Marketplace {
-    pub admin: Pubkey, // The wallet address of the marketplace administrator/authority
-    pub fee: u16,      // The marketplace fee percentage in basis points (e.g., 250 = 2.5%)
-    pub bump: u8,      // PDA bump seed for the marketplace account
-    pub treasury_bump: u8, // PDA bump seed for the marketplace treasury account
-    pub rewards_bump: u8, // PDA bump seed for the marketplace rewards distribution account
-
-    pub name: String, // The name of the marketplace used for branding and identification
-}
-
-// Implementation of the Space trait to define storage requirements
-impl Space for Marketplace {
-    /// Calculate the exact space needed for this account:
-    /// - 8 bytes: Account discriminator (automatically added by Anchor)
-    /// - 32 bytes: Pubkey for admin
-    /// - 2 bytes: u16 for fee
-    /// - 1 byte: u8 for bump
-    /// - 1 byte: u8 for treasury_bump
-    /// - 1 byte: u8 for rewards_bump
-    /// - 4 bytes: String prefix (length) + 32 bytes max for name content
-    const INIT_SPACE: usize = 8 + 32 + 2 + 1 + 1 + 1 + (4 + 32);
+    pub bump: u8,
+    /// The wallet address of the marketplace administrator/authority
+    pub admin: Pubkey,
+    /// The marketplace fee percentage in basis points (e.g., 250 = 2.5%)
+    pub fee_bps: u16,
+    #[max_len(32)]
+    pub collection_whitelist: Vec<Pubkey>,
+    #[max_len(32)]
+    pub asset_whitelist: Vec<Asset>,
+    /// The name of the marketplace used for branding and identification
+    #[max_len(32)]
+    pub name: String,
 }
 
 #[account]
-pub struct Listing {
-    pub maker: Pubkey,      // The wallet address of the seller who created this listing
-    pub maker_mint: Pubkey, // The mint address of the NFT being sold
-    pub price: u64,         // The selling price in lamports (SOL's smallest unit)
+#[derive(InitSpace, Debug)]
+pub struct Trade {
     pub bump: u8,
+    pub is_sell_nft_trade: bool,
+    pub creator: Pubkey,
+    pub collection: Pubkey,
+    pub token_id: u16,
+    pub price_amount: u64,
+    pub price_asset: Asset,
 }
 
-// Implementation of the Space trait to define storage requirements
-impl Space for Listing {
-    /// Calculate the exact space needed for this account:
-    /// - 8 bytes: Account discriminator (automatically added by Anchor)
-    /// - 32 bytes: Pubkey for maker
-    /// - 32 bytes: Pubkey for maker_mint
-    /// - 8 bytes: u64 for price
-    /// - 1 byte: u8 for bump
-    const INIT_SPACE: usize = 8 + 32 + 32 + 8 + 1;
+#[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Debug)]
+pub enum Asset {
+    Sol, // TODO: use Pubkey::default
+    Mint(Pubkey),
+}
+
+// nft program
+//
+#[derive(AnchorSerialize, AnchorDeserialize)]
+pub struct Token {
+    pub token_bump: u8,
+    pub mint_bump: u8,
+    pub id: u16,
+    pub collection: Pubkey,
+    pub mint: Pubkey,
+    pub metadata: String,
 }
