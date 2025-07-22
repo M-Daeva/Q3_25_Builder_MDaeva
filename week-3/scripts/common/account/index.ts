@@ -390,6 +390,36 @@ export class MarketplaceHelpers {
     return await this.handleTx([ix], modifiedParams, isDisplayed);
   }
 
+  async tryWithdrawFee(
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const { admin } = await this.getMarketplace();
+    const { value: balances } = await this.getBalances();
+
+    let promiseList: Promise<anchor.web3.TransactionInstruction>[] = [];
+
+    for (const { asset } of balances) {
+      if (!("sol" in asset)) {
+        const ix = this.program.methods
+          .withdrawFee()
+          .accounts({
+            admin,
+            sender: this.provider.wallet.publicKey,
+            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            tokenMint: asset?.mint[0],
+          })
+          .instruction();
+
+        promiseList.push(ix);
+      }
+    }
+
+    const ixs = await Promise.all(promiseList);
+
+    return await this.handleTx(ixs, params, isDisplayed);
+  }
+
   async getMarketplace(isDisplayed: boolean = false) {
     const [pda] = PublicKey.findProgramAddressSync(
       [Buffer.from("marketplace"), this.provider.wallet.publicKey.toBuffer()],
@@ -397,6 +427,17 @@ export class MarketplaceHelpers {
     );
 
     const res = await this.program.account.marketplace.fetch(pda);
+
+    return logAndReturn(res, isDisplayed);
+  }
+
+  async getBalances(isDisplayed: boolean = false) {
+    const [pda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("balances"), this.provider.wallet.publicKey.toBuffer()],
+      this.program.programId
+    );
+
+    const res = await this.program.account.balances.fetch(pda);
 
     return logAndReturn(res, isDisplayed);
   }

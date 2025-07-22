@@ -1,7 +1,7 @@
 use {
     crate::{
         error::CustomError,
-        state::{Asset, Marketplace, Trade},
+        state::{Asset, Balances, Marketplace, Trade},
     },
     anchor_lang::prelude::*,
     anchor_spl::{
@@ -41,6 +41,13 @@ pub struct AcceptSellTrade<'info> {
 
     #[account(
         mut,
+        seeds = [b"balances", admin.key().as_ref()],
+        bump = marketplace.balances_bump
+    )]
+    pub balances: Account<'info, Balances>,
+
+    #[account(
+        mut,
         close = seller,
         seeds = [b"trade", seller.key().as_ref(), collection.as_ref(), token_id.to_le_bytes().as_ref()],
         bump
@@ -74,7 +81,7 @@ pub struct AcceptSellTrade<'info> {
         associated_token::mint = token_mint,
         associated_token::authority = buyer
     )]
-    pub buyer_token_ata: InterfaceAccount<'info, TokenAccount>,
+    pub buyer_token_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         init_if_needed,
@@ -82,7 +89,7 @@ pub struct AcceptSellTrade<'info> {
         associated_token::mint = nft_mint,
         associated_token::authority = buyer
     )]
-    pub buyer_nft_ata: InterfaceAccount<'info, TokenAccount>,
+    pub buyer_nft_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         init_if_needed,
@@ -108,9 +115,10 @@ impl<'info> AcceptSellTrade<'info> {
             associated_token_program,
             nft_program,
             buyer,
-            admin,
             seller,
+            admin,
             marketplace,
+            balances,
             trade,
             token_account,
             nft_mint,
@@ -146,6 +154,19 @@ impl<'info> AcceptSellTrade<'info> {
 
         let fee = (trade.price_amount as u128 * marketplace.fee_bps as u128 / 10_000_u128) as u64;
         let amount_to_seller = trade.price_amount - fee;
+
+        balances.value = balances
+            .value
+            .iter()
+            .cloned()
+            .map(|mut x| {
+                if x.asset == trade.price_asset {
+                    x.amount += fee;
+                }
+
+                x
+            })
+            .collect();
 
         // transfer to seller
         transfer_from_user(

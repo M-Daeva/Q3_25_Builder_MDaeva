@@ -1,5 +1,5 @@
 use {
-    crate::state::{Asset, Balances, Marketplace},
+    crate::state::{Asset, BalanceItem, Balances, Marketplace},
     anchor_lang::prelude::*,
     base::helpers::get_space,
 };
@@ -54,6 +54,16 @@ impl<'info> Init<'info> {
         // collection_whitelist
         // asset_whitelist
 
+        balances.set_inner(Balances {
+            value: asset_whitelist
+                .iter()
+                .map(|x| BalanceItem {
+                    amount: 0,
+                    asset: x.clone(),
+                })
+                .collect(),
+        });
+
         marketplace.set_inner(Marketplace {
             marketplace_bump,
             balances_bump,
@@ -63,8 +73,6 @@ impl<'info> Init<'info> {
             asset_whitelist,
             name,
         });
-
-        balances.set_inner(Balances { value: vec![] });
 
         Ok(())
     }

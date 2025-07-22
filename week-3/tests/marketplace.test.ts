@@ -143,5 +143,15 @@ describe("marketplace", async () => {
         Math.round(1_000 * (buyerTokensBefore - buyerTokensAfter))
       ).toEqual(42);
     });
+
+    it("withdraw fee", async () => {
+      let balances = await marketplace.getBalances();
+      expect(balances.value[1].amount.toNumber()).toEqual(2_100);
+
+      await marketplace.tryWithdrawFee(TX_PARAMS);
+
+      balances = await marketplace.getBalances();
+      expect(balances.value[1].amount.toNumber()).toEqual(0);
+    });
   });
 });

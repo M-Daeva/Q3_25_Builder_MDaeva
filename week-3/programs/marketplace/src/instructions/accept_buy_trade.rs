@@ -1,7 +1,7 @@
 use {
     crate::{
         error::CustomError,
-        state::{Asset, Marketplace, Trade},
+        state::{Asset, Balances, Marketplace, Trade},
     },
     anchor_lang::prelude::*,
     anchor_spl::{
@@ -36,6 +36,13 @@ pub struct AcceptBuyTrade<'info> {
         bump = marketplace.marketplace_bump
     )]
     pub marketplace: Account<'info, Marketplace>,
+
+    #[account(
+        mut,
+        seeds = [b"balances", admin.key().as_ref()],
+        bump = marketplace.balances_bump
+    )]
+    pub balances: Account<'info, Balances>,
 
     #[account(
         mut,
@@ -109,6 +116,7 @@ impl<'info> AcceptBuyTrade<'info> {
             admin,
             buyer,
             marketplace,
+            balances,
             trade,
             token_account,
             nft_mint,
@@ -134,6 +142,19 @@ impl<'info> AcceptBuyTrade<'info> {
 
         let fee = (trade.price_amount as u128 * marketplace.fee_bps as u128 / 10_000_u128) as u64;
         let amount_to_seller = trade.price_amount - fee;
+
+        balances.value = balances
+            .value
+            .iter()
+            .cloned()
+            .map(|mut x| {
+                if x.asset == trade.price_asset {
+                    x.amount += fee;
+                }
+
+                x
+            })
+            .collect();
 
         // transfer nft to buyer
         transfer_from_user(

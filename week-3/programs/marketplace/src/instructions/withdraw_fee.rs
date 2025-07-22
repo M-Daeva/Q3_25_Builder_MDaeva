@@ -1,7 +1,7 @@
 use {
     crate::{
         error::CustomError,
-        state::{Asset, Marketplace, Trade},
+        state::{Asset, BalanceItem, Balances, Marketplace, Trade},
     },
     anchor_lang::prelude::*,
     anchor_spl::{
@@ -33,6 +33,13 @@ pub struct WithdrawFee<'info> {
     )]
     pub marketplace: Account<'info, Marketplace>,
 
+    #[account(
+        mut,
+        seeds = [b"balances", admin.key().as_ref()],
+        bump = marketplace.balances_bump
+    )]
+    pub balances: Account<'info, Balances>,
+
     // mint
     //
     pub token_mint: InterfaceAccount<'info, Mint>,
@@ -57,6 +64,51 @@ pub struct WithdrawFee<'info> {
 
 impl<'info> WithdrawFee<'info> {
     pub fn withdraw_fee(&mut self) -> Result<()> {
+        let WithdrawFee {
+            system_program,
+            token_program,
+            associated_token_program,
+            sender,
+            admin,
+            marketplace,
+            balances,
+            token_mint,
+            sender_token_ata,
+            app_token_ata,
+        } = self;
+
+        let mut amount = 0;
+
+        balances.value = balances
+            .value
+            .iter()
+            .cloned()
+            .map(|mut x| {
+                match x.asset {
+                    Asset::Sol => {}
+                    Asset::Mint(token) => {
+                        if token == token_mint.key() {
+                            amount = x.amount;
+                            x.amount = 0;
+                        }
+                    }
+                }
+
+                x
+            })
+            .collect();
+
+        transfer_from_program(
+            amount,
+            token_mint,
+            app_token_ata,
+            sender_token_ata,
+            &[b"marketplace", admin.key().as_ref()],
+            marketplace.marketplace_bump,
+            marketplace,
+            token_program,
+        )?;
+
         Ok(())
     }
 }
