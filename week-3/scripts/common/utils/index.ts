@@ -315,3 +315,30 @@ export async function getOrCreateAtaInstructions(
     };
   }
 }
+
+export function getTokenProgramFactory(provider: anchor.AnchorProvider) {
+  return async (mint: anchor.web3.PublicKey) => {
+    // check if it's SOL (represented by PublicKey.default)
+    if (mint.equals(PublicKey.default)) {
+      throw new Error(`Mint ${mint.toString()} represents Sol`);
+    }
+
+    // it's a token, so get the mint account to determine which token program owns it
+    const mintAccount = await provider.connection.getAccountInfo(mint);
+    if (!mintAccount) {
+      throw new Error(`Mint account ${mint.toString()} not found`);
+    }
+
+    // determine if it's Token Program or Token 2022
+    let tokenProgram: PublicKey;
+    if (mintAccount.owner.equals(spl.TOKEN_PROGRAM_ID)) {
+      tokenProgram = spl.TOKEN_PROGRAM_ID;
+    } else if (mintAccount.owner.equals(spl.TOKEN_2022_PROGRAM_ID)) {
+      tokenProgram = spl.TOKEN_2022_PROGRAM_ID;
+    } else {
+      throw new Error(`Unknown token program: ${mintAccount.owner.toString()}`);
+    }
+
+    return tokenProgram;
+  };
+}

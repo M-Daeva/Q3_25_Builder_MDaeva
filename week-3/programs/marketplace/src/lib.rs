@@ -10,7 +10,7 @@ pub mod state;
 use {
     instructions::{
         accept_buy_trade::*, accept_sell_trade::*, create_buy_trade::*, create_sell_trade::*,
-        init::*,
+        init::*, withdraw_fee::*,
     },
     state::*,
 };
@@ -25,11 +25,15 @@ pub mod marketplace {
         ctx: Context<Init>,
         fee_bps: u16,
         collection_whitelist: Vec<Pubkey>,
-        asset_whitelist: Vec<Asset>,
+        asset_whitelist: Vec<Pubkey>,
         name: String,
     ) -> Result<()> {
         ctx.accounts.init(
-            ctx.bumps.marketplace,
+            Bump {
+                marketplace: ctx.bumps.marketplace,
+                balances: ctx.bumps.balances,
+                treasury: ctx.bumps.treasury,
+            },
             fee_bps,
             collection_whitelist,
             asset_whitelist,
@@ -41,50 +45,73 @@ pub mod marketplace {
         ctx: Context<CreateSellTrade>,
         collection: Pubkey,
         token_id: u16,
-        price_amount: u64,
-        price_asset: Asset,
+        price: AssetItem,
     ) -> Result<()> {
-        ctx.accounts.create_sell_trade(
-            ctx.bumps.trade,
-            collection,
-            token_id,
-            price_amount,
-            price_asset,
-        )
+        ctx.accounts
+            .create_sell_trade(ctx.bumps.trade, collection, token_id, price)
     }
 
-    pub fn create_buy_trade(
-        ctx: Context<CreateBuyTrade>,
+    pub fn create_buy_with_token_trade(
+        ctx: Context<CreateBuyWithTokenTrade>,
         collection: Pubkey,
         token_id: u16,
-        price_amount: u64,
-        price_asset: Asset,
+        price: AssetItem,
     ) -> Result<()> {
-        ctx.accounts.create_buy_trade(
-            ctx.bumps.trade,
-            collection,
-            token_id,
-            price_amount,
-            price_asset,
-        )
+        ctx.accounts
+            .create_buy_with_token_trade(ctx.bumps.trade, collection, token_id, price)
     }
 
-    pub fn accept_sell_trade(
-        ctx: Context<AcceptSellTrade>,
+    pub fn create_buy_with_sol_trade(
+        ctx: Context<CreateBuyWithSolTrade>,
         collection: Pubkey,
         token_id: u16,
+        price: AssetItem,
     ) -> Result<()> {
-        ctx.accounts.accept_sell_trade(collection, token_id)
+        ctx.accounts
+            .create_buy_with_sol_trade(ctx.bumps.trade, collection, token_id, price)
     }
 
-    pub fn accept_buy_trade(
-        ctx: Context<AcceptBuyTrade>,
+    pub fn accept_sell_for_token_trade(
+        ctx: Context<AcceptSellForTokenTrade>,
         collection: Pubkey,
         token_id: u16,
     ) -> Result<()> {
-        ctx.accounts.accept_buy_trade(collection, token_id)
+        ctx.accounts
+            .accept_sell_for_token_trade(collection, token_id)
+    }
+
+    pub fn accept_sell_for_sol_trade(
+        ctx: Context<AcceptSellForSolTrade>,
+        collection: Pubkey,
+        token_id: u16,
+    ) -> Result<()> {
+        ctx.accounts.accept_sell_for_sol_trade(collection, token_id)
+    }
+
+    pub fn accept_buy_with_token_trade(
+        ctx: Context<AcceptBuyWithTokenTrade>,
+        collection: Pubkey,
+        token_id: u16,
+    ) -> Result<()> {
+        ctx.accounts
+            .accept_buy_with_token_trade(collection, token_id)
+    }
+
+    pub fn accept_buy_with_sol_trade(
+        ctx: Context<AcceptBuyWithSolTrade>,
+        collection: Pubkey,
+        token_id: u16,
+    ) -> Result<()> {
+        ctx.accounts.accept_buy_with_sol_trade(collection, token_id)
+    }
+
+    pub fn withdraw_token_fee(ctx: Context<WithdrawTokenFee>) -> Result<()> {
+        ctx.accounts.withdraw_token_fee()
+    }
+
+    pub fn withdraw_sol_fee(ctx: Context<WithdrawSolFee>) -> Result<()> {
+        ctx.accounts.withdraw_sol_fee()
     }
 }
 
 // TODO: remove_trade
-// TODO: withdraw_fee

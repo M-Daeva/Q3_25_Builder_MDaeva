@@ -7,7 +7,7 @@ use {
     anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface},
     base::{
         error::NftError,
-        helpers::{deserialize_account, get_space, has_duplicates, transfer_from_user},
+        helpers::{deserialize_account, get_space, has_duplicates, transfer_token_from_user},
     },
 };
 
@@ -102,7 +102,7 @@ impl<'info> Stake<'info> {
             Err(NftError::ExceededTokenLimit)?;
         }
 
-        transfer_from_user(
+        transfer_token_from_user(
             1,
             nft_mint,
             &user_nft_ata,
