@@ -1,9 +1,8 @@
 import * as anchor from "@coral-xyz/anchor";
-import * as spl from "@solana/spl-token";
 import { describe, expect, it } from "bun:test";
 import { Marketplace } from "../scripts/common/schema/types/marketplace";
 import { Nft } from "../scripts/common/schema/types/nft";
-import { Keypair, PublicKey } from "@solana/web3.js";
+import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import {
   ChainHelpers,
   NftHelpers,
@@ -95,7 +94,7 @@ describe("marketplace", async () => {
       expect(config.feeBps).toEqual(500);
     });
 
-    it("create and accept sell trade", async () => {
+    it("create and accept sell for token trade", async () => {
       const hellCatsTokenA = await nft.getToken(hellCats.address, 0);
       await marketplace.tryCreateTrade(
         seller,
@@ -166,6 +165,64 @@ describe("marketplace", async () => {
       expect(
         Math.round(1_000_000 * (adminMintXAfter - adminMintXBefore))
       ).toEqual(2_100);
+    });
+
+    it("create and accept buy with sol trade, withdraw fee", async () => {
+      let buyerSolBefore = await chain.getBalance(buyer.publicKey);
+      let sellerSolBefore = await chain.getBalance(seller.publicKey);
+
+      const hellCatsTokenB = await nft.getToken(hellCats.address, 1);
+      await marketplace.tryCreateTrade(
+        buyer,
+        nftProgram.idl.address,
+        hellCatsTokenB.mint,
+        PublicKey.default,
+        false,
+        hellCats.address,
+        hellCatsTokenB.id,
+        1.5 * LAMPORTS_PER_SOL,
+        PublicKey.default,
+        TX_PARAMS
+      );
+
+      let buyerSolAfter = await chain.getBalance(buyer.publicKey);
+      let sellerSolAfter = await chain.getBalance(seller.publicKey);
+      expect(buyerSolBefore - buyerSolAfter).toEqual(1.50373752);
+      expect(sellerSolAfter - sellerSolBefore).toEqual(0);
+
+      buyerSolBefore = buyerSolAfter;
+      sellerSolBefore = sellerSolAfter;
+
+      const trade = await marketplace.getTrade(
+        buyer.publicKey,
+        hellCats.address,
+        hellCatsTokenB.id
+      );
+      expect(trade.collection).toEqual(hellCats.address);
+      expect(trade.tokenId).toEqual(hellCatsTokenB.id);
+
+      await marketplace.tryAcceptTrade(
+        seller,
+        nftProgram.idl.address,
+        hellCatsTokenB.mint,
+        PublicKey.default,
+        buyer.publicKey,
+        hellCats.address,
+        hellCatsTokenB.id,
+        TX_PARAMS
+      );
+
+      buyerSolAfter = await chain.getBalance(buyer.publicKey);
+      sellerSolAfter = await chain.getBalance(seller.publicKey);
+
+      expect(buyerSolAfter - buyerSolBefore).toEqual(0.0016982400000000175);
+      expect(sellerSolAfter - sellerSolBefore).toEqual(1.4249999999999998);
+
+      let adminSolBefore = await chain.getBalance(ownerKeypair.publicKey);
+      await marketplace.tryWithdrawFee(TX_PARAMS);
+
+      let adminSolAfter = await chain.getBalance(ownerKeypair.publicKey);
+      expect(adminSolAfter - adminSolBefore).toEqual(0.07499504089355469);
     });
   });
 });

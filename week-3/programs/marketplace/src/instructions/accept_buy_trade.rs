@@ -191,6 +191,8 @@ pub struct AcceptBuyWithSolTrade<'info> {
     pub seller: Signer<'info>,
 
     pub admin: SystemAccount<'info>,
+
+    #[account(mut)]
     pub buyer: SystemAccount<'info>,
 
     #[account(

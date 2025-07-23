@@ -217,6 +217,7 @@ impl<'info> CreateBuyWithSolTrade<'info> {
         let CreateBuyWithSolTrade {
             system_program,
             buyer,
+            treasury,
             marketplace,
             trade,
             token_account,
@@ -243,7 +244,7 @@ impl<'info> CreateBuyWithSolTrade<'info> {
         transfer_sol_from_user(
             price.amount,
             buyer,
-            &marketplace.to_account_info(),
+            &treasury.to_account_info(),
             system_program,
         )?;
 

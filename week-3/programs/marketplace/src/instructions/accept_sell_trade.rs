@@ -250,6 +250,7 @@ impl<'info> AcceptSellForSolTrade<'info> {
             buyer,
             seller,
             admin,
+            treasury,
             marketplace,
             balances,
             trade,
@@ -283,7 +284,7 @@ impl<'info> AcceptSellForSolTrade<'info> {
         transfer_sol_from_user(amount_to_seller, buyer, seller, system_program)?;
 
         // pay fee
-        transfer_sol_from_user(fee, buyer, &marketplace.to_account_info(), system_program)?;
+        transfer_sol_from_user(fee, buyer, &treasury.to_account_info(), system_program)?;
 
         // receive nft
         transfer_token_from_program(

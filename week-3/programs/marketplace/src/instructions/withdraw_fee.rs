@@ -84,16 +84,18 @@ impl<'info> WithdrawTokenFee<'info> {
             })
             .collect();
 
-        transfer_token_from_program(
-            amount,
-            token_mint,
-            app_token_ata,
-            sender_token_ata,
-            &[b"marketplace", admin.key().as_ref()],
-            marketplace.bump.marketplace,
-            marketplace,
-            token_program,
-        )?;
+        if amount != 0 {
+            transfer_token_from_program(
+                amount,
+                token_mint,
+                app_token_ata,
+                sender_token_ata,
+                &[b"marketplace", admin.key().as_ref()],
+                marketplace.bump.marketplace,
+                marketplace,
+                token_program,
+            )?;
+        }
 
         Ok(())
     }
@@ -158,14 +160,16 @@ impl<'info> WithdrawSolFee<'info> {
             })
             .collect();
 
-        transfer_sol_from_program(
-            amount,
-            &treasury.to_account_info(),
-            sender,
-            &[b"treasury", admin.key().as_ref()],
-            marketplace.bump.treasury,
-            system_program,
-        )?;
+        if amount != 0 {
+            transfer_sol_from_program(
+                amount,
+                &treasury.to_account_info(),
+                sender,
+                &[b"treasury", admin.key().as_ref()],
+                marketplace.bump.treasury,
+                system_program,
+            )?;
+        }
 
         Ok(())
     }

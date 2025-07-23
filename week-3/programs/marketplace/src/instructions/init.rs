@@ -1,7 +1,7 @@
 use {
     crate::state::{AssetItem, Balances, Bump, Marketplace},
     anchor_lang::prelude::*,
-    base::helpers::get_space,
+    base::helpers::{get_rent_exempt, get_space, transfer_sol_from_user},
 };
 
 #[derive(Accounts)]
@@ -12,6 +12,7 @@ pub struct Init<'info> {
     pub admin: Signer<'info>,
 
     #[account(
+        mut,
         seeds = [b"treasury", admin.key().as_ref()],
         bump
     )]
@@ -48,10 +49,11 @@ impl<'info> Init<'info> {
         name: String,
     ) -> Result<()> {
         let Init {
+            system_program,
             admin,
+            treasury,
             marketplace,
             balances,
-            ..
         } = self;
 
         // TODO: guards:
@@ -77,6 +79,8 @@ impl<'info> Init<'info> {
             asset_whitelist,
             name,
         });
+
+        transfer_sol_from_user(get_rent_exempt(treasury)?, admin, treasury, system_program)?;
 
         Ok(())
     }

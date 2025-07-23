@@ -47,10 +47,11 @@ export type Marketplace = {
           "signer": true
         },
         {
-          "name": "admin"
+          "name": "buyer",
+          "writable": true
         },
         {
-          "name": "buyer"
+          "name": "admin"
         },
         {
           "name": "treasury",
@@ -2951,6 +2952,7 @@ export type Marketplace = {
         },
         {
           "name": "treasury",
+          "writable": true,
           "pda": {
             "seeds": [
               {

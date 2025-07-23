@@ -46,6 +46,13 @@ pub fn get_space(struct_space: usize) -> usize {
     DISCRIMINATOR_SPACE + struct_space
 }
 
+pub fn get_rent_exempt<'a, T>(account: &T) -> Result<u64>
+where
+    T: ToAccountInfo<'a>,
+{
+    Ok(Rent::get()?.minimum_balance(account.to_account_info().data_len()))
+}
+
 pub fn transfer_sol_from_user<'a>(
     amount: u64,
     from: &Signer<'a>,

@@ -41,10 +41,11 @@
           "signer": true
         },
         {
-          "name": "admin"
+          "name": "buyer",
+          "writable": true
         },
         {
-          "name": "buyer"
+          "name": "admin"
         },
         {
           "name": "treasury",
@@ -2945,6 +2946,7 @@
         },
         {
           "name": "treasury",
+          "writable": true,
           "pda": {
             "seeds": [
               {
