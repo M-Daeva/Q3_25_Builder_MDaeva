@@ -307,24 +307,44 @@ export class MarketplaceHelpers {
     let instructions: anchor.web3.TransactionInstruction[] = [];
 
     if (isSellNftTrade) {
-      const tokenProgram = await this.getTokenProgram(priceAsset);
+      if (priceAsset.equals(PublicKey.default)) {
+        const tokenProgram = await this.getTokenProgram(nftMint);
 
-      const ix = await this.program.methods
-        .createSellTrade(collection, tokenId, {
-          amount: new anchor.BN(priceAmount),
-          asset: priceAsset,
-        })
-        .accounts({
-          admin,
-          seller: userKeypair.publicKey,
-          tokenProgram,
-          nftProgram,
-          nftMint,
-          tokenMint,
-        })
-        .instruction();
+        const ix = await this.program.methods
+          .createSellForSolTrade(collection, tokenId, {
+            amount: new anchor.BN(priceAmount),
+            asset: priceAsset,
+          })
+          .accounts({
+            admin,
+            seller: userKeypair.publicKey,
+            tokenProgram,
+            nftProgram,
+            nftMint,
+          })
+          .instruction();
 
-      instructions.push(ix);
+        instructions.push(ix);
+      } else {
+        const tokenProgram = await this.getTokenProgram(priceAsset);
+
+        const ix = await this.program.methods
+          .createSellForTokenTrade(collection, tokenId, {
+            amount: new anchor.BN(priceAmount),
+            asset: priceAsset,
+          })
+          .accounts({
+            admin,
+            seller: userKeypair.publicKey,
+            tokenProgram,
+            nftProgram,
+            nftMint,
+            tokenMint,
+          })
+          .instruction();
+
+        instructions.push(ix);
+      }
     } else {
       if (priceAsset.equals(PublicKey.default)) {
         const tokenProgram = await this.getTokenProgram(nftMint);
@@ -452,6 +472,76 @@ export class MarketplaceHelpers {
             tokenProgram,
             nftProgram,
             nftMint,
+            tokenMint,
+          })
+          .instruction();
+
+        instructions.push(ix);
+      }
+    }
+
+    const modifiedParams = {
+      ...params,
+      signers: [...(params.signers || []), userKeypair],
+    };
+
+    return await this.handleTx(instructions, modifiedParams, isDisplayed);
+  }
+
+  async tryRemoveTrade(
+    userKeypair: Keypair,
+    nftProgram: anchor.Address,
+    nftMint: PublicKey,
+    tokenMint: PublicKey,
+    creator: PublicKey,
+    collection: PublicKey,
+    tokenId: number,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const { admin } = await this.getMarketplace();
+    const trade = await this.getTrade(creator, collection, tokenId);
+
+    let instructions: anchor.web3.TransactionInstruction[] = [];
+
+    if (trade.isSellNftTrade) {
+      const mint = trade.price.asset.equals(PublicKey.default)
+        ? nftMint
+        : trade.price.asset;
+      const tokenProgram = await this.getTokenProgram(mint);
+
+      const ix = await this.program.methods
+        .removeSellTrade(collection, tokenId)
+        .accounts({
+          admin,
+          seller: userKeypair.publicKey,
+          tokenProgram,
+          nftProgram,
+          nftMint,
+        })
+        .instruction();
+
+      instructions.push(ix);
+    } else {
+      if (trade.price.asset.equals(PublicKey.default)) {
+        const ix = await this.program.methods
+          .removeBuyWithSolTrade(collection, tokenId)
+          .accounts({
+            admin,
+            buyer: userKeypair.publicKey,
+          })
+          .instruction();
+
+        instructions.push(ix);
+      } else {
+        const tokenProgram = await this.getTokenProgram(trade.price.asset);
+
+        const ix = await this.program.methods
+          .removeBuyWithTokenTrade(collection, tokenId)
+          .accounts({
+            admin,
+            buyer: userKeypair.publicKey,
+            tokenProgram,
             tokenMint,
           })
           .instruction();

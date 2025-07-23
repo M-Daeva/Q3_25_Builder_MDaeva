@@ -12,6 +12,15 @@ pub enum CustomError {
 
     #[msg("Asset is not found!")]
     AssetIsNotFound,
+
+    #[msg("Fee is too big!")]
+    FeeIsTooBig,
+
+    #[msg("Asset list is emty!")]
+    EmptyAssetList,
+
+    #[msg("Asset already exists!")]
+    AssetDuplication,
 }
 
 impl From<CustomError> for ProgError {

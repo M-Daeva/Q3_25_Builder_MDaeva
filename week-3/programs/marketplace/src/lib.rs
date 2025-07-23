@@ -10,7 +10,7 @@ pub mod state;
 use {
     instructions::{
         accept_buy_trade::*, accept_sell_trade::*, create_buy_trade::*, create_sell_trade::*,
-        init::*, withdraw_fee::*,
+        init::*, remove_buy_trade::*, remove_sell_trade::*, withdraw_fee::*,
     },
     state::*,
 };
@@ -41,14 +41,24 @@ pub mod marketplace {
         )
     }
 
-    pub fn create_sell_trade(
-        ctx: Context<CreateSellTrade>,
+    pub fn create_sell_for_token_trade(
+        ctx: Context<CreateSellForTokenTrade>,
         collection: Pubkey,
         token_id: u16,
         price: AssetItem,
     ) -> Result<()> {
         ctx.accounts
-            .create_sell_trade(ctx.bumps.trade, collection, token_id, price)
+            .create_sell_for_token_trade(ctx.bumps.trade, collection, token_id, price)
+    }
+
+    pub fn create_sell_for_sol_trade(
+        ctx: Context<CreateSellForSolTrade>,
+        collection: Pubkey,
+        token_id: u16,
+        price: AssetItem,
+    ) -> Result<()> {
+        ctx.accounts
+            .create_sell_for_sol_trade(ctx.bumps.trade, collection, token_id, price)
     }
 
     pub fn create_buy_with_token_trade(
@@ -112,6 +122,29 @@ pub mod marketplace {
     pub fn withdraw_sol_fee(ctx: Context<WithdrawSolFee>) -> Result<()> {
         ctx.accounts.withdraw_sol_fee()
     }
-}
 
-// TODO: remove_trade
+    pub fn remove_sell_trade(
+        ctx: Context<RemoveSellTrade>,
+        collection: Pubkey,
+        token_id: u16,
+    ) -> Result<()> {
+        ctx.accounts.remove_sell_trade(collection, token_id)
+    }
+
+    pub fn remove_buy_with_token_trade(
+        ctx: Context<RemoveBuyWithTokenTrade>,
+        collection: Pubkey,
+        token_id: u16,
+    ) -> Result<()> {
+        ctx.accounts
+            .remove_buy_with_token_trade(collection, token_id)
+    }
+
+    pub fn remove_buy_with_sol_trade(
+        ctx: Context<RemoveBuyWithSolTrade>,
+        collection: Pubkey,
+        token_id: u16,
+    ) -> Result<()> {
+        ctx.accounts.remove_buy_with_sol_trade(collection, token_id)
+    }
+}

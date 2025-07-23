@@ -224,5 +224,95 @@ describe("marketplace", async () => {
       let adminSolAfter = await chain.getBalance(ownerKeypair.publicKey);
       expect(adminSolAfter - adminSolBefore).toEqual(0.07499504089355469);
     });
+
+    it("create and remove buy for token trade", async () => {
+      const buyerTokensBefore = await chain.getTokenBalance(
+        mintXKeypair.publicKey,
+        buyer.publicKey
+      );
+
+      const galacticPunksTokenA = await nft.getToken(galacticPunks.address, 0);
+      await marketplace.tryCreateTrade(
+        buyer,
+        nftProgram.idl.address,
+        galacticPunksTokenA.mint,
+        mintXKeypair.publicKey,
+        false,
+        galacticPunks.address,
+        galacticPunksTokenA.id,
+        42_000,
+        mintXKeypair.publicKey,
+        TX_PARAMS
+      );
+
+      const trade = await marketplace.getTrade(
+        buyer.publicKey,
+        galacticPunks.address,
+        galacticPunksTokenA.id
+      );
+      expect(trade.collection).toEqual(galacticPunks.address);
+      expect(trade.tokenId).toEqual(galacticPunksTokenA.id);
+
+      await marketplace.tryRemoveTrade(
+        buyer,
+        nftProgram.idl.address,
+        galacticPunksTokenA.mint,
+        mintXKeypair.publicKey,
+        buyer.publicKey,
+        galacticPunks.address,
+        galacticPunksTokenA.id,
+        TX_PARAMS
+      );
+
+      const buyerTokensAfter = await chain.getTokenBalance(
+        mintXKeypair.publicKey,
+        buyer.publicKey
+      );
+
+      expect(
+        Math.round(1_000 * (buyerTokensBefore - buyerTokensAfter))
+      ).toEqual(0);
+    });
+
+    it("create and remove sell for sol trade", async () => {
+      const sellerSolBefore = await chain.getBalance(seller.publicKey);
+
+      const galacticPunksTokenA = await nft.getToken(galacticPunks.address, 0);
+      await marketplace.tryCreateTrade(
+        seller,
+        nftProgram.idl.address,
+        galacticPunksTokenA.mint,
+        PublicKey.default,
+        true,
+        galacticPunks.address,
+        galacticPunksTokenA.id,
+        1.5 * LAMPORTS_PER_SOL,
+        PublicKey.default,
+        TX_PARAMS
+      );
+
+      const trade = await marketplace.getTrade(
+        seller.publicKey,
+        galacticPunks.address,
+        galacticPunksTokenA.id
+      );
+      expect(trade.collection).toEqual(galacticPunks.address);
+      expect(trade.tokenId).toEqual(galacticPunksTokenA.id);
+
+      await marketplace.tryRemoveTrade(
+        seller,
+        nftProgram.idl.address,
+        galacticPunksTokenA.mint,
+        PublicKey.default,
+        seller.publicKey,
+        galacticPunks.address,
+        galacticPunksTokenA.id,
+        TX_PARAMS
+      );
+
+      const sellerSolAfter = await chain.getBalance(seller.publicKey);
+
+      expect(sellerSolBefore - sellerSolAfter).toEqual(0.0020392799999999767);
+    });
   });
 });
