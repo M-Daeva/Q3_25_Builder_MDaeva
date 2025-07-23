@@ -1,12 +1,11 @@
 import * as anchor from "@coral-xyz/anchor";
 import * as spl from "@solana/spl-token";
 import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
-import { TraderInfo, TxParams } from "../interfaces";
+import { TxParams } from "../interfaces";
 import {
   getHandleTx,
   getOrCreateAtaInstructions,
-  getProgram,
-  l,
+  getTokenProgramFactory,
   li,
   logAndReturn,
   publicKeyFromString,
@@ -19,9 +18,9 @@ import { Marketplace } from "../schema/types/marketplace";
 export type Asset = "sol" | PublicKey;
 export type IdlAsset = { sol: {} } | { mint: { 0: PublicKey } };
 
-function getAssets(assets: Asset[]): IdlAsset[] {
-  return assets.map((x) => (x === "sol" ? { sol: {} } : { mint: { 0: x } }));
-}
+// function getAssets(assets: Asset[]): IdlAsset[] {
+//   return assets.map((x) => (x === "sol" ? { sol: {} } : { mint: { 0: x } }));
+// }
 
 export class NftHelpers {
   private provider: anchor.AnchorProvider;
@@ -260,6 +259,10 @@ export class MarketplaceHelpers {
     isDisplayed: boolean
   ) => Promise<anchor.web3.TransactionSignature>;
 
+  private getTokenProgram: (
+    mint: anchor.web3.PublicKey
+  ) => Promise<anchor.web3.PublicKey>;
+
   constructor(
     provider: anchor.AnchorProvider,
     program: anchor.Program<Marketplace>
@@ -267,6 +270,7 @@ export class MarketplaceHelpers {
     this.provider = provider;
     this.program = program;
     this.handleTx = getHandleTx(provider);
+    this.getTokenProgram = getTokenProgramFactory(provider);
   }
 
   async tryInit(
@@ -299,6 +303,7 @@ export class MarketplaceHelpers {
     isDisplayed: boolean = false
   ): Promise<anchor.web3.TransactionSignature> {
     const { admin } = await this.getMarketplace();
+    const tokenProgram = await this.getTokenProgram(priceAsset);
 
     let instructions: anchor.web3.TransactionInstruction[] = [];
 
@@ -311,7 +316,7 @@ export class MarketplaceHelpers {
         .accounts({
           admin,
           seller: userKeypair.publicKey,
-          tokenProgram: spl.TOKEN_PROGRAM_ID,
+          tokenProgram,
           nftProgram,
           nftMint,
           tokenMint,
@@ -320,7 +325,7 @@ export class MarketplaceHelpers {
 
       instructions.push(ix);
     } else {
-      if (priceAsset === PublicKey.default) {
+      if (priceAsset.equals(PublicKey.default)) {
         const ix = await this.program.methods
           .createBuyWithSolTrade(collection, tokenId, {
             amount: new anchor.BN(priceAmount),
@@ -329,7 +334,7 @@ export class MarketplaceHelpers {
           .accounts({
             admin,
             buyer: userKeypair.publicKey,
-            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            tokenProgram,
             nftProgram,
             nftMint,
           })
@@ -345,7 +350,7 @@ export class MarketplaceHelpers {
           .accounts({
             admin,
             buyer: userKeypair.publicKey,
-            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            tokenProgram,
             nftProgram,
             nftMint,
             tokenMint,
@@ -377,18 +382,19 @@ export class MarketplaceHelpers {
   ): Promise<anchor.web3.TransactionSignature> {
     const { admin } = await this.getMarketplace();
     const trade = await this.getTrade(creator, collection, tokenId);
+    const tokenProgram = await this.getTokenProgram(trade.price.asset);
 
     let instructions: anchor.web3.TransactionInstruction[] = [];
 
     if (trade.isSellNftTrade) {
-      if (trade.price.asset === PublicKey.default) {
+      if (trade.price.asset.equals(PublicKey.default)) {
         const ix = await this.program.methods
           .acceptSellForSolTrade(collection, tokenId)
           .accounts({
             admin,
             buyer: userKeypair.publicKey,
             seller: creator,
-            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            tokenProgram,
             nftMint,
           })
           .instruction();
@@ -401,7 +407,7 @@ export class MarketplaceHelpers {
             admin,
             buyer: userKeypair.publicKey,
             seller: creator,
-            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            tokenProgram,
             nftMint,
             tokenMint,
           })
@@ -410,14 +416,14 @@ export class MarketplaceHelpers {
         instructions.push(ix);
       }
     } else {
-      if (trade.price.asset === PublicKey.default) {
+      if (trade.price.asset.equals(PublicKey.default)) {
         const ix = await this.program.methods
           .acceptBuyWithSolTrade(collection, tokenId)
           .accounts({
             admin,
             buyer: creator,
             seller: userKeypair.publicKey,
-            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            tokenProgram,
             nftProgram,
             nftMint,
           })
@@ -431,7 +437,7 @@ export class MarketplaceHelpers {
             admin,
             buyer: creator,
             seller: userKeypair.publicKey,
-            tokenProgram: spl.TOKEN_PROGRAM_ID,
+            tokenProgram,
             nftProgram,
             nftMint,
             tokenMint,
@@ -460,7 +466,7 @@ export class MarketplaceHelpers {
     let promiseList: Promise<anchor.web3.TransactionInstruction>[] = [];
 
     for (const { asset } of balances) {
-      if (asset === PublicKey.default) {
+      if (asset.equals(PublicKey.default)) {
         const ix = this.program.methods
           .withdrawSolFee()
           .accounts({
@@ -471,16 +477,7 @@ export class MarketplaceHelpers {
 
         promiseList.push(ix);
       } else {
-        // get the mint account to determine which token program owns it
-        const mintAccount = await this.provider.connection.getAccountInfo(
-          asset
-        );
-        if (!mintAccount) {
-          throw new Error(`Mint account ${asset.toString()} not found`);
-        }
-
-        // the token program is the owner of the mint account
-        const tokenProgram = mintAccount.owner;
+        const tokenProgram = await this.getTokenProgram(asset);
 
         const ix = this.program.methods
           .withdrawTokenFee()
@@ -497,7 +494,6 @@ export class MarketplaceHelpers {
     }
 
     const ixs = await Promise.all(promiseList);
-
     return await this.handleTx(ixs, params, isDisplayed);
   }
 

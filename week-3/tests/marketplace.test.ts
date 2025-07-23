@@ -148,17 +148,24 @@ describe("marketplace", async () => {
       let balances = await marketplace.getBalances();
       expect(balances.value[1].amount.toNumber()).toEqual(2_100);
 
-      li({
-        balances: balances.value.map((x) => ({
-          amount: x.amount.toNumber(),
-          asset: x.asset,
-        })),
-      });
+      const adminMintXBefore = await chain.getTokenBalance(
+        mintXKeypair.publicKey,
+        ownerKeypair.publicKey
+      );
 
       await marketplace.tryWithdrawFee(TX_PARAMS);
 
-      // balances = await marketplace.getBalances();
-      // expect(balances.value[1].amount.toNumber()).toEqual(0);
+      balances = await marketplace.getBalances();
+      expect(balances.value[1].amount.toNumber()).toEqual(0);
+
+      const adminMintXAfter = await chain.getTokenBalance(
+        mintXKeypair.publicKey,
+        ownerKeypair.publicKey
+      );
+
+      expect(
+        Math.round(1_000_000 * (adminMintXAfter - adminMintXBefore))
+      ).toEqual(2_100);
     });
   });
 });
