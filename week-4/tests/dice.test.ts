@@ -1,8 +1,8 @@
 import * as anchor from "@coral-xyz/anchor";
 import { describe, expect, it } from "bun:test";
-import { Nft } from "../scripts/common/schema/types/nft";
-import { Keypair, PublicKey } from "@solana/web3.js";
-import { ChainHelpers, NftHelpers } from "../scripts/common/account";
+import { Dice } from "../scripts/common/schema/types/dice";
+import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
+import { ChainHelpers, DiceHelpers } from "../scripts/common/account";
 import {
   getProvider,
   getRpc,
@@ -23,54 +23,30 @@ describe("staking", async () => {
   anchor.setProvider(provider);
 
   const chain = new ChainHelpers(provider);
-  const nftProgram = anchor.workspace.Nft as anchor.Program<Nft>;
+  const diceProgram = anchor.workspace.Dice as anchor.Program<Dice>;
   const TX_PARAMS = {
     cpu: { k: 1, b: 150 },
   };
 
-  const nft = new NftHelpers(provider, nftProgram);
+  const dice = new DiceHelpers(provider, diceProgram);
 
   // generate new keypairs
   const admin = Keypair.generate();
-  const stakerA = Keypair.generate();
-  const stakerB = Keypair.generate();
+  const user = Keypair.generate();
 
   // airdrop SOL for transaction fees
   await Promise.all(
-    [admin, stakerA, stakerB].map((x) => chain.requestAirdrop(x.publicKey, 2))
-  );
-
-  const COLLECTION_ID = 0;
-  const COLLECTION_METADATA = "HellCats";
-
-  await nft.tryCreateCollection(COLLECTION_ID, COLLECTION_METADATA, TX_PARAMS);
-  await nft.tryMintToken(COLLECTION_ID, "", stakerA.publicKey, TX_PARAMS);
-
-  const collection = await nft.getCollection(
-    ownerKeypair.publicKey,
-    COLLECTION_ID
-  );
-  const token = await nft.getToken(
-    collection.address,
-    collection.nextTokenId - 1
+    [admin, user].map((x) => chain.requestAirdrop(x.publicKey, 2))
   );
 
   describe("instructions", () => {
-    it("mint nft", async () => {
-      const COLLECTION_ID = 0;
-      const COLLECTION_METADATA = "HellCats";
+    it("init", async () => {
+      await dice.tryInit(1 * LAMPORTS_PER_SOL, TX_PARAMS);
 
-      const collection = await nft.getCollection(
-        ownerKeypair.publicKey,
-        COLLECTION_ID
-      );
-      const token = await nft.getToken(
-        collection.address,
-        collection.nextTokenId - 1
-      );
+      const vaultPda = dice.getVaultPda();
+      const vaultSol = await chain.getBalance(vaultPda);
 
-      expect(collection.metadata).toEqual(COLLECTION_METADATA);
-      expect(token.id).toEqual(0);
+      expect(vaultSol).toEqual(1);
     });
   });
 });

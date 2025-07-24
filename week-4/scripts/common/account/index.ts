@@ -5,7 +5,6 @@ import { TxParams } from "../interfaces";
 import {
   getHandleTx,
   getOrCreateAtaInstructions,
-  getTokenProgramFactory,
   li,
   logAndReturn,
   publicKeyFromString,
@@ -29,39 +28,126 @@ export class DiceHelpers {
     this.handleTx = getHandleTx(provider);
   }
 
-  async tryCreateCollection(
-    id: number,
-    metadata: string,
+  async tryInit(
+    amount: number,
     params: TxParams = {},
     isDisplayed: boolean = false
   ): Promise<anchor.web3.TransactionSignature> {
     const ix = await this.program.methods
-      .createCollection(id, metadata)
+      .init(new anchor.BN(amount))
       .accounts({
-        admin: this.provider.wallet.publicKey,
+        house: this.provider.wallet.publicKey,
       })
       .instruction();
 
     return await this.handleTx([ix], params, isDisplayed);
   }
 
-  async getCollection(
-    admin: PublicKey | string,
+  async tryPlaceBet(
+    userKeypair: Keypair,
     id: number,
+    roll: number,
+    amount: number,
+    params: TxParams = {},
     isDisplayed: boolean = false
-  ) {
+  ): Promise<anchor.web3.TransactionSignature> {
+    const ix = await this.program.methods
+      .placeBet(new anchor.BN(id), roll, new anchor.BN(amount))
+      .accounts({
+        house: this.provider.wallet.publicKey,
+        player: userKeypair.publicKey,
+      })
+      .instruction();
+
+    const modifiedParams = {
+      ...params,
+      signers: [...(params.signers || []), userKeypair],
+    };
+
+    return await this.handleTx([ix], modifiedParams, isDisplayed);
+  }
+
+  async tryResolveBet(
+    signature: number[],
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const ix = await this.program.methods
+      .resolveBet(Array.from(new Uint8Array(signature)))
+      .accounts({
+        house: this.provider.wallet.publicKey,
+      })
+      .instruction();
+
+    return await this.handleTx([ix], params, isDisplayed);
+  }
+
+  async tryRefundBet(
+    userKeypair: Keypair,
+    id: number,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const ix = await this.program.methods
+      .refundBet(new anchor.BN(id))
+      .accounts({
+        house: this.provider.wallet.publicKey,
+        player: userKeypair.publicKey,
+      })
+      .instruction();
+
+    const modifiedParams = {
+      ...params,
+      signers: [...(params.signers || []), userKeypair],
+    };
+
+    return await this.handleTx([ix], modifiedParams, isDisplayed);
+  }
+
+  getVaultPda(isDisplayed: boolean = false) {
     const [pda] = PublicKey.findProgramAddressSync(
-      [
-        Buffer.from("collection"),
-        publicKeyFromString(admin).toBuffer(),
-        Buffer.from([id]),
-      ],
+      [Buffer.from("vault"), this.provider.wallet.publicKey.toBuffer()],
       this.program.programId
     );
 
-    const res = await this.program.account.collection.fetch(pda);
+    return logAndReturn(pda, isDisplayed);
+  }
+
+  getBetPDA(
+    vaultPubkey: PublicKey,
+    id: number | anchor.BN,
+    isDisplayed: boolean = false
+  ) {
+    const [pda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("bet"), vaultPubkey.toBuffer(), this.idToBuffer(id)],
+      this.program.programId
+    );
+
+    return logAndReturn(pda, isDisplayed);
+  }
+
+  async getBet(id: number, isDisplayed: boolean = false) {
+    const pda = this.getBetPDA(this.getVaultPda(), id);
+    const res = await this.program.account.bet.fetch(pda);
 
     return logAndReturn(res, isDisplayed);
+  }
+
+  private idToBuffer(id: number | anchor.BN): Buffer {
+    const idBuffer = Buffer.alloc(16);
+    const idValue = typeof id === "number" ? BigInt(id) : BigInt(id.toString());
+
+    // Write as little-endian u128 (16 bytes)
+    // Split into two 64-bit parts
+    const lower = idValue & BigInt("0xFFFFFFFFFFFFFFFF");
+    const upper = idValue >> BigInt(64);
+
+    // Write lower 64 bits at offset 0
+    idBuffer.writeBigUInt64LE(lower, 0);
+    // Write upper 64 bits at offset 8
+    idBuffer.writeBigUInt64LE(upper, 8);
+
+    return idBuffer;
   }
 }
 
