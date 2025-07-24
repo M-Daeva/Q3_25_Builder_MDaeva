@@ -171,6 +171,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "anchor-instruction-sysvar"
+version = "0.1.0"
+source = "git+https://github.com/ShrinathNR/anchor-instruction-sysvar.git?branch=version-upgrade#f552a304db6746c1c077057352b03986979ec714"
+dependencies = [
+ "anchor-lang",
+ "solana-program",
+]
+
+[[package]]
 name = "anchor-lang"
 version = "0.31.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -608,6 +617,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e5c37193a1db1d8ed868c03ec7b152175f26160a5b740e5e484143877e0adf0"
 
 [[package]]
+name = "dice"
+version = "1.0.0"
+dependencies = [
+ "anchor-instruction-sysvar",
+ "anchor-lang",
+ "anchor-spl",
+ "base",
+]
+
+[[package]]
 name = "digest"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -913,15 +932,6 @@ dependencies = [
  "num-traits",
  "solana-program",
  "thiserror 1.0.69",
-]
-
-[[package]]
-name = "nft"
-version = "1.0.0"
-dependencies = [
- "anchor-lang",
- "anchor-spl",
- "base",
 ]
 
 [[package]]

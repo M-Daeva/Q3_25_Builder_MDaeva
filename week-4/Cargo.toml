@@ -23,5 +23,6 @@ overflow-checks = true
 [workspace.dependencies]
 anchor-lang = { version = "0.31.1", features = ["init-if-needed"] }
 anchor-spl = { version = "0.31.1", features = ["token", "metadata"] }
+anchor-instruction-sysvar = { git = "https://github.com/ShrinathNR/anchor-instruction-sysvar.git", branch = "version-upgrade" }
 
 base = { path = "./packages/base" }

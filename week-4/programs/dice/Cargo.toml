@@ -1,5 +1,5 @@
 [package]
-name = "nft"
+name = "dice"
 version = "1.0.0"
 description = "Created with Anchor"
 repository = { workspace = true }
@@ -21,4 +21,5 @@ idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
 [dependencies]
 anchor-lang = { workspace = true }
 anchor-spl = { workspace = true }
+anchor-instruction-sysvar = { workspace = true }
 base = { workspace = true }

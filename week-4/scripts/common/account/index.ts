@@ -11,11 +11,11 @@ import {
   publicKeyFromString,
 } from "../../common/utils";
 
-import { Nft } from "../schema/types/nft";
+import { Dice } from "../schema/types/dice";
 
-export class NftHelpers {
+export class DiceHelpers {
   private provider: anchor.AnchorProvider;
-  private program: anchor.Program<Nft>;
+  private program: anchor.Program<Dice>;
 
   private handleTx: (
     instructions: anchor.web3.TransactionInstruction[],
@@ -23,7 +23,7 @@ export class NftHelpers {
     isDisplayed: boolean
   ) => Promise<anchor.web3.TransactionSignature>;
 
-  constructor(provider: anchor.AnchorProvider, program: anchor.Program<Nft>) {
+  constructor(provider: anchor.AnchorProvider, program: anchor.Program<Dice>) {
     this.provider = provider;
     this.program = program;
     this.handleTx = getHandleTx(provider);
@@ -45,25 +45,6 @@ export class NftHelpers {
     return await this.handleTx([ix], params, isDisplayed);
   }
 
-  async tryMintToken(
-    id: number,
-    metadata: string,
-    recipient: PublicKey | string,
-    params: TxParams = {},
-    isDisplayed: boolean = false
-  ): Promise<anchor.web3.TransactionSignature> {
-    const ix = await this.program.methods
-      .mintToken(id, metadata)
-      .accounts({
-        admin: this.provider.wallet.publicKey,
-        recipient: publicKeyFromString(recipient),
-        tokenProgram: spl.TOKEN_PROGRAM_ID,
-      })
-      .instruction();
-
-    return await this.handleTx([ix], params, isDisplayed);
-  }
-
   async getCollection(
     admin: PublicKey | string,
     id: number,
@@ -79,25 +60,6 @@ export class NftHelpers {
     );
 
     const res = await this.program.account.collection.fetch(pda);
-
-    return logAndReturn(res, isDisplayed);
-  }
-
-  async getToken(
-    collection: PublicKey | string,
-    id: number,
-    isDisplayed: boolean = false
-  ) {
-    const [pda] = PublicKey.findProgramAddressSync(
-      [
-        Buffer.from("token"),
-        publicKeyFromString(collection).toBuffer(),
-        new anchor.BN(id).toArrayLike(Buffer, "le", 2),
-      ],
-      this.program.programId
-    );
-
-    const res = await this.program.account.token.fetch(pda);
 
     return logAndReturn(res, isDisplayed);
   }

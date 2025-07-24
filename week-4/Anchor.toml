@@ -5,10 +5,10 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-nft = "5JFttyrKH4mHkNDU6D5YDRo3FQs1RRCqq4HHy1Rn7msF"
+dice = "3XEw4Ta4PU5NMET3xJhc71yagoB85awhTzzcNdFbAyBt"
 
 [programs.devnet]
-nft = "5JFttyrKH4mHkNDU6D5YDRo3FQs1RRCqq4HHy1Rn7msF"
+dice = "3XEw4Ta4PU5NMET3xJhc71yagoB85awhTzzcNdFbAyBt"
 
 [registry]
 url = "https://api.apr.dev"
