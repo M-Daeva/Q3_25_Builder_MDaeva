@@ -1,0 +1,22 @@
+[toolchain]
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.localnet]
+dice = "3XEw4Ta4PU5NMET3xJhc71yagoB85awhTzzcNdFbAyBt"
+
+[programs.devnet]
+dice = "3XEw4Ta4PU5NMET3xJhc71yagoB85awhTzzcNdFbAyBt"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "localnet"
+wallet = "~/dev/.test-wallets/solana/dev-keypair.json"
+
+[scripts]
+test = "bun test"
+# test = "bun test nft"

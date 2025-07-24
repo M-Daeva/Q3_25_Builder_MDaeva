@@ -1,7 +1,13 @@
 use {
-    crate::state::{AssetItem, Balances, Bump, Marketplace},
+    crate::{
+        error::CustomError,
+        state::{AssetItem, Balances, Bump, Marketplace},
+    },
     anchor_lang::prelude::*,
-    base::helpers::{get_rent_exempt, get_space, transfer_sol_from_user},
+    base::{
+        error::NftError,
+        helpers::{get_rent_exempt, get_space, has_duplicates, transfer_sol_from_user},
+    },
 };
 
 #[derive(Accounts)]
@@ -56,10 +62,25 @@ impl<'info> Init<'info> {
             balances,
         } = self;
 
-        // TODO: guards:
-        // fee_bps
-        // collection_whitelist
-        // asset_whitelist
+        if fee_bps > 10_000 {
+            Err(CustomError::FeeIsTooBig)?;
+        }
+
+        if collection_whitelist.is_empty() {
+            Err(NftError::EmptyCollectionList)?;
+        }
+
+        if has_duplicates(&collection_whitelist) {
+            Err(NftError::CollectionDuplication)?;
+        }
+
+        if asset_whitelist.is_empty() {
+            Err(CustomError::EmptyAssetList)?;
+        }
+
+        if has_duplicates(&asset_whitelist) {
+            Err(CustomError::AssetDuplication)?;
+        }
 
         balances.set_inner(Balances {
             value: asset_whitelist

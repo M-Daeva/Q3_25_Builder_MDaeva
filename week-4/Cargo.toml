@@ -1,0 +1,28 @@
+[workspace.package]
+edition = "2021"
+repository = "https://github.com/M-Daeva/solana-boilerplate"
+authors = ["M. Daeva <embedmad@gmail.com>"]
+license = "Apache-2.0"
+
+[workspace]
+members = ["programs/*", "packages/*"]
+exclude = []
+resolver = "2"
+
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = "fat"
+debug-assertions = false
+codegen-units = 1
+panic = 'abort'
+incremental = false
+overflow-checks = true
+
+[workspace.dependencies]
+anchor-lang = { version = "0.31.1", features = ["init-if-needed"] }
+anchor-spl = { version = "0.31.1", features = ["token", "metadata"] }
+anchor-instruction-sysvar = { git = "https://github.com/ShrinathNR/anchor-instruction-sysvar.git", branch = "version-upgrade" }
+
+base = { path = "./packages/base" }
