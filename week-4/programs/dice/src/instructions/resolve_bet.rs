@@ -7,13 +7,16 @@ use {
     anchor_lang::{
         prelude::*,
         solana_program::{
-            self, ed25519_program, hash::hash, sysvar::instructions::load_instruction_at_checked,
+            self, ed25519_program,
+            hash::hash,
+            sysvar::instructions::{load_current_index_checked, load_instruction_at_checked},
         },
     },
     base::helpers::transfer_sol_from_program,
 };
 
 #[derive(Accounts)]
+#[instruction(id: u128)]
 pub struct ResolveBet<'info> {
     pub system_program: Program<'info, System>,
 
@@ -27,13 +30,14 @@ pub struct ResolveBet<'info> {
     pub house: Signer<'info>,
 
     /// CHECK: this is safe
+    #[account(mut)]
     pub player: UncheckedAccount<'info>,
 
     #[account(
         mut,
         close = player,
         has_one = player,
-        seeds = [b"bet", vault.key().as_ref(), bet.id.to_le_bytes().as_ref()],
+        seeds = [b"bet", vault.key().as_ref(), id.to_le_bytes().as_ref()],
         bump = bet.bump
     )]
     pub bet: Account<'info, Bet>,
@@ -55,7 +59,15 @@ impl<'info> ResolveBet<'info> {
             ..
         } = self;
 
-        let ix = load_instruction_at_checked(0, &instruction_sysvar.to_account_info())?;
+        // get the current instruction index first
+        let current_index = load_current_index_checked(&instruction_sysvar.to_account_info())?;
+
+        // Ed25519 instruction should be before this instruction
+        let ed25519_index = current_index
+            .checked_sub(1)
+            .ok_or(DiceError::Ed25519Program)? as usize;
+
+        let ix = load_instruction_at_checked(ed25519_index, &instruction_sysvar.to_account_info())?;
 
         if ix.program_id != ed25519_program::ID {
             Err(DiceError::Ed25519Program)?;
@@ -91,7 +103,7 @@ impl<'info> ResolveBet<'info> {
         Ok(())
     }
 
-    pub fn resolve_bet(&mut self, bumps: &ResolveBetBumps, sig: &[u8]) -> Result<()> {
+    pub fn resolve_bet(&mut self, bumps: &ResolveBetBumps, _id: u128, sig: &[u8]) -> Result<()> {
         let ResolveBet {
             system_program,
             house,

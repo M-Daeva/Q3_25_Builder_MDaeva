@@ -23,9 +23,9 @@ pub mod dice {
         ctx.accounts.create_bet(&ctx.bumps, id, roll, amount)
     }
 
-    pub fn resolve_bet(ctx: Context<ResolveBet>, sig: [u8; 64]) -> Result<()> {
+    pub fn resolve_bet(ctx: Context<ResolveBet>, id: u128, sig: [u8; 64]) -> Result<()> {
         ctx.accounts.verify_ed25519_signature(&sig)?;
-        ctx.accounts.resolve_bet(&ctx.bumps, &sig)
+        ctx.accounts.resolve_bet(&ctx.bumps, id, &sig)
     }
 
     pub fn refund_bet(ctx: Context<RefundBet>, id: u128) -> Result<()> {

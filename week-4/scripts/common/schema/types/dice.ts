@@ -260,6 +260,7 @@ export type Dice = {
         },
         {
           "name": "player",
+          "writable": true,
           "relations": [
             "bet"
           ]
@@ -282,9 +283,8 @@ export type Dice = {
                 "path": "vault"
               },
               {
-                "kind": "account",
-                "path": "bet.id",
-                "account": "bet"
+                "kind": "arg",
+                "path": "id"
               }
             ]
           }
@@ -313,6 +313,10 @@ export type Dice = {
         }
       ],
       "args": [
+        {
+          "name": "id",
+          "type": "u128"
+        },
         {
           "name": "sig",
           "type": {

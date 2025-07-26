@@ -1,5 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import * as spl from "@solana/spl-token";
+import { ed25519 } from "@noble/curves/ed25519";
 import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import { TxParams } from "../interfaces";
 import {
@@ -68,18 +69,40 @@ export class DiceHelpers {
   }
 
   async tryResolveBet(
+    id: number,
     signature: number[],
     params: TxParams = {},
     isDisplayed: boolean = false
   ): Promise<anchor.web3.TransactionSignature> {
+    const vaultPDA = this.getVaultPda();
+    const betPDA = this.getBetPDA(vaultPDA, id);
+    const betAccount = await this.program.account.bet.fetch(betPDA);
+
+    const message = this.createBetMessage({
+      player: betAccount.player,
+      amount: betAccount.amount,
+      slot: betAccount.slot,
+      id: betAccount.id,
+      roll: betAccount.roll,
+      bump: betAccount.bump,
+    });
+
+    const ed25519Ix = anchor.web3.Ed25519Program.createInstructionWithPublicKey(
+      {
+        publicKey: this.provider.wallet.publicKey.toBytes(),
+        message,
+        signature: new Uint8Array(signature),
+      }
+    );
+
     const ix = await this.program.methods
-      .resolveBet(Array.from(new Uint8Array(signature)))
+      .resolveBet(new anchor.BN(id), Array.from(new Uint8Array(signature)))
       .accounts({
         house: this.provider.wallet.publicKey,
       })
       .instruction();
 
-    return await this.handleTx([ix], params, isDisplayed);
+    return await this.handleTx([ed25519Ix, ix], params, isDisplayed);
   }
 
   async tryRefundBet(
@@ -131,6 +154,87 @@ export class DiceHelpers {
     const res = await this.program.account.bet.fetch(pda);
 
     return logAndReturn(res, isDisplayed);
+  }
+
+  async generateSignatureForBet(
+    houseKeypair: Keypair,
+    betId: number
+  ): Promise<number[]> {
+    try {
+      const vaultPDA = this.getVaultPda();
+      const betPDA = this.getBetPDA(vaultPDA, betId);
+      const betAccount = await this.program.account.bet.fetch(betPDA);
+
+      const message = this.createBetMessage({
+        player: betAccount.player,
+        amount: betAccount.amount,
+        slot: betAccount.slot,
+        id: betAccount.id,
+        roll: betAccount.roll,
+        bump: betAccount.bump,
+      });
+
+      return this.createEd25519Signature(houseKeypair, message);
+    } catch (error) {
+      console.error("Error generating signature:", error);
+      throw error;
+    }
+  }
+
+  private createBetMessage(bet: {
+    player: PublicKey;
+    amount: anchor.BN;
+    slot: anchor.BN;
+    id: anchor.BN;
+    roll: number;
+    bump: number;
+  }): Uint8Array {
+    const message = new Uint8Array(32 + 8 + 8 + 16 + 1 + 1);
+    let offset = 0;
+
+    // Player pubkey (32 bytes)
+    message.set(bet.player.toBytes(), offset);
+    offset += 32;
+
+    // Amount as little-endian u64 (8 bytes)
+    const amountBuffer = Buffer.alloc(8);
+    amountBuffer.writeBigUInt64LE(BigInt(bet.amount.toString()), 0);
+    message.set(amountBuffer, offset);
+    offset += 8;
+
+    // Slot as little-endian u64 (8 bytes)
+    const slotBuffer = Buffer.alloc(8);
+    slotBuffer.writeBigUInt64LE(BigInt(bet.slot.toString()), 0);
+    message.set(slotBuffer, offset);
+    offset += 8;
+
+    // ID as little-endian u128 (16 bytes)
+    const idBuffer = this.idToBuffer(bet.id);
+    message.set(idBuffer, offset);
+    offset += 16;
+
+    // Roll (1 byte)
+    message[offset] = bet.roll;
+    offset += 1;
+
+    // Bump (1 byte)
+    message[offset] = bet.bump;
+
+    return message;
+  }
+
+  private createEd25519Signature(
+    houseKeypair: Keypair,
+    message: Uint8Array
+  ): number[] {
+    // Sign the message with the house's private key
+    const signature = ed25519.sign(
+      message,
+      houseKeypair.secretKey.slice(0, 32)
+    );
+
+    // Convert to number array for the program
+    return Array.from(signature);
   }
 
   private idToBuffer(id: number | anchor.BN): Buffer {
