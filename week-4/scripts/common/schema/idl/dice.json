@@ -254,6 +254,7 @@
         },
         {
           "name": "player",
+          "writable": true,
           "relations": [
             "bet"
           ]
@@ -276,9 +277,8 @@
                 "path": "vault"
               },
               {
-                "kind": "account",
-                "path": "bet.id",
-                "account": "Bet"
+                "kind": "arg",
+                "path": "id"
               }
             ]
           }
@@ -307,6 +307,10 @@
         }
       ],
       "args": [
+        {
+          "name": "id",
+          "type": "u128"
+        },
         {
           "name": "sig",
           "type": {
