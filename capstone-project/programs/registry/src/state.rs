@@ -6,7 +6,6 @@ use {
 // TODO: add default values
 // dex_adapter:
 // rotation_timeout:
-// token_whitelist:
 // account_registration_fee:
 // account_data_size_range:
 // account_lifetime_range:
@@ -28,8 +27,6 @@ pub struct CommonConfig {
     pub dex_adapter: Option<Pubkey>,
     pub is_paused: bool,
     pub rotation_timeout: u32,
-    /// list of supported SPL/Token2022 tokens
-    pub token_whitelist: Vec<Pubkey>,
 }
 
 /// account-related program settings
@@ -68,6 +65,7 @@ pub struct UserId {
 pub struct UserAccount {
     /// for pagination
     pub id: u32,
+    pub is_activated: bool,
     /// encrypted user data
     pub data: String,
     /// encryption nonce

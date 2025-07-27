@@ -22,7 +22,6 @@ pub mod registry {
     pub fn init(
         dex_adapter: Option<Pubkey>,
         rotation_timeout: Option<u32>,
-        token_whitelist: Option<Vec<Pubkey>>,
         account_registration_fee: Option<AssetItem>,
         account_data_size_range: Option<Range>,
         account_lifetime_range: Option<Range>,
@@ -36,7 +35,6 @@ pub mod registry {
         dex_adapter: Option<Pubkey>,
         is_paused: Option<bool>,
         rotation_timeout: Option<u32>,
-        token_whitelist: Option<Vec<Pubkey>>,
     ) -> Result<()> {
         unimplemented!()
     }

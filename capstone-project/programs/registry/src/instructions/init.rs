@@ -1,4 +1,4 @@
-use {anchor_lang::prelude::*, base::helpers::transfer_sol_from_user};
+use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
 pub struct Init<'info> {
