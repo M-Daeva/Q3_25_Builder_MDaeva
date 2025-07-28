@@ -1,21 +1,21 @@
 ### Description
 
-### Workflows
+A decentralized password manager that combines self-custody security with blockchain-based data persistence, where users maintain complete control over their encrypted data while optionally leveraging on-chain storage for enhanced reliability and accessibility
 
-a) User has 11$ as SOL
-1. Client calls Registry::create_account(1$ SOL)
-2. Client wraps 10$ SOL to WSOL
-3. Client calls DEXAdapter::swap_and_forward(10$ WSOL → USDC, Registry)
-4. DEX Adapter swaps and forwards USDC to Registry
-5. Registry automatically activates account upon USDC receipt
+### Diagrams
 
-b) User has 11$ as WBTC
-1. User calls DEXAdapter::multi_swap(11$ WBTC → 1$ WSOL + 10$ USDC)
-2. DEX Adapter performs two swaps:
-    1/11 * WBTC → WSOL
-    10/11 * WBTC → USDC
-3. DEX Adapter sends 10$ USDC to user
-4. DEX Adapter unwraps 1$ WSOL to SOL sending it to user directly
-5. Client calls Registry::create_account(1$ SOL)
-6. Client calls Registry::activate_account(10$ USDC)
+#### Architecture Diagram
+![Architecture Diagram](/diagrams/Password%20Manager%20Architecture%20Diagram.drawio.svg)
+
+#### Create and Activate Account with SOL Flowchart
+![Create and Activate Account with SOL Flowchart](/diagrams/Password%20Manager%20Flow%20Create%20Account%20SOL.drawio.svg)
+
+#### Create and Activate Account with WBTC Flowchart
+![Create and Activate Account with WBTC Flowchart](/diagrams/Password%20Manager%20Flow%20Create%20Account%20WBTC.drawio.svg)
+
+#### Update Data in User Account Flowchart
+![Update Data in User Account Flowchart](/diagrams/Password%20Manager%20Flow%20Update%20Data.drawio.svg)
+
+#### Rotate Account Flowchart
+![Rotate Account Flowchart](/diagrams/Password%20Manager%20Flow%20Rotate%20Account.drawio.svg)
 
