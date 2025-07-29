@@ -60,9 +60,28 @@ fn transfer_admin() -> Result<()> {
         .unwrap_err();
     assert_error(res, AuthError::Unauthorized);
 
-    app.registry_try_update_common_config(AppUser::Admin, Some(AppUser::Alice), None, None, None)?;
-    app.registry_try_confirm_admin_rotation(AppUser::Alice)?;
+    let res = app
+        .registry_try_confirm_admin_rotation(AppUser::Alice)
+        .unwrap_err();
+    assert_error(res, AuthError::NoNewAdmin);
 
+    app.registry_try_update_common_config(AppUser::Admin, Some(AppUser::Alice), None, None, None)?;
+
+    app.wait(ROTATION_TIMEOUT as u64);
+    let res = app
+        .registry_try_confirm_admin_rotation(AppUser::Alice)
+        .unwrap_err();
+    assert_error(res, AuthError::TransferAdminDeadline);
+
+    app.registry_try_update_common_config(AppUser::Admin, Some(AppUser::Alice), None, None, None)?;
+
+    let res = app
+        .registry_try_confirm_admin_rotation(AppUser::Bob)
+        .unwrap_err();
+    assert_error(res, AuthError::Unauthorized);
+
+    app.wait(4);
+    app.registry_try_confirm_admin_rotation(AppUser::Alice)?;
     assert_eq!(
         app.registry_query_common_config()?.admin,
         AppUser::Alice.pubkey()

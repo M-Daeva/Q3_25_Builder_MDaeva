@@ -3,7 +3,7 @@ use {
         core::token::WithTokenKeys,
         types::{AppAsset, AppToken, AppUser, GetDecimals},
     },
-    anchor_lang::{AnchorDeserialize, Id, InstructionData, Result, ToAccountMetas},
+    anchor_lang::{prelude::Clock, AnchorDeserialize, Id, InstructionData, Result, ToAccountMetas},
     anchor_spl::associated_token::AssociatedToken,
     dex_adapter,
     litesvm::{types::TransactionMetadata, LiteSVM},
@@ -210,6 +210,20 @@ impl App {
 
     // utils
 
+    pub fn get_clock_time(&self) -> u64 {
+        self.litesvm.get_sysvar::<Clock>().unix_timestamp as u64
+    }
+
+    pub fn wait(&mut self, delay_s: u64) {
+        let mut clock = self.litesvm.get_sysvar::<Clock>();
+        clock.unix_timestamp += delay_s as i64;
+        clock.slot += 25 * delay_s / 10;
+
+        self.litesvm.set_sysvar::<Clock>(&clock);
+        // to avoid AlreadyProcessed error
+        self.litesvm.expire_blockhash();
+    }
+
     pub fn get_balance(&self, user: AppUser, asset: impl Into<AppAsset>) -> Result<u64> {
         let address = &user.pubkey();
 
@@ -321,6 +335,9 @@ pub mod extension {
         );
 
         litesvm.send_transaction(transaction).map_err(|e| {
+            // TODO: remove
+            println!("litesvm.send_transaction {:#?}\n", &e);
+
             let logs = e.meta.logs;
             let logs_str = format!("{:#?}", &logs);
 
