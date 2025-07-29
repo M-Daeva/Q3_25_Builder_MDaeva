@@ -16,11 +16,11 @@ pub const ACCOUNT_LIFETIME_MIN: u32 = 2 * SECONDS_PER_YEAR;
 pub const ACCOUNT_LIFETIME_MAX: u32 = 100 * SECONDS_PER_YEAR;
 pub const ACCOUNT_LIFETIME_MARGIN_BPS: u16 = 2_000; // 20 %
 
-pub const SEED_BUMP: &[u8] = b"bump";
-pub const SEED_COMMON_CONFIG: &[u8] = b"common_config";
-pub const SEED_ACCOUNT_CONFIG: &[u8] = b"account_config";
-pub const SEED_USER_COUNTER: &[u8] = b"user_counter";
-pub const SEED_ADMIN_ROTATION_STATE: &[u8] = b"admin_rotation_state";
+pub const SEED_BUMP: &str = "bump";
+pub const SEED_COMMON_CONFIG: &str = "common_config";
+pub const SEED_ACCOUNT_CONFIG: &str = "account_config";
+pub const SEED_USER_COUNTER: &str = "user_counter";
+pub const SEED_ADMIN_ROTATION_STATE: &str = "admin_rotation_state";
 
 /// to store bumps for all app accounts
 #[account]
@@ -34,7 +34,7 @@ pub struct Bump {
 
 /// common program settings
 #[account]
-#[derive(InitSpace)]
+#[derive(InitSpace, PartialEq, Debug)]
 pub struct CommonConfig {
     /// can update the config and execute priveled instructions
     pub admin: Pubkey,
@@ -45,7 +45,7 @@ pub struct CommonConfig {
 
 /// account-related program settings
 #[account]
-#[derive(InitSpace)]
+#[derive(InitSpace, PartialEq, Debug)]
 pub struct AccountConfig {
     pub registration_fee: AssetItem,
     pub data_size_range: Range,
@@ -55,7 +55,7 @@ pub struct AccountConfig {
 
 /// for indexing
 #[account]
-#[derive(InitSpace, Default)]
+#[derive(InitSpace, Default, PartialEq, Debug)]
 pub struct UserCounter {
     pub last_user_id: u32,
 }
@@ -63,7 +63,7 @@ pub struct UserCounter {
 /// to transfer ownership from one address to another in 2 steps (for security reasons) \
 /// used both for app admin and user accounts
 #[account]
-#[derive(InitSpace)]
+#[derive(InitSpace, PartialEq, Debug)]
 pub struct RotationState {
     pub new_owner: Option<Pubkey>,
     pub expiration_date: u64,
@@ -71,7 +71,7 @@ pub struct RotationState {
 
 /// get by user: Pubkey
 #[account]
-#[derive(InitSpace)]
+#[derive(InitSpace, PartialEq, Debug)]
 pub struct UserId {
     pub value: u32,
     pub account_bump: u8,
@@ -80,7 +80,7 @@ pub struct UserId {
 
 /// get by user_id: u32
 #[account]
-#[derive(InitSpace)]
+#[derive(InitSpace, PartialEq, Debug)]
 pub struct UserAccount {
     /// for indexing
     pub id: u32,

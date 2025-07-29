@@ -11,9 +11,9 @@ pub const MAINNET_WSOL: Pubkey =
 pub const MAINNET_WBTC: Pubkey =
     Pubkey::from_str_const("5XZw2LKTyrfvfiskJ78AMpackRjPcyCif1WhUsPDuVqQ");
 
-pub const SEED_BUMP: &[u8] = b"bump";
-pub const SEED_CONFIG: &[u8] = b"config";
-pub const SEED_ADMIN_ROTATION_STATE: &[u8] = b"admin_rotation_state";
+pub const SEED_BUMP: &str = "bump";
+pub const SEED_CONFIG: &str = "config";
+pub const SEED_ADMIN_ROTATION_STATE: &str = "admin_rotation_state";
 
 /// to store bumps for all app accounts
 #[account]
@@ -24,7 +24,7 @@ pub struct Bump {
 }
 
 #[account]
-#[derive(InitSpace)]
+#[derive(InitSpace, PartialEq, Debug)]
 pub struct Config {
     /// can update the config and execute priveled instructions
     pub admin: Pubkey,
@@ -38,7 +38,7 @@ pub struct Config {
 
 /// to transfer ownership from one address to another in 2 steps (for security reasons)
 #[account]
-#[derive(InitSpace)]
+#[derive(InitSpace, PartialEq, Debug)]
 pub struct RotationState {
     pub new_owner: Option<Pubkey>,
     pub expiration_date: u64,

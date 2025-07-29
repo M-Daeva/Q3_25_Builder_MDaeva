@@ -20,7 +20,7 @@ pub struct Init<'info> {
         init,
         payer = sender,
         space = get_space(Bump::INIT_SPACE),
-        seeds = [SEED_BUMP],
+        seeds = [SEED_BUMP.as_bytes()],
         bump
     )]
     pub bump: Account<'info, Bump>,
@@ -29,7 +29,7 @@ pub struct Init<'info> {
         init,
         payer = sender,
         space = get_space(Config::INIT_SPACE),
-        seeds = [SEED_CONFIG],
+        seeds = [SEED_CONFIG.as_bytes()],
         bump
     )]
     pub config: Account<'info, Config>,
@@ -38,7 +38,7 @@ pub struct Init<'info> {
         init,
         payer = sender,
         space = get_space(RotationState::INIT_SPACE),
-        seeds = [SEED_ADMIN_ROTATION_STATE],
+        seeds = [SEED_ADMIN_ROTATION_STATE.as_bytes()],
         bump
     )]
     pub admin_rotation_state: Account<'info, RotationState>,

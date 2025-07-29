@@ -33,9 +33,9 @@ clear && ./program_id.sh registry
 clear && ./build.sh
 ```
 
-3. Test programs (stop local validator if required)
+3. Test programs
 ```sh
-clear && bun test-local
+bun test-rs
 ```
 
 4. Deploy programs (run local validator if required)

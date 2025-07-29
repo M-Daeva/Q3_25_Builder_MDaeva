@@ -32,7 +32,7 @@ pub struct Init<'info> {
         init,
         payer = sender,
         space = get_space(Bump::INIT_SPACE),
-        seeds = [SEED_BUMP],
+        seeds = [SEED_BUMP.as_bytes()],
         bump
     )]
     pub bump: Account<'info, Bump>,
@@ -41,7 +41,7 @@ pub struct Init<'info> {
         init,
         payer = sender,
         space = get_space(CommonConfig::INIT_SPACE),
-        seeds = [SEED_COMMON_CONFIG],
+        seeds = [SEED_COMMON_CONFIG.as_bytes()],
         bump
     )]
     pub common_config: Account<'info, CommonConfig>,
@@ -50,7 +50,7 @@ pub struct Init<'info> {
         init,
         payer = sender,
         space = get_space(AccountConfig::INIT_SPACE),
-        seeds = [SEED_ACCOUNT_CONFIG],
+        seeds = [SEED_ACCOUNT_CONFIG.as_bytes()],
         bump
     )]
     pub account_config: Account<'info, AccountConfig>,
@@ -59,7 +59,7 @@ pub struct Init<'info> {
         init,
         payer = sender,
         space = get_space(UserCounter::INIT_SPACE),
-        seeds = [SEED_USER_COUNTER],
+        seeds = [SEED_USER_COUNTER.as_bytes()],
         bump
     )]
     pub user_counter: Account<'info, UserCounter>,
@@ -68,7 +68,7 @@ pub struct Init<'info> {
         init,
         payer = sender,
         space = get_space(RotationState::INIT_SPACE),
-        seeds = [SEED_ADMIN_ROTATION_STATE],
+        seeds = [SEED_ADMIN_ROTATION_STATE.as_bytes()],
         bump
     )]
     pub admin_rotation_state: Account<'info, RotationState>,
