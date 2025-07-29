@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
 pub struct SwapSpec {
     pub token_out: Pubkey,
     /// e.g., 1 for 1/11

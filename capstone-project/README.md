@@ -2,6 +2,7 @@
 
 A decentralized password manager that combines self-custody security with blockchain-based data persistence, where users maintain complete control over their encrypted data while optionally leveraging on-chain storage for enhanced reliability and accessibility
 
+
 ### Diagrams
 
 #### Architecture Diagram
@@ -19,3 +20,36 @@ A decentralized password manager that combines self-custody security with blockc
 #### Rotate Account Flowchart
 ![Rotate Account Flowchart](./diagrams/Password_Manager_Flow_Rotate_Account.drawio.svg)
 
+
+### Workflow
+
+1. Generate program ID and update it in files
+```sh
+clear && ./program_id.sh registry
+```
+
+2. Build programs
+```sh
+clear && ./build.sh
+```
+
+3. Test programs (stop local validator if required)
+```sh
+clear && bun test-local
+```
+
+4. Deploy programs (run local validator if required)
+```sh
+solana-test-validator
+clear && ./deploy.sh localnet
+```
+
+5. Initialize programs
+```sh
+clear && bun initialize localnet
+```
+
+6. Interact with programs
+```sh
+clear && bun start localnet
+```
