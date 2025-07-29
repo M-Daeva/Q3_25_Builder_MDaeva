@@ -38,7 +38,7 @@ impl DexAdapterExtension for App {
         // programs
         let ProgramId {
             system_program,
-            registry: program_id,
+            dex_adapter: program_id,
             ..
         } = self.program_id;
 
