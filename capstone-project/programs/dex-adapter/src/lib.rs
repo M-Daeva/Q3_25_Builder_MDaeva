@@ -8,21 +8,23 @@ pub mod instructions;
 pub mod state;
 pub mod types;
 
-// use {instructions::init::*, types::SwapSpec};
+use instructions::init::*;
 
-declare_id!("3XEw4Ta4PU5NMET3xJhc71yagoB85awhTzzcNdFbAyBt");
+declare_id!("FMsjKKPk7FQb1B9H8UQTLrdCUZ9MaoAeTnNK9kdVJmtt");
 
-// #[program]
+#[program]
 pub mod dex_adapter {
-    // use super::*;
+    use super::*;
 
-    // pub fn init(
-    //     registry: Option<Pubkey>,
-    //     rotation_timeout: Option<u32>,
-    //     token_in_whitelist: Option<Vec<Pubkey>>,
-    // ) -> Result<()> {
-    //     unimplemented!()
-    // }
+    pub fn init(
+        ctx: Context<Init>,
+        registry: Option<Pubkey>,
+        rotation_timeout: Option<u32>,
+        token_in_whitelist: Option<Vec<Pubkey>>,
+    ) -> Result<()> {
+        ctx.accounts
+            .init(ctx.bumps, registry, rotation_timeout, token_in_whitelist)
+    }
 
     // pub fn update_config(
     //     admin: Option<Pubkey>,
