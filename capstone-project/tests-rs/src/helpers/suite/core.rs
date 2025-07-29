@@ -220,8 +220,6 @@ impl App {
         clock.slot += 25 * delay_s / 10;
 
         self.litesvm.set_sysvar::<Clock>(&clock);
-        // to avoid AlreadyProcessed error
-        self.litesvm.expire_blockhash();
     }
 
     pub fn get_balance(&self, user: AppUser, asset: impl Into<AppAsset>) -> Result<u64> {
@@ -327,6 +325,9 @@ pub mod extension {
     where
         S: Signers + ?Sized,
     {
+        // to avoid AlreadyProcessed error
+        litesvm.expire_blockhash();
+
         let transaction = Transaction::new_signed_with_payer(
             instructions,
             Some(payer),
@@ -335,9 +336,6 @@ pub mod extension {
         );
 
         litesvm.send_transaction(transaction).map_err(|e| {
-            // TODO: remove
-            println!("litesvm.send_transaction {:#?}\n", &e);
-
             let logs = e.meta.logs;
             let logs_str = format!("{:#?}", &logs);
 

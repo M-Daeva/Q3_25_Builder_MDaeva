@@ -80,7 +80,6 @@ fn transfer_admin() -> Result<()> {
         .unwrap_err();
     assert_error(res, AuthError::Unauthorized);
 
-    app.wait(4);
     app.registry_try_confirm_admin_rotation(AppUser::Alice)?;
     assert_eq!(
         app.registry_query_common_config()?.admin,
