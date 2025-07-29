@@ -9,7 +9,7 @@ pub mod state;
 pub mod types;
 
 use {
-    instructions::init::*,
+    instructions::{confirm_admin_rotation::*, init::*, update_common_config::*},
     types::{AssetItem, Range},
 };
 
@@ -39,14 +39,16 @@ pub mod registry {
         )
     }
 
-    // pub fn update_common_config(
-    //     admin: Option<Pubkey>,
-    //     dex_adapter: Option<Pubkey>,
-    //     is_paused: Option<bool>,
-    //     rotation_timeout: Option<u32>,
-    // ) -> Result<()> {
-    //     unimplemented!()
-    // }
+    pub fn update_common_config(
+        ctx: Context<UpdateCommonConfig>,
+        admin: Option<Pubkey>,
+        dex_adapter: Option<Pubkey>,
+        is_paused: Option<bool>,
+        rotation_timeout: Option<u32>,
+    ) -> Result<()> {
+        ctx.accounts
+            .update_common_config(admin, dex_adapter, is_paused, rotation_timeout)
+    }
 
     // pub fn update_account_config(
     //     registration_fee: Option<AssetItem>,
@@ -57,9 +59,9 @@ pub mod registry {
     //     unimplemented!()
     // }
 
-    // pub fn confirm_admin_rotation() -> Result<()> {
-    //     unimplemented!()
-    // }
+    pub fn confirm_admin_rotation(ctx: Context<ConfirmAdminRotation>) -> Result<()> {
+        ctx.accounts.confirm_admin_rotation()
+    }
 
     // pub fn withdraw_revenue(amount: Option<u64>, recipient: Option<Pubkey>) -> Result<()> {
     //     unimplemented!()

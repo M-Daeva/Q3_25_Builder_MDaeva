@@ -1,6 +1,18 @@
 use anchor_lang::prelude::*;
 
 #[error_code]
+pub enum AuthError {
+    #[msg("Sender doesn't have access permissions!")]
+    Unauthorized,
+
+    #[msg("New admin wasn't specified!")]
+    NoNewAdmin,
+
+    #[msg("It's too late to accept admin role!")]
+    TransferAdminDeadline,
+}
+
+#[error_code]
 pub enum NftError {
     #[msg("NFT isn't found!")]
     NftIsNotFound,

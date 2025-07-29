@@ -27,6 +27,20 @@ pub trait RegistryExtension {
         account_lifetime_margin_bps: Option<u16>,
     ) -> Result<TransactionMetadata>;
 
+    fn registry_try_update_common_config(
+        &mut self,
+        sender: AppUser,
+        admin: Option<AppUser>,
+        dex_adapter: Option<Pubkey>,
+        is_paused: Option<bool>,
+        rotation_timeout: Option<u32>,
+    ) -> Result<TransactionMetadata>;
+
+    fn registry_try_confirm_admin_rotation(
+        &mut self,
+        sender: AppUser,
+    ) -> Result<TransactionMetadata>;
+
     fn registry_query_common_config(&self) -> Result<state::CommonConfig>;
 
     fn registry_query_account_config(&self) -> Result<state::AccountConfig>;
@@ -98,6 +112,91 @@ impl RegistryExtension for App {
             account_lifetime_range,
             account_lifetime_margin_bps,
         };
+
+        send_tx_with_ix(
+            self,
+            &program_id,
+            &accounts,
+            &instruction_data,
+            &payer,
+            &signers,
+        )
+    }
+
+    fn registry_try_update_common_config(
+        &mut self,
+        sender: AppUser,
+        admin: Option<AppUser>,
+        dex_adapter: Option<Pubkey>,
+        is_paused: Option<bool>,
+        rotation_timeout: Option<u32>,
+    ) -> Result<TransactionMetadata> {
+        // programs
+        let ProgramId {
+            registry: program_id,
+            ..
+        } = self.program_id;
+
+        // signers
+        let payer = sender.pubkey();
+        let signers = [sender.keypair()];
+
+        // pda
+        let bump = self.pda.registry_bump();
+        let common_config = self.pda.registry_common_config();
+        let admin_rotation_state = self.pda.registry_admin_rotation_state();
+
+        let accounts = accounts::UpdateCommonConfig {
+            sender: payer,
+            bump,
+            common_config,
+            admin_rotation_state,
+        };
+
+        let instruction_data = instruction::UpdateCommonConfig {
+            admin: admin.map(|x| x.pubkey()),
+            dex_adapter,
+            is_paused,
+            rotation_timeout,
+        };
+
+        send_tx_with_ix(
+            self,
+            &program_id,
+            &accounts,
+            &instruction_data,
+            &payer,
+            &signers,
+        )
+    }
+
+    fn registry_try_confirm_admin_rotation(
+        &mut self,
+        sender: AppUser,
+    ) -> Result<TransactionMetadata> {
+        // programs
+        let ProgramId {
+            registry: program_id,
+            ..
+        } = self.program_id;
+
+        // signers
+        let payer = sender.pubkey();
+        let signers = [sender.keypair()];
+
+        // pda
+        let bump = self.pda.registry_bump();
+        let common_config = self.pda.registry_common_config();
+        let admin_rotation_state = self.pda.registry_admin_rotation_state();
+
+        let accounts = accounts::ConfirmAdminRotation {
+            sender: payer,
+            bump,
+            common_config,
+            admin_rotation_state,
+        };
+
+        let instruction_data = instruction::ConfirmAdminRotation {};
 
         send_tx_with_ix(
             self,

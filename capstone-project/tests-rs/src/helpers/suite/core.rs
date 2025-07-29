@@ -320,11 +320,11 @@ pub mod extension {
             litesvm.latest_blockhash(),
         );
 
-        // TODO: pass logs instead of error
         litesvm.send_transaction(transaction).map_err(|e| {
-            println!("{:#?}", &e);
+            let logs = e.meta.logs;
+            let logs_str = format!("{:#?}", &logs);
 
-            to_anchor_err(e.err)
+            to_anchor_err(logs_str)
         })
     }
 
@@ -349,4 +349,72 @@ pub mod extension {
 
         send_tx(&mut app.litesvm, &[ix], payer, signers)
     }
+}
+
+pub fn assert_error(
+    err: anchor_lang::error::Error,
+    expected: impl ToString + Sized + std::fmt::Debug,
+) {
+    let expected_error_name = format!("{:#?}", expected);
+    let expected_error_text = expected.to_string();
+
+    let error = parse_anchor_err(&err);
+    let contains_name = error.contains(&expected_error_name);
+    let contains_text = error.contains(&expected_error_text);
+
+    pretty_assertions::assert_eq!(
+        "",
+        if contains_name || contains_text {
+            ""
+        } else {
+            " "
+        },
+        "\n\n✅ Expected error:\n{} -> {}\n\n❌ Received error:\n{}",
+        expected_error_name,
+        expected_error_text,
+        error
+    );
+}
+
+/// Parses an Anchor error to extract the error code and message from program logs
+/// Returns a formatted string like "Error Code: Unauthorized. Error Message: Sender doesn't have access permissions!"
+fn parse_anchor_err(error: impl std::fmt::Debug) -> String {
+    let error_msg = &format!("{:#?}", error);
+
+    // Try to parse the error message as JSON (program logs)
+    if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(error_msg) {
+        if let serde_json::Value::Array(logs) = json_value {
+            // Look for the AnchorError log entry
+            for log in &logs {
+                if let Some(log_str) = log.as_str() {
+                    if log_str.contains("AnchorError occurred") {
+                        return extract_error_details(log_str).unwrap_or_default();
+                    }
+                }
+            }
+        }
+    }
+
+    // If JSON parsing fails, try to find the error directly in the string
+    if error_msg.contains("AnchorError occurred") {
+        return extract_error_details(error_msg).unwrap_or_default();
+    }
+
+    String::default()
+}
+
+/// Extracts error code and message from an AnchorError log string
+fn extract_error_details(log_str: &str) -> Option<String> {
+    let error_code = extract_field(log_str, "Error Code: ", ".")?;
+    let error_message = extract_field(log_str, "Error Message: ", ".")?;
+
+    Some(format!("{} -> {}", error_code, error_message))
+}
+
+/// Helper function to extract a field between two delimiters
+fn extract_field(text: &str, start_delimiter: &str, end_delimiter: &str) -> Option<String> {
+    let start_pos = text.find(start_delimiter)? + start_delimiter.len();
+    let remaining = &text[start_pos..];
+    let end_pos = remaining.find(end_delimiter)?;
+    Some(remaining[..end_pos].to_string())
 }

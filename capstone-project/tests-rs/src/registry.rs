@@ -2,11 +2,12 @@ use {
     crate::helpers::{
         registry::RegistryExtension,
         suite::{
-            core::{token::WithTokenKeys, App},
+            core::{assert_error, token::WithTokenKeys, App},
             types::{AppToken, AppUser},
         },
     },
     anchor_lang::Result,
+    base::error::AuthError,
     pretty_assertions::assert_eq,
     registry::{
         state::{CommonConfig, ACCOUNT_REGISTRATION_FEE_AMOUNT, ROTATION_TIMEOUT},
@@ -14,8 +15,7 @@ use {
     },
 };
 
-#[test]
-fn init_default() -> Result<()> {
+fn init_app() -> Result<App> {
     let mut app = App::new();
 
     app.registry_try_init(
@@ -31,6 +31,13 @@ fn init_default() -> Result<()> {
         None,
     )?;
 
+    Ok(app)
+}
+
+#[test]
+fn init_default() -> Result<()> {
+    let app = init_app()?;
+
     assert_eq!(
         app.registry_query_common_config()?,
         CommonConfig {
@@ -39,6 +46,26 @@ fn init_default() -> Result<()> {
             is_paused: false,
             rotation_timeout: ROTATION_TIMEOUT
         }
+    );
+
+    Ok(())
+}
+
+#[test]
+fn transfer_admin() -> Result<()> {
+    let mut app = init_app()?;
+
+    let res = app
+        .registry_try_update_common_config(AppUser::Alice, Some(AppUser::Alice), None, None, None)
+        .unwrap_err();
+    assert_error(res, AuthError::Unauthorized);
+
+    app.registry_try_update_common_config(AppUser::Admin, Some(AppUser::Alice), None, None, None)?;
+    app.registry_try_confirm_admin_rotation(AppUser::Alice)?;
+
+    assert_eq!(
+        app.registry_query_common_config()?.admin,
+        AppUser::Alice.pubkey()
     );
 
     Ok(())

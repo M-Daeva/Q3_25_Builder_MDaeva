@@ -1,7 +1,15 @@
-use anchor_lang::prelude::*;
+use {anchor_lang::prelude::*, base::error::AuthError};
+
+pub enum ProgError {
+    Auth(AuthError),
+    Cusom(CustomError),
+}
 
 #[error_code]
-pub enum ProgError {
+pub enum CustomError {
+    #[msg("Parameters are not provided!")]
+    NoParameters,
+
     #[msg("Insufficient SOL amount for account creation")]
     InsufficientSolAmount,
 
@@ -10,7 +18,16 @@ pub enum ProgError {
 
     #[msg("Account already activated")]
     AccountAlreadyActivated,
+}
 
-    #[msg("Unauthorized program caller")]
-    UnauthorizedCaller,
+impl From<CustomError> for ProgError {
+    fn from(error: CustomError) -> Self {
+        Self::Cusom(error)
+    }
+}
+
+impl From<AuthError> for ProgError {
+    fn from(error: AuthError) -> Self {
+        Self::Auth(error)
+    }
 }
