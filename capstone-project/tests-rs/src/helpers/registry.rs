@@ -106,7 +106,7 @@ impl RegistryExtension for App {
         let admin_rotation_state = self.pda.registry_admin_rotation_state();
 
         // ata
-        let revenue_app_ata = App::get_ata(&bump, &revenue_mint);
+        let revenue_app_ata = App::get_ata(&common_config, &revenue_mint);
 
         let accounts = accounts::Init {
             system_program,

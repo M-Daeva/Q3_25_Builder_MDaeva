@@ -62,7 +62,7 @@ pub struct WithdrawRevenue<'info> {
     #[account(
         mut,
         associated_token::mint = revenue_mint,
-        associated_token::authority = bump
+        associated_token::authority = common_config
     )]
     pub revenue_app_ata: InterfaceAccount<'info, TokenAccount>,
 }
