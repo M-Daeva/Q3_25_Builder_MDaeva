@@ -12,7 +12,6 @@ use {
 
 #[derive(Accounts)]
 pub struct UpdateCommonConfig<'info> {
-    #[account(mut)]
     pub sender: Signer<'info>,
 
     // data storage

@@ -8,7 +8,6 @@ use {
 
 #[derive(Accounts)]
 pub struct ConfirmAdminRotation<'info> {
-    #[account(mut)]
     pub sender: Signer<'info>,
 
     // data storage

@@ -10,14 +10,23 @@ pub enum CustomError {
     #[msg("Parameters are not provided!")]
     NoParameters,
 
-    #[msg("Insufficient SOL amount for account creation")]
-    InsufficientSolAmount,
+    #[msg("Wrong asset type!")]
+    WrongAssetType,
 
-    #[msg("Insufficient USDC amount for account activation")]
-    InsufficientUsdcAmount,
+    #[msg("Zero amount to send!")]
+    ZeroAmount,
 
-    #[msg("Account already activated")]
-    AccountAlreadyActivated,
+    #[msg("Exceeded available asset amount!")]
+    ExceededAvailableAssetAmount,
+    //
+    // #[msg("Insufficient SOL amount for account creation")]
+    // InsufficientSolAmount,
+
+    // #[msg("Insufficient USDC amount for account activation")]
+    // InsufficientUsdcAmount,
+
+    // #[msg("Account already activated")]
+    // AccountAlreadyActivated,
 }
 
 impl From<CustomError> for ProgError {

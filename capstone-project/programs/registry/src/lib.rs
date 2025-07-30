@@ -9,7 +9,10 @@ pub mod state;
 pub mod types;
 
 use {
-    instructions::{confirm_admin_rotation::*, init::*, update_common_config::*},
+    instructions::{
+        confirm_admin_rotation::*, init::*, update_account_config::*, update_common_config::*,
+        withdraw_revenue::*,
+    },
     types::{AssetItem, Range},
 };
 
@@ -50,22 +53,32 @@ pub mod registry {
             .update_common_config(admin, dex_adapter, is_paused, rotation_timeout)
     }
 
-    // pub fn update_account_config(
-    //     registration_fee: Option<AssetItem>,
-    //     data_size_range: Option<Range>,
-    //     lifetime_range: Option<Range>,
-    //     lifetime_margin_bps: Option<u16>,
-    // ) -> Result<()> {
-    //     unimplemented!()
-    // }
+    pub fn update_account_config(
+        ctx: Context<UpdateAccountConfig>,
+        registration_fee: Option<AssetItem>,
+        data_size_range: Option<Range>,
+        lifetime_range: Option<Range>,
+        lifetime_margin_bps: Option<u16>,
+    ) -> Result<()> {
+        ctx.accounts.update_account_config(
+            registration_fee,
+            data_size_range,
+            lifetime_range,
+            lifetime_margin_bps,
+        )
+    }
 
     pub fn confirm_admin_rotation(ctx: Context<ConfirmAdminRotation>) -> Result<()> {
         ctx.accounts.confirm_admin_rotation()
     }
 
-    // pub fn withdraw_revenue(amount: Option<u64>, recipient: Option<Pubkey>) -> Result<()> {
-    //     unimplemented!()
-    // }
+    pub fn withdraw_revenue(
+        ctx: Context<WithdrawRevenue>,
+        amount: Option<u64>,
+        recipient: Option<Pubkey>,
+    ) -> Result<()> {
+        ctx.accounts.withdraw_revenue(amount, recipient)
+    }
 
     // /// creates user PDA account accepting rent exempt in SOL
     // pub fn create_account(max_data_size: u32, lifetime: u32) -> Result<()> {
