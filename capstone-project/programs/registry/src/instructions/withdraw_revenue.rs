@@ -14,7 +14,6 @@ use {
 };
 
 #[derive(Accounts)]
-#[instruction(amount: Option<u64>, recipient: Option<Pubkey>,)]
 pub struct WithdrawRevenue<'info> {
     pub system_program: Program<'info, System>,
     pub token_program: Interface<'info, TokenInterface>,
@@ -22,6 +21,9 @@ pub struct WithdrawRevenue<'info> {
 
     #[account(mut)]
     pub sender: Signer<'info>,
+
+    // handle the option on client
+    pub recipient: SystemAccount<'info>,
 
     // data storage
     //
@@ -53,9 +55,9 @@ pub struct WithdrawRevenue<'info> {
         init_if_needed,
         payer = sender,
         associated_token::mint = revenue_mint,
-        associated_token::authority = sender
+        associated_token::authority = recipient
     )]
-    pub revenue_admin_ata: InterfaceAccount<'info, TokenAccount>,
+    pub revenue_recipient_ata: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         mut,
@@ -66,27 +68,18 @@ pub struct WithdrawRevenue<'info> {
 }
 
 impl<'info> WithdrawRevenue<'info> {
-    pub fn withdraw_revenue(
-        &mut self,
-        amount: Option<u64>,
-        recipient: Option<Pubkey>,
-    ) -> Result<()> {
+    pub fn withdraw_revenue(&mut self, amount: Option<u64>) -> Result<()> {
         let WithdrawRevenue {
-            system_program,
             token_program,
-            associated_token_program,
             sender,
             bump,
             common_config,
             account_config,
             revenue_mint,
-            revenue_admin_ata,
+            revenue_recipient_ata,
             revenue_app_ata,
+            ..
         } = self;
-
-        let amount = amount.unwrap_or(revenue_app_ata.amount);
-        // TODO: use instead of revenue_admin_ata
-        let recipient = recipient.unwrap_or(sender.key());
 
         if sender.key() != common_config.admin {
             Err(AuthError::Unauthorized)?;
@@ -95,6 +88,8 @@ impl<'info> WithdrawRevenue<'info> {
         if revenue_mint.key() != account_config.registration_fee.asset {
             Err(CustomError::WrongAssetType)?;
         }
+
+        let amount = amount.unwrap_or(revenue_app_ata.amount);
 
         if amount == 0 {
             Err(CustomError::ZeroAmount)?;
@@ -108,7 +103,7 @@ impl<'info> WithdrawRevenue<'info> {
             amount,
             revenue_mint,
             revenue_app_ata,
-            revenue_admin_ata,
+            revenue_recipient_ata,
             &[SEED_COMMON_CONFIG.as_bytes()],
             bump.common_config,
             common_config,

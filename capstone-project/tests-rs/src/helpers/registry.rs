@@ -2,9 +2,10 @@ use {
     crate::helpers::suite::{
         core::{
             extension::{get_data, send_tx_with_ix},
+            token::WithTokenKeys,
             App, ProgramId,
         },
-        types::AppUser,
+        types::{AppToken, AppUser},
     },
     anchor_lang::Result,
     litesvm::types::TransactionMetadata,
@@ -36,9 +37,26 @@ pub trait RegistryExtension {
         rotation_timeout: Option<u32>,
     ) -> Result<TransactionMetadata>;
 
+    fn registry_try_update_account_config(
+        &mut self,
+        sender: AppUser,
+        registration_fee: Option<AssetItem>,
+        data_size_range: Option<Range>,
+        lifetime_range: Option<Range>,
+        lifetime_margin_bps: Option<u16>,
+    ) -> Result<TransactionMetadata>;
+
     fn registry_try_confirm_admin_rotation(
         &mut self,
         sender: AppUser,
+    ) -> Result<TransactionMetadata>;
+
+    fn registry_try_withdraw_revenue(
+        &mut self,
+        sender: AppUser,
+        amount: Option<u64>,
+        recipient: Option<AppUser>,
+        revenue_asset: Option<AppToken>,
     ) -> Result<TransactionMetadata>;
 
     fn registry_query_common_config(&self) -> Result<state::CommonConfig>;
@@ -170,6 +188,53 @@ impl RegistryExtension for App {
         )
     }
 
+    fn registry_try_update_account_config(
+        &mut self,
+        sender: AppUser,
+        registration_fee: Option<AssetItem>,
+        data_size_range: Option<Range>,
+        lifetime_range: Option<Range>,
+        lifetime_margin_bps: Option<u16>,
+    ) -> Result<TransactionMetadata> {
+        // programs
+        let ProgramId {
+            registry: program_id,
+            ..
+        } = self.program_id;
+
+        // signers
+        let payer = sender.pubkey();
+        let signers = [sender.keypair()];
+
+        // pda
+        let bump = self.pda.registry_bump();
+        let common_config = self.pda.registry_common_config();
+        let account_config = self.pda.registry_account_config();
+
+        let accounts = accounts::UpdateAccountConfig {
+            sender: payer,
+            bump,
+            common_config,
+            account_config,
+        };
+
+        let instruction_data = instruction::UpdateAccountConfig {
+            registration_fee,
+            data_size_range,
+            lifetime_range,
+            lifetime_margin_bps,
+        };
+
+        send_tx_with_ix(
+            self,
+            &program_id,
+            &accounts,
+            &instruction_data,
+            &payer,
+            &signers,
+        )
+    }
+
     fn registry_try_confirm_admin_rotation(
         &mut self,
         sender: AppUser,
@@ -197,6 +262,69 @@ impl RegistryExtension for App {
         };
 
         let instruction_data = instruction::ConfirmAdminRotation {};
+
+        send_tx_with_ix(
+            self,
+            &program_id,
+            &accounts,
+            &instruction_data,
+            &payer,
+            &signers,
+        )
+    }
+
+    fn registry_try_withdraw_revenue(
+        &mut self,
+        sender: AppUser,
+        amount: Option<u64>,
+        recipient: Option<AppUser>,
+        revenue_asset: Option<AppToken>, // to test asset guard
+    ) -> Result<TransactionMetadata> {
+        // programs
+        let ProgramId {
+            system_program,
+            token_program,
+            associated_token_program,
+            registry: program_id,
+            ..
+        } = self.program_id;
+
+        let recipient = recipient.unwrap_or(sender).pubkey();
+
+        // signers
+        let payer = sender.pubkey();
+        let signers = [sender.keypair()];
+
+        // mint
+        let revenue_mint = match revenue_asset {
+            Some(x) => x.pubkey(&self),
+            _ => self.registry_query_account_config()?.registration_fee.asset,
+        };
+
+        // pda
+        let bump = self.pda.registry_bump();
+        let common_config = self.pda.registry_common_config();
+        let account_config = self.pda.registry_account_config();
+
+        // ata
+        let revenue_recipient_ata = App::get_ata(&recipient, &revenue_mint);
+        let revenue_app_ata = App::get_ata(&common_config, &revenue_mint);
+
+        let accounts = accounts::WithdrawRevenue {
+            system_program,
+            token_program,
+            associated_token_program,
+            sender: payer,
+            recipient,
+            bump,
+            common_config,
+            account_config,
+            revenue_mint,
+            revenue_recipient_ata,
+            revenue_app_ata,
+        };
+
+        let instruction_data = instruction::WithdrawRevenue { amount };
 
         send_tx_with_ix(
             self,

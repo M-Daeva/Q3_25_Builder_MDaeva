@@ -72,12 +72,8 @@ pub mod registry {
         ctx.accounts.confirm_admin_rotation()
     }
 
-    pub fn withdraw_revenue(
-        ctx: Context<WithdrawRevenue>,
-        amount: Option<u64>,
-        recipient: Option<Pubkey>,
-    ) -> Result<()> {
-        ctx.accounts.withdraw_revenue(amount, recipient)
+    pub fn withdraw_revenue(ctx: Context<WithdrawRevenue>, amount: Option<u64>) -> Result<()> {
+        ctx.accounts.withdraw_revenue(amount)
     }
 
     // /// creates user PDA account accepting rent exempt in SOL
