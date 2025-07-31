@@ -333,9 +333,21 @@ pub mod extension {
         T: AnchorDeserialize,
     {
         const DISCRIMINATOR_SPACE: usize = 8;
-        let data = &mut &litesvm.get_account(pda).unwrap().data[DISCRIMINATOR_SPACE..];
 
-        Ok(T::deserialize(data)?)
+        match litesvm.get_account(pda) {
+            Some(account) => {
+                if account.data.len() > DISCRIMINATOR_SPACE {
+                    let data = &mut &account.data[DISCRIMINATOR_SPACE..];
+
+                    Ok(T::deserialize(data)?)
+                } else {
+                    Err(to_anchor_err(
+                        "Range start index out of range for the data slice!",
+                    ))
+                }
+            }
+            _ => Err(to_anchor_err("Account data is not found!")),
+        }
     }
 
     pub fn send_tx<S>(

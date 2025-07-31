@@ -228,7 +228,19 @@ fn rotate_account_default() -> Result<()> {
     app.registry_try_write_data(AppUser::Alice, DATA_0, NONCE_0)?;
 
     app.registry_try_request_account_rotation(AppUser::Alice, AppUser::Bob)?;
-    app.registry_try_confirm_account_rotation(AppUser::Bob)?;
+    app.registry_try_confirm_account_rotation(AppUser::Bob, AppUser::Alice)?;
+
+    app.registry_query_user_id(AppUser::Alice).unwrap_err();
+
+    let bob_user_id = app.registry_query_user_id(AppUser::Bob)?;
+    assert_eq!(
+        app.registry_query_user_account(bob_user_id.id)?,
+        UserAccount {
+            data: DATA_0.to_string(),
+            nonce: NONCE_0,
+            max_size: MAX_DATA_SIZE
+        }
+    );
 
     Ok(())
 }

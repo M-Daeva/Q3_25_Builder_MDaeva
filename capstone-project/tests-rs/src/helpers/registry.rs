@@ -84,6 +84,7 @@ pub trait RegistryExtension {
     fn registry_try_confirm_account_rotation(
         &mut self,
         sender: AppUser,
+        prev_owner: AppUser,
     ) -> Result<TransactionMetadata>;
 
     fn registry_query_config(&self) -> Result<state::Config>;
@@ -601,6 +602,7 @@ impl RegistryExtension for App {
     fn registry_try_confirm_account_rotation(
         &mut self,
         sender: AppUser,
+        prev_owner: AppUser,
     ) -> Result<TransactionMetadata> {
         // programs
         let ProgramId {
@@ -614,11 +616,10 @@ impl RegistryExtension for App {
         let signers = [sender.keypair()];
 
         // pda
+        let user_id_pre = self.pda.registry_user_id(prev_owner.pubkey());
         let user_id = self.pda.registry_user_id(payer);
-        let id = self.registry_query_user_id(sender)?.id;
-        let user_rotation_state = self.pda.registry_user_rotation_state(id);
-        let user_pre = self.registry_query_user_rotation_state(id)?.owner;
-        let user_id_pre = self.pda.registry_user_id(user_pre);
+        let user_id_value_pre = self.registry_query_user_id(prev_owner)?.id;
+        let user_rotation_state = self.pda.registry_user_rotation_state(user_id_value_pre);
 
         let accounts = accounts::ConfirmAccountRotation {
             system_program,
