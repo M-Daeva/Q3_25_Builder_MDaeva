@@ -59,7 +59,7 @@ fn transfer_admin() -> Result<()> {
     let res = app
         .registry_try_confirm_admin_rotation(AppUser::Alice)
         .unwrap_err();
-    assert_error(res, AuthError::NoNewAdmin);
+    assert_error(res, AuthError::NoNewOwner);
 
     app.registry_try_update_common_config(AppUser::Admin, Some(AppUser::Alice), None, None)?;
 
@@ -67,7 +67,7 @@ fn transfer_admin() -> Result<()> {
     let res = app
         .registry_try_confirm_admin_rotation(AppUser::Alice)
         .unwrap_err();
-    assert_error(res, AuthError::TransferAdminDeadline);
+    assert_error(res, AuthError::TransferOwnerDeadline);
 
     app.registry_try_update_common_config(AppUser::Admin, Some(AppUser::Alice), None, None)?;
 

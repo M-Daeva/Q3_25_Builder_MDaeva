@@ -5,11 +5,11 @@ pub enum AuthError {
     #[msg("Sender doesn't have access permissions!")]
     Unauthorized,
 
-    #[msg("New admin wasn't specified!")]
-    NoNewAdmin,
+    #[msg("New owner wasn't specified!")]
+    NoNewOwner,
 
-    #[msg("It's too late to accept admin role!")]
-    TransferAdminDeadline,
+    #[msg("It's too late to accept owner role!")]
+    TransferOwnerDeadline,
 }
 
 #[error_code]

@@ -61,6 +61,7 @@ pub struct ReopenAccount<'info> {
 impl<'info> ReopenAccount<'info> {
     pub fn reopen_account(&mut self, max_data_size: u32) -> Result<()> {
         let ReopenAccount {
+            sender,
             account_config,
             user_id,
             user_account,
@@ -83,6 +84,7 @@ impl<'info> ReopenAccount<'info> {
         });
 
         user_rotation_state.set_inner(RotationState {
+            owner: sender.key(),
             new_owner: None,
             expiration_date: get_clock_time()?,
         });

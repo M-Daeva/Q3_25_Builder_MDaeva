@@ -63,6 +63,7 @@ pub struct UserCounter {
 #[account]
 #[derive(InitSpace, PartialEq, Debug)]
 pub struct RotationState {
+    pub owner: Pubkey,
     pub new_owner: Option<Pubkey>,
     pub expiration_date: u64,
 }

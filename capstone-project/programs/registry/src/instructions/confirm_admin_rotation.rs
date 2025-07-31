@@ -45,19 +45,23 @@ impl<'info> ConfirmAdminRotation<'info> {
         let clock_time = get_clock_time()?;
 
         match admin_rotation_state.new_owner {
-            None => Err(AuthError::NoNewAdmin)?,
+            None => Err(AuthError::NoNewOwner)?,
             Some(new_admin) => {
                 if sender.key() != new_admin {
                     Err(AuthError::Unauthorized)?;
                 }
 
                 if clock_time >= admin_rotation_state.expiration_date {
-                    Err(AuthError::TransferAdminDeadline)?;
+                    Err(AuthError::TransferOwnerDeadline)?;
                 }
 
                 common_config.admin = new_admin;
-                admin_rotation_state.new_owner = None;
-                admin_rotation_state.expiration_date = clock_time;
+
+                admin_rotation_state.set_inner(RotationState {
+                    owner: new_admin,
+                    new_owner: None,
+                    expiration_date: clock_time,
+                });
             }
         }
 

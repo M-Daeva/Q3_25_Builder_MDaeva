@@ -83,6 +83,7 @@ impl<'info> CreateAccount<'info> {
         expected_user_id: u32,
     ) -> Result<()> {
         let CreateAccount {
+            sender,
             common_config,
             account_config,
             user_counter,
@@ -123,6 +124,7 @@ impl<'info> CreateAccount<'info> {
         });
 
         user_rotation_state.set_inner(RotationState {
+            owner: sender.key(),
             new_owner: None,
             expiration_date: get_clock_time()?,
         });

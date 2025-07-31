@@ -9,8 +9,9 @@ pub mod types;
 use {
     anchor_lang::prelude::*,
     instructions::{
-        activate_account::*, close_account::*, confirm_admin_rotation::*, create_account::*,
-        init::*, reopen_account::*, update_account_config::*, update_common_config::*,
+        activate_account::*, close_account::*, confirm_account_rotation::*,
+        confirm_admin_rotation::*, create_account::*, init::*, reopen_account::*,
+        request_account_rotation::*, update_account_config::*, update_common_config::*,
         withdraw_revenue::*, write_data::*,
     },
     types::{AssetItem, Range},
@@ -92,12 +93,15 @@ pub mod registry {
         ctx.accounts.write_data(data, nonce)
     }
 
-    // pub fn request_account_rotation(new_owner: Pubkey) -> Result<()> {
-    //     unimplemented!()
-    // }
+    pub fn request_account_rotation(
+        ctx: Context<RequestAccountRotation>,
+        new_owner: Pubkey,
+    ) -> Result<()> {
+        ctx.accounts.request_account_rotation(new_owner)
+    }
 
-    // /// updates address - id pair
-    // pub fn confirm_account_rotation() -> Result<()> {
-    //     unimplemented!()
-    // }
+    /// updates address - id pair
+    pub fn confirm_account_rotation(ctx: Context<ConfirmAccountRotation>) -> Result<()> {
+        ctx.accounts.confirm_account_rotation()
+    }
 }

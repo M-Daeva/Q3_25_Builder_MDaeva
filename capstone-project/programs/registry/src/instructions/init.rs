@@ -132,6 +132,7 @@ impl<'info> Init<'info> {
         user_counter.set_inner(UserCounter::default());
 
         admin_rotation_state.set_inner(RotationState {
+            owner: sender.key(),
             new_owner: None,
             expiration_date: get_clock_time()?,
         });

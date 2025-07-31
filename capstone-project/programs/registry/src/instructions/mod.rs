@@ -1,9 +1,11 @@
 pub mod activate_account;
 pub mod close_account;
+pub mod confirm_account_rotation;
 pub mod confirm_admin_rotation;
 pub mod create_account;
 pub mod init;
 pub mod reopen_account;
+pub mod request_account_rotation;
 pub mod update_account_config;
 pub mod update_common_config;
 pub mod withdraw_revenue;
@@ -11,10 +13,12 @@ pub mod write_data;
 
 pub use activate_account::*;
 pub use close_account::*;
+pub use confirm_account_rotation::*;
 pub use confirm_admin_rotation::*;
 pub use create_account::*;
 pub use init::*;
 pub use reopen_account::*;
+pub use request_account_rotation::*;
 pub use update_account_config::*;
 pub use update_common_config::*;
 pub use withdraw_revenue::*;
