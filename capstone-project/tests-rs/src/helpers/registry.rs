@@ -24,17 +24,12 @@ pub trait RegistryExtension {
         account_data_size_range: Option<Range>,
     ) -> Result<TransactionMetadata>;
 
-    fn registry_try_update_common_config(
+    fn registry_try_update_config(
         &mut self,
         sender: AppUser,
         admin: Option<AppUser>,
         is_paused: Option<bool>,
         rotation_timeout: Option<u32>,
-    ) -> Result<TransactionMetadata>;
-
-    fn registry_try_update_account_config(
-        &mut self,
-        sender: AppUser,
         registration_fee: Option<AssetItem>,
         data_size_range: Option<Range>,
     ) -> Result<TransactionMetadata>;
@@ -91,9 +86,7 @@ pub trait RegistryExtension {
         sender: AppUser,
     ) -> Result<TransactionMetadata>;
 
-    fn registry_query_common_config(&self) -> Result<state::CommonConfig>;
-
-    fn registry_query_account_config(&self) -> Result<state::AccountConfig>;
+    fn registry_query_config(&self) -> Result<state::Config>;
 
     fn registry_query_user_counter(&self) -> Result<state::UserCounter>;
 
@@ -135,13 +128,12 @@ impl RegistryExtension for App {
 
         // pda
         let bump = self.pda.registry_bump();
-        let common_config = self.pda.registry_common_config();
-        let account_config = self.pda.registry_account_config();
+        let config = self.pda.registry_config();
         let user_counter = self.pda.registry_user_counter();
         let admin_rotation_state = self.pda.registry_admin_rotation_state();
 
         // ata
-        let revenue_app_ata = App::get_ata(&common_config, &revenue_mint);
+        let revenue_app_ata = App::get_ata(&config, &revenue_mint);
 
         let accounts = accounts::Init {
             system_program,
@@ -149,8 +141,7 @@ impl RegistryExtension for App {
             associated_token_program,
             sender: payer,
             bump,
-            common_config,
-            account_config,
+            config,
             user_counter,
             admin_rotation_state,
             revenue_mint,
@@ -173,54 +164,12 @@ impl RegistryExtension for App {
         )
     }
 
-    fn registry_try_update_common_config(
+    fn registry_try_update_config(
         &mut self,
         sender: AppUser,
         admin: Option<AppUser>,
         is_paused: Option<bool>,
         rotation_timeout: Option<u32>,
-    ) -> Result<TransactionMetadata> {
-        // programs
-        let ProgramId {
-            registry: program_id,
-            ..
-        } = self.program_id;
-
-        // signers
-        let payer = sender.pubkey();
-        let signers = [sender.keypair()];
-
-        // pda
-        let bump = self.pda.registry_bump();
-        let common_config = self.pda.registry_common_config();
-        let admin_rotation_state = self.pda.registry_admin_rotation_state();
-
-        let accounts = accounts::UpdateCommonConfig {
-            sender: payer,
-            bump,
-            common_config,
-            admin_rotation_state,
-        };
-
-        let instruction_data = instruction::UpdateCommonConfig {
-            admin: admin.map(|x| x.pubkey()),
-            is_paused,
-            rotation_timeout,
-        };
-
-        send_tx_with_ix(
-            self,
-            &program_id,
-            &accounts,
-            &instruction_data,
-            &payer,
-            &signers,
-        )
-    }
-
-    fn registry_try_update_account_config(
-        &mut self,
-        sender: AppUser,
         registration_fee: Option<AssetItem>,
         data_size_range: Option<Range>,
     ) -> Result<TransactionMetadata> {
@@ -236,17 +185,20 @@ impl RegistryExtension for App {
 
         // pda
         let bump = self.pda.registry_bump();
-        let common_config = self.pda.registry_common_config();
-        let account_config = self.pda.registry_account_config();
+        let config = self.pda.registry_config();
+        let admin_rotation_state = self.pda.registry_admin_rotation_state();
 
-        let accounts = accounts::UpdateAccountConfig {
+        let accounts = accounts::UpdateConfig {
             sender: payer,
             bump,
-            common_config,
-            account_config,
+            config,
+            admin_rotation_state,
         };
 
-        let instruction_data = instruction::UpdateAccountConfig {
+        let instruction_data = instruction::UpdateConfig {
+            admin: admin.map(|x| x.pubkey()),
+            is_paused,
+            rotation_timeout,
             registration_fee,
             data_size_range,
         };
@@ -277,13 +229,13 @@ impl RegistryExtension for App {
 
         // pda
         let bump = self.pda.registry_bump();
-        let common_config = self.pda.registry_common_config();
+        let config = self.pda.registry_config();
         let admin_rotation_state = self.pda.registry_admin_rotation_state();
 
         let accounts = accounts::ConfirmAdminRotation {
             sender: payer,
             bump,
-            common_config,
+            config,
             admin_rotation_state,
         };
 
@@ -324,17 +276,16 @@ impl RegistryExtension for App {
         // mint
         let revenue_mint = match revenue_asset {
             Some(x) => x.pubkey(&self),
-            _ => self.registry_query_account_config()?.registration_fee.asset,
+            _ => self.registry_query_config()?.registration_fee.asset,
         };
 
         // pda
         let bump = self.pda.registry_bump();
-        let common_config = self.pda.registry_common_config();
-        let account_config = self.pda.registry_account_config();
+        let config = self.pda.registry_config();
 
         // ata
         let revenue_recipient_ata = App::get_ata(&recipient, &revenue_mint);
-        let revenue_app_ata = App::get_ata(&common_config, &revenue_mint);
+        let revenue_app_ata = App::get_ata(&config, &revenue_mint);
 
         let accounts = accounts::WithdrawRevenue {
             system_program,
@@ -343,8 +294,7 @@ impl RegistryExtension for App {
             sender: payer,
             recipient,
             bump,
-            common_config,
-            account_config,
+            config,
             revenue_mint,
             revenue_recipient_ata,
             revenue_app_ata,
@@ -380,8 +330,7 @@ impl RegistryExtension for App {
 
         // pda
         let bump = self.pda.registry_bump();
-        let common_config = self.pda.registry_common_config();
-        let account_config = self.pda.registry_account_config();
+        let config = self.pda.registry_config();
         let user_counter = self.pda.registry_user_counter();
 
         let user_id = self.pda.registry_user_id(payer);
@@ -393,8 +342,7 @@ impl RegistryExtension for App {
             system_program,
             sender: payer,
             bump,
-            common_config,
-            account_config,
+            config,
             user_counter,
             user_id,
             user_account,
@@ -472,7 +420,7 @@ impl RegistryExtension for App {
 
         // pda
         let bump = self.pda.registry_bump();
-        let account_config = self.pda.registry_account_config();
+        let config = self.pda.registry_config();
 
         let user_id = self.pda.registry_user_id(payer);
         let id = self.registry_query_user_id(sender)?.id;
@@ -483,7 +431,7 @@ impl RegistryExtension for App {
             system_program,
             sender: payer,
             bump,
-            account_config,
+            config,
             user_id,
             user_account,
             user_rotation_state,
@@ -525,19 +473,18 @@ impl RegistryExtension for App {
         // mint
         let revenue_mint = match revenue_asset {
             Some(x) => x.pubkey(&self),
-            _ => self.registry_query_account_config()?.registration_fee.asset,
+            _ => self.registry_query_config()?.registration_fee.asset,
         };
 
         // pda
         let bump = self.pda.registry_bump();
-        let account_config = self.pda.registry_account_config();
-        let common_config = self.pda.registry_common_config();
+        let config = self.pda.registry_config();
 
         let user_id = self.pda.registry_user_id(payer);
 
         // ata
         let revenue_sender_ata = App::get_ata(&payer, &revenue_mint);
-        let revenue_app_ata = App::get_ata(&common_config, &revenue_mint);
+        let revenue_app_ata = App::get_ata(&config, &revenue_mint);
 
         let accounts = accounts::ActivateAccount {
             system_program,
@@ -545,8 +492,7 @@ impl RegistryExtension for App {
             associated_token_program,
             sender: payer,
             bump,
-            common_config,
-            account_config,
+            config,
             user_id,
             revenue_mint,
             revenue_sender_ata,
@@ -624,7 +570,7 @@ impl RegistryExtension for App {
 
         // pda
         let bump = self.pda.registry_bump();
-        let common_config = self.pda.registry_common_config();
+        let config = self.pda.registry_config();
 
         let user_id = self.pda.registry_user_id(payer);
         let id = self.registry_query_user_id(sender)?.id;
@@ -633,7 +579,7 @@ impl RegistryExtension for App {
         let accounts = accounts::RequestAccountRotation {
             sender: payer,
             bump,
-            common_config,
+            config,
             user_id,
             user_rotation_state,
         };
@@ -694,12 +640,8 @@ impl RegistryExtension for App {
         )
     }
 
-    fn registry_query_common_config(&self) -> Result<state::CommonConfig> {
-        get_data(&self.litesvm, &self.pda.registry_common_config())
-    }
-
-    fn registry_query_account_config(&self) -> Result<state::AccountConfig> {
-        get_data(&self.litesvm, &&self.pda.registry_account_config())
+    fn registry_query_config(&self) -> Result<state::Config> {
+        get_data(&self.litesvm, &self.pda.registry_config())
     }
 
     fn registry_query_user_counter(&self) -> Result<state::UserCounter> {

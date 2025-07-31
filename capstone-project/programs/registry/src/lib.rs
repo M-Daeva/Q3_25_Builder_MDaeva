@@ -11,8 +11,7 @@ use {
     instructions::{
         activate_account::*, close_account::*, confirm_account_rotation::*,
         confirm_admin_rotation::*, create_account::*, init::*, reopen_account::*,
-        request_account_rotation::*, update_account_config::*, update_common_config::*,
-        withdraw_revenue::*, write_data::*,
+        request_account_rotation::*, update_config::*, withdraw_revenue::*, write_data::*,
     },
     types::{AssetItem, Range},
 };
@@ -37,23 +36,21 @@ pub mod registry {
         )
     }
 
-    pub fn update_common_config(
-        ctx: Context<UpdateCommonConfig>,
+    pub fn update_config(
+        ctx: Context<UpdateConfig>,
         admin: Option<Pubkey>,
         is_paused: Option<bool>,
         rotation_timeout: Option<u32>,
-    ) -> Result<()> {
-        ctx.accounts
-            .update_common_config(admin, is_paused, rotation_timeout)
-    }
-
-    pub fn update_account_config(
-        ctx: Context<UpdateAccountConfig>,
         registration_fee: Option<AssetItem>,
         data_size_range: Option<Range>,
     ) -> Result<()> {
-        ctx.accounts
-            .update_account_config(registration_fee, data_size_range)
+        ctx.accounts.update_config(
+            admin,
+            is_paused,
+            rotation_timeout,
+            registration_fee,
+            data_size_range,
+        )
     }
 
     pub fn confirm_admin_rotation(ctx: Context<ConfirmAdminRotation>) -> Result<()> {

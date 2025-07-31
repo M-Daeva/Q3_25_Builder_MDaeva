@@ -1,10 +1,9 @@
 use {
     crate::{
         state::{
-            AccountConfig, Bump, CommonConfig, RotationState, UserCounter, ACCOUNT_DATA_SIZE_MAX,
-            ACCOUNT_DATA_SIZE_MIN, ACCOUNT_REGISTRATION_FEE_AMOUNT, ACCOUNT_REGISTRATION_FEE_ASSET,
-            ROTATION_TIMEOUT, SEED_ACCOUNT_CONFIG, SEED_ADMIN_ROTATION_STATE, SEED_BUMP,
-            SEED_COMMON_CONFIG, SEED_USER_COUNTER,
+            Bump, Config, RotationState, UserCounter, ACCOUNT_DATA_SIZE_MAX, ACCOUNT_DATA_SIZE_MIN,
+            ACCOUNT_REGISTRATION_FEE_AMOUNT, ACCOUNT_REGISTRATION_FEE_ASSET, ROTATION_TIMEOUT,
+            SEED_ADMIN_ROTATION_STATE, SEED_BUMP, SEED_CONFIG, SEED_USER_COUNTER,
         },
         types::{AssetItem, Range},
     },
@@ -39,20 +38,11 @@ pub struct Init<'info> {
     #[account(
         init,
         payer = sender,
-        space = get_space(CommonConfig::INIT_SPACE),
-        seeds = [SEED_COMMON_CONFIG.as_bytes()],
+        space = get_space(Config::INIT_SPACE),
+        seeds = [SEED_CONFIG.as_bytes()],
         bump
     )]
-    pub common_config: Account<'info, CommonConfig>,
-
-    #[account(
-        init,
-        payer = sender,
-        space = get_space(AccountConfig::INIT_SPACE),
-        seeds = [SEED_ACCOUNT_CONFIG.as_bytes()],
-        bump
-    )]
-    pub account_config: Account<'info, AccountConfig>,
+    pub config: Account<'info, Config>,
 
     #[account(
         init,
@@ -82,7 +72,7 @@ pub struct Init<'info> {
         init,
         payer = sender,
         associated_token::mint = revenue_mint,
-        associated_token::authority = common_config
+        associated_token::authority = config
     )]
     pub revenue_app_ata: InterfaceAccount<'info, TokenAccount>,
 }
@@ -98,27 +88,22 @@ impl<'info> Init<'info> {
         let Init {
             sender,
             bump,
-            common_config,
-            account_config,
+            config,
             user_counter,
             admin_rotation_state,
             ..
         } = self;
 
         bump.set_inner(Bump {
-            common_config: bumps.common_config,
-            account_config: bumps.account_config,
+            config: bumps.config,
             user_counter: bumps.user_counter,
             rotation_state: bumps.admin_rotation_state,
         });
 
-        common_config.set_inner(CommonConfig {
+        config.set_inner(Config {
             admin: sender.key(),
             is_paused: false,
             rotation_timeout: rotation_timeout.unwrap_or(ROTATION_TIMEOUT),
-        });
-
-        account_config.set_inner(AccountConfig {
             registration_fee: account_registration_fee.unwrap_or(AssetItem {
                 amount: ACCOUNT_REGISTRATION_FEE_AMOUNT,
                 asset: ACCOUNT_REGISTRATION_FEE_ASSET,

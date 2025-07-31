@@ -10,8 +10,11 @@ use {
     base::error::AuthError,
     pretty_assertions::assert_eq,
     registry::{
-        state::{CommonConfig, ACCOUNT_REGISTRATION_FEE_AMOUNT, ROTATION_TIMEOUT},
-        types::AssetItem,
+        state::{
+            Config, ACCOUNT_DATA_SIZE_MAX, ACCOUNT_DATA_SIZE_MIN, ACCOUNT_REGISTRATION_FEE_AMOUNT,
+            ROTATION_TIMEOUT,
+        },
+        types::{AssetItem, Range},
     },
 };
 
@@ -36,11 +39,19 @@ fn init_default() -> Result<()> {
     let app = init_app()?;
 
     assert_eq!(
-        app.registry_query_common_config()?,
-        CommonConfig {
+        app.registry_query_config()?,
+        Config {
             admin: AppUser::Admin.pubkey(),
             is_paused: false,
-            rotation_timeout: ROTATION_TIMEOUT
+            rotation_timeout: ROTATION_TIMEOUT,
+            registration_fee: AssetItem {
+                amount: ACCOUNT_REGISTRATION_FEE_AMOUNT,
+                asset: AppToken::USDC.pubkey(&app),
+            },
+            data_size_range: Range {
+                min: ACCOUNT_DATA_SIZE_MIN,
+                max: ACCOUNT_DATA_SIZE_MAX,
+            }
         }
     );
 
@@ -52,7 +63,7 @@ fn transfer_admin() -> Result<()> {
     let mut app = init_app()?;
 
     let res = app
-        .registry_try_update_common_config(AppUser::Alice, Some(AppUser::Alice), None, None)
+        .registry_try_update_config(AppUser::Alice, Some(AppUser::Alice), None, None, None, None)
         .unwrap_err();
     assert_error(res, AuthError::Unauthorized);
 
@@ -61,7 +72,7 @@ fn transfer_admin() -> Result<()> {
         .unwrap_err();
     assert_error(res, AuthError::NoNewOwner);
 
-    app.registry_try_update_common_config(AppUser::Admin, Some(AppUser::Alice), None, None)?;
+    app.registry_try_update_config(AppUser::Admin, Some(AppUser::Alice), None, None, None, None)?;
 
     app.wait(ROTATION_TIMEOUT as u64);
     let res = app
@@ -69,7 +80,7 @@ fn transfer_admin() -> Result<()> {
         .unwrap_err();
     assert_error(res, AuthError::TransferOwnerDeadline);
 
-    app.registry_try_update_common_config(AppUser::Admin, Some(AppUser::Alice), None, None)?;
+    app.registry_try_update_config(AppUser::Admin, Some(AppUser::Alice), None, None, None, None)?;
 
     let res = app
         .registry_try_confirm_admin_rotation(AppUser::Bob)
@@ -77,10 +88,7 @@ fn transfer_admin() -> Result<()> {
     assert_error(res, AuthError::Unauthorized);
 
     app.registry_try_confirm_admin_rotation(AppUser::Alice)?;
-    assert_eq!(
-        app.registry_query_common_config()?.admin,
-        AppUser::Alice.pubkey()
-    );
+    assert_eq!(app.registry_query_config()?.admin, AppUser::Alice.pubkey());
 
     Ok(())
 }

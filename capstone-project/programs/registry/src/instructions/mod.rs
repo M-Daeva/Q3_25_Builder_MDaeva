@@ -6,8 +6,7 @@ pub mod create_account;
 pub mod init;
 pub mod reopen_account;
 pub mod request_account_rotation;
-pub mod update_account_config;
-pub mod update_common_config;
+pub mod update_config;
 pub mod withdraw_revenue;
 pub mod write_data;
 
@@ -19,7 +18,6 @@ pub use create_account::*;
 pub use init::*;
 pub use reopen_account::*;
 pub use request_account_rotation::*;
-pub use update_account_config::*;
-pub use update_common_config::*;
+pub use update_config::*;
 pub use withdraw_revenue::*;
 pub use write_data::*;

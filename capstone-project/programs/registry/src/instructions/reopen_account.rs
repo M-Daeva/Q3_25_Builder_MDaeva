@@ -2,8 +2,8 @@ use {
     crate::{
         error::CustomError,
         state::{
-            AccountConfig, Bump, RotationState, UserAccount, UserId, SEED_ACCOUNT_CONFIG,
-            SEED_BUMP, SEED_USER_ACCOUNT, SEED_USER_ID, SEED_USER_ROTATION_STATE,
+            Bump, Config, RotationState, UserAccount, UserId, SEED_BUMP, SEED_CONFIG,
+            SEED_USER_ACCOUNT, SEED_USER_ID, SEED_USER_ROTATION_STATE,
         },
     },
     anchor_lang::prelude::*,
@@ -27,10 +27,10 @@ pub struct ReopenAccount<'info> {
     pub bump: Account<'info, Bump>,
 
     #[account(
-        seeds = [SEED_ACCOUNT_CONFIG.as_bytes()],
-        bump = bump.account_config
+        seeds = [SEED_CONFIG.as_bytes()],
+        bump = bump.config
     )]
-    pub account_config: Account<'info, AccountConfig>,
+    pub config: Account<'info, Config>,
 
     #[account(
         mut,
@@ -62,15 +62,14 @@ impl<'info> ReopenAccount<'info> {
     pub fn reopen_account(&mut self, max_data_size: u32) -> Result<()> {
         let ReopenAccount {
             sender,
-            account_config,
+            config,
             user_id,
             user_account,
             user_rotation_state,
             ..
         } = self;
 
-        if max_data_size < account_config.data_size_range.min
-            || max_data_size > account_config.data_size_range.max
+        if max_data_size < config.data_size_range.min || max_data_size > config.data_size_range.max
         {
             Err(CustomError::MaxDataSizeIsOutOfRange)?;
         }

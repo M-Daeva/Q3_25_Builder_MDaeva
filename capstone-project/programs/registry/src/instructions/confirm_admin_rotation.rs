@@ -1,6 +1,6 @@
 use {
     crate::state::{
-        Bump, CommonConfig, RotationState, SEED_ADMIN_ROTATION_STATE, SEED_BUMP, SEED_COMMON_CONFIG,
+        Bump, Config, RotationState, SEED_ADMIN_ROTATION_STATE, SEED_BUMP, SEED_CONFIG,
     },
     anchor_lang::prelude::*,
     base::{error::AuthError, helpers::get_clock_time},
@@ -20,10 +20,10 @@ pub struct ConfirmAdminRotation<'info> {
 
     #[account(
         mut,
-        seeds = [SEED_COMMON_CONFIG.as_bytes()],
-        bump = bump.common_config
+        seeds = [SEED_CONFIG.as_bytes()],
+        bump = bump.config
     )]
-    pub common_config: Account<'info, CommonConfig>,
+    pub config: Account<'info, Config>,
 
     #[account(
         mut,
@@ -37,7 +37,7 @@ impl<'info> ConfirmAdminRotation<'info> {
     pub fn confirm_admin_rotation(&mut self) -> Result<()> {
         let ConfirmAdminRotation {
             sender,
-            common_config,
+            config,
             admin_rotation_state,
             ..
         } = self;
@@ -55,7 +55,7 @@ impl<'info> ConfirmAdminRotation<'info> {
                     Err(AuthError::TransferOwnerDeadline)?;
                 }
 
-                common_config.admin = new_admin;
+                config.admin = new_admin;
 
                 admin_rotation_state.set_inner(RotationState {
                     owner: new_admin,

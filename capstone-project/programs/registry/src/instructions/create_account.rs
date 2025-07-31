@@ -2,9 +2,8 @@ use {
     crate::{
         error::CustomError,
         state::{
-            AccountConfig, Bump, CommonConfig, RotationState, UserAccount, UserCounter, UserId,
-            SEED_ACCOUNT_CONFIG, SEED_BUMP, SEED_COMMON_CONFIG, SEED_USER_ACCOUNT,
-            SEED_USER_COUNTER, SEED_USER_ID, SEED_USER_ROTATION_STATE,
+            Bump, Config, RotationState, UserAccount, UserCounter, UserId, SEED_BUMP, SEED_CONFIG,
+            SEED_USER_ACCOUNT, SEED_USER_COUNTER, SEED_USER_ID, SEED_USER_ROTATION_STATE,
         },
     },
     anchor_lang::prelude::*,
@@ -28,16 +27,10 @@ pub struct CreateAccount<'info> {
     pub bump: Account<'info, Bump>,
 
     #[account(
-        seeds = [SEED_COMMON_CONFIG.as_bytes()],
-        bump = bump.common_config
+        seeds = [SEED_CONFIG.as_bytes()],
+        bump = bump.config
     )]
-    pub common_config: Account<'info, CommonConfig>,
-
-    #[account(
-        seeds = [SEED_ACCOUNT_CONFIG.as_bytes()],
-        bump = bump.account_config
-    )]
-    pub account_config: Account<'info, AccountConfig>,
+    pub config: Account<'info, Config>,
 
     #[account(
         mut,
@@ -84,8 +77,7 @@ impl<'info> CreateAccount<'info> {
     ) -> Result<()> {
         let CreateAccount {
             sender,
-            common_config,
-            account_config,
+            config,
             user_counter,
             user_id,
             user_account,
@@ -97,12 +89,11 @@ impl<'info> CreateAccount<'info> {
             Err(CustomError::WrongUserId)?;
         }
 
-        if common_config.is_paused {
+        if config.is_paused {
             Err(CustomError::ContractIsPaused)?;
         }
 
-        if max_data_size < account_config.data_size_range.min
-            || max_data_size > account_config.data_size_range.max
+        if max_data_size < config.data_size_range.min || max_data_size > config.data_size_range.max
         {
             Err(CustomError::MaxDataSizeIsOutOfRange)?;
         }

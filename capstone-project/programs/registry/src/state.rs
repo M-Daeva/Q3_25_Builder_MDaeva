@@ -14,8 +14,7 @@ pub const ACCOUNT_DATA_SIZE_MIN: u32 = 512;
 pub const ACCOUNT_DATA_SIZE_MAX: u32 = 8_192;
 
 pub const SEED_BUMP: &str = "bump";
-pub const SEED_COMMON_CONFIG: &str = "common_config";
-pub const SEED_ACCOUNT_CONFIG: &str = "account_config";
+pub const SEED_CONFIG: &str = "config";
 pub const SEED_USER_COUNTER: &str = "user_counter";
 pub const SEED_ADMIN_ROTATION_STATE: &str = "admin_rotation_state";
 
@@ -27,26 +26,18 @@ pub const SEED_USER_ROTATION_STATE: &str = "user_rotation_state";
 #[account]
 #[derive(InitSpace)]
 pub struct Bump {
-    pub common_config: u8,
-    pub account_config: u8,
+    pub config: u8,
     pub user_counter: u8,
     pub rotation_state: u8,
 }
 
-/// common program settings
 #[account]
 #[derive(InitSpace, PartialEq, Debug)]
-pub struct CommonConfig {
+pub struct Config {
     /// can update the config and execute priveled instructions
     pub admin: Pubkey,
     pub is_paused: bool,
     pub rotation_timeout: u32,
-}
-
-/// account-related program settings
-#[account]
-#[derive(InitSpace, PartialEq, Debug)]
-pub struct AccountConfig {
     pub registration_fee: AssetItem,
     pub data_size_range: Range,
 }

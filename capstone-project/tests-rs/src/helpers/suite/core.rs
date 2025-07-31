@@ -47,17 +47,9 @@ impl Pda {
         .0
     }
 
-    pub fn registry_common_config(&self) -> Pubkey {
+    pub fn registry_config(&self) -> Pubkey {
         get_pda_and_bump(
-            &seeds![registry::state::SEED_COMMON_CONFIG],
-            &self.registry_program_id,
-        )
-        .0
-    }
-
-    pub fn registry_account_config(&self) -> Pubkey {
-        get_pda_and_bump(
-            &seeds![registry::state::SEED_ACCOUNT_CONFIG],
+            &seeds![registry::state::SEED_CONFIG],
             &self.registry_program_id,
         )
         .0

@@ -1,9 +1,7 @@
 use {
     crate::{
         error::CustomError,
-        state::{
-            AccountConfig, Bump, CommonConfig, SEED_ACCOUNT_CONFIG, SEED_BUMP, SEED_COMMON_CONFIG,
-        },
+        state::{Bump, Config, SEED_BUMP, SEED_CONFIG},
     },
     anchor_lang::prelude::*,
     anchor_spl::{
@@ -34,16 +32,10 @@ pub struct WithdrawRevenue<'info> {
     pub bump: Account<'info, Bump>,
 
     #[account(
-        seeds = [SEED_COMMON_CONFIG.as_bytes()],
-        bump = bump.common_config
+        seeds = [SEED_CONFIG.as_bytes()],
+        bump = bump.config
     )]
-    pub common_config: Account<'info, CommonConfig>,
-
-    #[account(
-        seeds = [SEED_ACCOUNT_CONFIG.as_bytes()],
-        bump = bump.account_config
-    )]
-    pub account_config: Account<'info, AccountConfig>,
+    pub config: Account<'info, Config>,
 
     // mint
     //
@@ -62,7 +54,7 @@ pub struct WithdrawRevenue<'info> {
     #[account(
         mut,
         associated_token::mint = revenue_mint,
-        associated_token::authority = common_config
+        associated_token::authority = config
     )]
     pub revenue_app_ata: InterfaceAccount<'info, TokenAccount>,
 }
@@ -73,19 +65,18 @@ impl<'info> WithdrawRevenue<'info> {
             token_program,
             sender,
             bump,
-            common_config,
-            account_config,
+            config,
             revenue_mint,
             revenue_recipient_ata,
             revenue_app_ata,
             ..
         } = self;
 
-        if sender.key() != common_config.admin {
+        if sender.key() != config.admin {
             Err(AuthError::Unauthorized)?;
         }
 
-        if revenue_mint.key() != account_config.registration_fee.asset {
+        if revenue_mint.key() != config.registration_fee.asset {
             Err(CustomError::WrongAssetType)?;
         }
 
@@ -104,9 +95,9 @@ impl<'info> WithdrawRevenue<'info> {
             revenue_mint,
             revenue_app_ata,
             revenue_recipient_ata,
-            &[SEED_COMMON_CONFIG.as_bytes()],
-            bump.common_config,
-            common_config,
+            &[SEED_CONFIG.as_bytes()],
+            bump.config,
+            config,
             token_program,
         )?;
 
