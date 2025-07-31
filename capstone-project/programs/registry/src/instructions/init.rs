@@ -2,8 +2,7 @@ use {
     crate::{
         state::{
             AccountConfig, Bump, CommonConfig, RotationState, UserCounter, ACCOUNT_DATA_SIZE_MAX,
-            ACCOUNT_DATA_SIZE_MIN, ACCOUNT_LIFETIME_MARGIN_BPS, ACCOUNT_LIFETIME_MAX,
-            ACCOUNT_LIFETIME_MIN, ACCOUNT_REGISTRATION_FEE_AMOUNT, ACCOUNT_REGISTRATION_FEE_ASSET,
+            ACCOUNT_DATA_SIZE_MIN, ACCOUNT_REGISTRATION_FEE_AMOUNT, ACCOUNT_REGISTRATION_FEE_ASSET,
             ROTATION_TIMEOUT, SEED_ACCOUNT_CONFIG, SEED_ADMIN_ROTATION_STATE, SEED_BUMP,
             SEED_COMMON_CONFIG, SEED_USER_COUNTER,
         },
@@ -96,8 +95,6 @@ impl<'info> Init<'info> {
         rotation_timeout: Option<u32>,
         account_registration_fee: Option<AssetItem>,
         account_data_size_range: Option<Range>,
-        account_lifetime_range: Option<Range>,
-        account_lifetime_margin_bps: Option<u16>,
     ) -> Result<()> {
         let Init {
             sender,
@@ -132,11 +129,6 @@ impl<'info> Init<'info> {
                 min: ACCOUNT_DATA_SIZE_MIN,
                 max: ACCOUNT_DATA_SIZE_MAX,
             }),
-            lifetime_range: account_lifetime_range.unwrap_or(Range {
-                min: ACCOUNT_LIFETIME_MIN,
-                max: ACCOUNT_LIFETIME_MAX,
-            }),
-            lifetime_margin_bps: account_lifetime_margin_bps.unwrap_or(ACCOUNT_LIFETIME_MARGIN_BPS),
         });
 
         user_counter.set_inner(UserCounter::default());

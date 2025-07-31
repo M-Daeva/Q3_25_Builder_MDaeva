@@ -41,8 +41,6 @@ impl<'info> UpdateAccountConfig<'info> {
         &mut self,
         registration_fee: Option<AssetItem>,
         data_size_range: Option<Range>,
-        lifetime_range: Option<Range>,
-        lifetime_margin_bps: Option<u16>,
     ) -> Result<()> {
         let UpdateAccountConfig {
             sender,
@@ -65,16 +63,6 @@ impl<'info> UpdateAccountConfig<'info> {
 
         if let Some(x) = data_size_range {
             account_config.data_size_range = x;
-            is_config_updated = true;
-        }
-
-        if let Some(x) = lifetime_range {
-            account_config.lifetime_range = x;
-            is_config_updated = true;
-        }
-
-        if let Some(x) = lifetime_margin_bps {
-            account_config.lifetime_margin_bps = x;
             is_config_updated = true;
         }
 

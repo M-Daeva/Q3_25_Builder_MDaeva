@@ -10,8 +10,8 @@ pub mod types;
 
 use {
     instructions::{
-        confirm_admin_rotation::*, init::*, update_account_config::*, update_common_config::*,
-        withdraw_revenue::*,
+        close_account::*, confirm_admin_rotation::*, create_account::*, init::*, reopen_account::*,
+        update_account_config::*, update_common_config::*, withdraw_revenue::*,
     },
     types::{AssetItem, Range},
 };
@@ -28,8 +28,6 @@ pub mod registry {
         rotation_timeout: Option<u32>,
         account_registration_fee: Option<AssetItem>,
         account_data_size_range: Option<Range>,
-        account_lifetime_range: Option<Range>,
-        account_lifetime_margin_bps: Option<u16>,
     ) -> Result<()> {
         ctx.accounts.init(
             ctx.bumps,
@@ -37,8 +35,6 @@ pub mod registry {
             rotation_timeout,
             account_registration_fee,
             account_data_size_range,
-            account_lifetime_range,
-            account_lifetime_margin_bps,
         )
     }
 
@@ -57,15 +53,9 @@ pub mod registry {
         ctx: Context<UpdateAccountConfig>,
         registration_fee: Option<AssetItem>,
         data_size_range: Option<Range>,
-        lifetime_range: Option<Range>,
-        lifetime_margin_bps: Option<u16>,
     ) -> Result<()> {
-        ctx.accounts.update_account_config(
-            registration_fee,
-            data_size_range,
-            lifetime_range,
-            lifetime_margin_bps,
-        )
+        ctx.accounts
+            .update_account_config(registration_fee, data_size_range)
     }
 
     pub fn confirm_admin_rotation(ctx: Context<ConfirmAdminRotation>) -> Result<()> {
@@ -76,14 +66,23 @@ pub mod registry {
         ctx.accounts.withdraw_revenue(amount)
     }
 
-    // /// creates user PDA account accepting rent exempt in SOL
-    // pub fn create_account(max_data_size: u32, lifetime: u32) -> Result<()> {
-    //     unimplemented!()
-    // }
+    /// creates user PDA account taking rent exempt in SOL
+    pub fn create_account(
+        ctx: Context<CreateAccount>,
+        max_data_size: u32,
+        expected_user_id: u32,
+    ) -> Result<()> {
+        ctx.accounts
+            .create_account(ctx.bumps, max_data_size, expected_user_id)
+    }
 
-    // pub fn close_account() -> Result<()> {
-    //     unimplemented!()
-    // }
+    pub fn close_account(ctx: Context<CloseAccount>) -> Result<()> {
+        ctx.accounts.close_account()
+    }
+
+    pub fn reopen_account(ctx: Context<ReopenAccount>, max_data_size: u32) -> Result<()> {
+        ctx.accounts.reopen_account(max_data_size)
+    }
 
     // /// activates account with fee asset payment
     // pub fn activate_account() -> Result<()> {
@@ -92,20 +91,6 @@ pub mod registry {
 
     // /// automatic activation when fee asset is received from DEX Adapter
     // pub fn receive_payment(user_account: Pubkey) -> Result<()> {
-    //     unimplemented!()
-    // }
-
-    // /// to know rent exempt for PDA creation before the action
-    // pub fn simulate_rent_cost(
-    //     data: String,
-    //     lifetime: u64,
-    //     margin_bps: Option<u16>, // overrides config value
-    // ) -> Result<u64> {
-    //     unimplemented!()
-    // }
-
-    // /// to increase/decrease rent when more/less data/lifetime is required
-    // pub fn update_storage(max_size: Option<u32>, expiration_date: Option<u64>) -> Result<()> {
     //     unimplemented!()
     // }
 

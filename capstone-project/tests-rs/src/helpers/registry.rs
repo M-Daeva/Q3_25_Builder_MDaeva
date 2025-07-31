@@ -24,8 +24,6 @@ pub trait RegistryExtension {
         rotation_timeout: Option<u32>,
         account_registration_fee: Option<AssetItem>,
         account_data_size_range: Option<Range>,
-        account_lifetime_range: Option<Range>,
-        account_lifetime_margin_bps: Option<u16>,
     ) -> Result<TransactionMetadata>;
 
     fn registry_try_update_common_config(
@@ -42,8 +40,6 @@ pub trait RegistryExtension {
         sender: AppUser,
         registration_fee: Option<AssetItem>,
         data_size_range: Option<Range>,
-        lifetime_range: Option<Range>,
-        lifetime_margin_bps: Option<u16>,
     ) -> Result<TransactionMetadata>;
 
     fn registry_try_confirm_admin_rotation(
@@ -59,6 +55,20 @@ pub trait RegistryExtension {
         revenue_asset: Option<AppToken>,
     ) -> Result<TransactionMetadata>;
 
+    fn registry_try_create_account(
+        &mut self,
+        sender: AppUser,
+        max_data_size: u32,
+    ) -> Result<TransactionMetadata>;
+
+    fn registry_try_close_account(&mut self, sender: AppUser) -> Result<TransactionMetadata>;
+
+    fn registry_try_reopen_account(
+        &mut self,
+        sender: AppUser,
+        max_data_size: u32,
+    ) -> Result<TransactionMetadata>;
+
     fn registry_query_common_config(&self) -> Result<state::CommonConfig>;
 
     fn registry_query_account_config(&self) -> Result<state::AccountConfig>;
@@ -66,6 +76,12 @@ pub trait RegistryExtension {
     fn registry_query_user_counter(&self) -> Result<state::UserCounter>;
 
     fn registry_query_admin_rotation_state(&self) -> Result<state::RotationState>;
+
+    fn registry_query_user_id(&self, user: AppUser) -> Result<state::UserId>;
+
+    fn registry_query_user_account(&self, user_id: u32) -> Result<state::UserAccount>;
+
+    fn registry_query_user_rotation_state(&self, user_id: u32) -> Result<state::RotationState>;
 }
 
 impl RegistryExtension for App {
@@ -76,8 +92,6 @@ impl RegistryExtension for App {
         rotation_timeout: Option<u32>,
         account_registration_fee: Option<AssetItem>,
         account_data_size_range: Option<Range>,
-        account_lifetime_range: Option<Range>,
-        account_lifetime_margin_bps: Option<u16>,
     ) -> Result<TransactionMetadata> {
         // programs
         let ProgramId {
@@ -127,8 +141,6 @@ impl RegistryExtension for App {
             rotation_timeout,
             account_registration_fee,
             account_data_size_range,
-            account_lifetime_range,
-            account_lifetime_margin_bps,
         };
 
         send_tx_with_ix(
@@ -193,8 +205,6 @@ impl RegistryExtension for App {
         sender: AppUser,
         registration_fee: Option<AssetItem>,
         data_size_range: Option<Range>,
-        lifetime_range: Option<Range>,
-        lifetime_margin_bps: Option<u16>,
     ) -> Result<TransactionMetadata> {
         // programs
         let ProgramId {
@@ -221,8 +231,6 @@ impl RegistryExtension for App {
         let instruction_data = instruction::UpdateAccountConfig {
             registration_fee,
             data_size_range,
-            lifetime_range,
-            lifetime_margin_bps,
         };
 
         send_tx_with_ix(
@@ -336,6 +344,145 @@ impl RegistryExtension for App {
         )
     }
 
+    fn registry_try_create_account(
+        &mut self,
+        sender: AppUser,
+        max_data_size: u32,
+    ) -> Result<TransactionMetadata> {
+        // programs
+        let ProgramId {
+            system_program,
+            registry: program_id,
+            ..
+        } = self.program_id;
+
+        // signers
+        let payer = sender.pubkey();
+        let signers = [sender.keypair()];
+
+        // pda
+        let bump = self.pda.registry_bump();
+        let common_config = self.pda.registry_common_config();
+        let account_config = self.pda.registry_account_config();
+        let user_counter = self.pda.registry_user_counter();
+
+        let user_id = self.pda.registry_user_id(payer);
+        let expected_user_id = self.registry_query_user_counter()?.last_user_id + 1;
+        let user_account = self.pda.registry_user_account(expected_user_id);
+        let user_rotation_state = self.pda.registry_user_rotation_state(expected_user_id);
+
+        let accounts = accounts::CreateAccount {
+            system_program,
+            sender: payer,
+            bump,
+            common_config,
+            account_config,
+            user_counter,
+            user_id,
+            user_account,
+            user_rotation_state,
+        };
+
+        let instruction_data = instruction::CreateAccount {
+            max_data_size,
+            expected_user_id,
+        };
+
+        send_tx_with_ix(
+            self,
+            &program_id,
+            &accounts,
+            &instruction_data,
+            &payer,
+            &signers,
+        )
+    }
+
+    fn registry_try_close_account(&mut self, sender: AppUser) -> Result<TransactionMetadata> {
+        // programs
+        let ProgramId {
+            system_program,
+            registry: program_id,
+            ..
+        } = self.program_id;
+
+        // signers
+        let payer = sender.pubkey();
+        let signers = [sender.keypair()];
+
+        // pda
+        let user_id = self.pda.registry_user_id(payer);
+        let id = self.registry_query_user_id(sender)?.id;
+        let user_account = self.pda.registry_user_account(id);
+        let user_rotation_state = self.pda.registry_user_rotation_state(id);
+
+        let accounts = accounts::CloseAccount {
+            system_program,
+            sender: payer,
+            user_id,
+            user_account,
+            user_rotation_state,
+        };
+
+        let instruction_data = instruction::CloseAccount {};
+
+        send_tx_with_ix(
+            self,
+            &program_id,
+            &accounts,
+            &instruction_data,
+            &payer,
+            &signers,
+        )
+    }
+
+    fn registry_try_reopen_account(
+        &mut self,
+        sender: AppUser,
+        max_data_size: u32,
+    ) -> Result<TransactionMetadata> {
+        // programs
+        let ProgramId {
+            system_program,
+            registry: program_id,
+            ..
+        } = self.program_id;
+
+        // signers
+        let payer = sender.pubkey();
+        let signers = [sender.keypair()];
+
+        // pda
+        let bump = self.pda.registry_bump();
+        let account_config = self.pda.registry_account_config();
+
+        let user_id = self.pda.registry_user_id(payer);
+        let id = self.registry_query_user_id(sender)?.id;
+        let user_account = self.pda.registry_user_account(id);
+        let user_rotation_state = self.pda.registry_user_rotation_state(id);
+
+        let accounts = accounts::ReopenAccount {
+            system_program,
+            sender: payer,
+            bump,
+            account_config,
+            user_id,
+            user_account,
+            user_rotation_state,
+        };
+
+        let instruction_data = instruction::ReopenAccount { max_data_size };
+
+        send_tx_with_ix(
+            self,
+            &program_id,
+            &accounts,
+            &instruction_data,
+            &payer,
+            &signers,
+        )
+    }
+
     fn registry_query_common_config(&self) -> Result<state::CommonConfig> {
         get_data(&self.litesvm, &self.pda.registry_common_config())
     }
@@ -350,5 +497,20 @@ impl RegistryExtension for App {
 
     fn registry_query_admin_rotation_state(&self) -> Result<state::RotationState> {
         get_data(&self.litesvm, &self.pda.registry_admin_rotation_state())
+    }
+
+    fn registry_query_user_id(&self, user: AppUser) -> Result<state::UserId> {
+        get_data(&self.litesvm, &self.pda.registry_user_id(user.pubkey()))
+    }
+
+    fn registry_query_user_account(&self, user_id: u32) -> Result<state::UserAccount> {
+        get_data(&self.litesvm, &self.pda.registry_user_account(user_id))
+    }
+
+    fn registry_query_user_rotation_state(&self, user_id: u32) -> Result<state::RotationState> {
+        get_data(
+            &self.litesvm,
+            &self.pda.registry_user_rotation_state(user_id),
+        )
     }
 }

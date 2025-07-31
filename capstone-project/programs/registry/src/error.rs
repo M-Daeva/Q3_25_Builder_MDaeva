@@ -18,6 +18,15 @@ pub enum CustomError {
 
     #[msg("Exceeded available asset amount!")]
     ExceededAvailableAssetAmount,
+
+    #[msg("The contract is temporary paused!")]
+    ContractIsPaused,
+
+    #[msg("Max data size is out of range!")]
+    MaxDataSizeIsOutOfRange,
+
+    #[msg("Wrong user ID!")]
+    WrongUserId,
     //
     // #[msg("Insufficient SOL amount for account creation")]
     // InsufficientSolAmount,

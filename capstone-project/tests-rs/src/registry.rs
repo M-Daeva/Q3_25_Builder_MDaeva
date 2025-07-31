@@ -27,8 +27,6 @@ fn init_app() -> Result<App> {
             asset: AppToken::USDC.pubkey(&app),
         }),
         None,
-        None,
-        None,
     )?;
 
     Ok(app)
@@ -85,6 +83,15 @@ fn transfer_admin() -> Result<()> {
         app.registry_query_common_config()?.admin,
         AppUser::Alice.pubkey()
     );
+
+    Ok(())
+}
+
+#[test]
+fn create_account_default() -> Result<()> {
+    let mut app = init_app()?;
+
+    app.registry_try_create_account(AppUser::Alice, 1_000)?;
 
     Ok(())
 }
