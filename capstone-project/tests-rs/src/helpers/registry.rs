@@ -66,6 +66,31 @@ pub trait RegistryExtension {
         max_data_size: u32,
     ) -> Result<TransactionMetadata>;
 
+    fn registry_try_activate_account(
+        &mut self,
+        sender: AppUser,
+        user: Option<AppUser>,
+        revenue_asset: Option<AppToken>, // to test asset guard
+    ) -> Result<TransactionMetadata>;
+
+    fn registry_try_write_data(
+        &mut self,
+        sender: AppUser,
+        data: &str,
+        nonce: u64,
+    ) -> Result<TransactionMetadata>;
+
+    fn registry_try_request_account_rotation(
+        &mut self,
+        sender: AppUser,
+        new_owner: AppUser,
+    ) -> Result<TransactionMetadata>;
+
+    fn registry_try_confirm_account_rotation(
+        &mut self,
+        sender: AppUser,
+    ) -> Result<TransactionMetadata>;
+
     fn registry_query_common_config(&self) -> Result<state::CommonConfig>;
 
     fn registry_query_account_config(&self) -> Result<state::AccountConfig>;
@@ -465,6 +490,199 @@ impl RegistryExtension for App {
         };
 
         let instruction_data = instruction::ReopenAccount { max_data_size };
+
+        send_tx_with_ix(
+            self,
+            &program_id,
+            &accounts,
+            &instruction_data,
+            &payer,
+            &signers,
+        )
+    }
+
+    fn registry_try_activate_account(
+        &mut self,
+        sender: AppUser,
+        user: Option<AppUser>,
+        revenue_asset: Option<AppToken>, // to test asset guard
+    ) -> Result<TransactionMetadata> {
+        // programs
+        let ProgramId {
+            system_program,
+            token_program,
+            associated_token_program,
+            registry: program_id,
+            ..
+        } = self.program_id;
+
+        let user = user.unwrap_or(sender).pubkey();
+
+        // signers
+        let payer = sender.pubkey();
+        let signers = [sender.keypair()];
+
+        // mint
+        let revenue_mint = match revenue_asset {
+            Some(x) => x.pubkey(&self),
+            _ => self.registry_query_account_config()?.registration_fee.asset,
+        };
+
+        // pda
+        let bump = self.pda.registry_bump();
+        let account_config = self.pda.registry_account_config();
+        let common_config = self.pda.registry_common_config();
+
+        let user_id = self.pda.registry_user_id(payer);
+
+        // ata
+        let revenue_sender_ata = App::get_ata(&payer, &revenue_mint);
+        let revenue_app_ata = App::get_ata(&common_config, &revenue_mint);
+
+        let accounts = accounts::ActivateAccount {
+            system_program,
+            token_program,
+            associated_token_program,
+            sender: payer,
+            bump,
+            common_config,
+            account_config,
+            user_id,
+            revenue_mint,
+            revenue_sender_ata,
+            revenue_app_ata,
+        };
+
+        let instruction_data = instruction::ActivateAccount { user };
+
+        send_tx_with_ix(
+            self,
+            &program_id,
+            &accounts,
+            &instruction_data,
+            &payer,
+            &signers,
+        )
+    }
+
+    fn registry_try_write_data(
+        &mut self,
+        sender: AppUser,
+        data: &str,
+        nonce: u64,
+    ) -> Result<TransactionMetadata> {
+        // programs
+        let ProgramId {
+            registry: program_id,
+            ..
+        } = self.program_id;
+
+        // signers
+        let payer = sender.pubkey();
+        let signers = [sender.keypair()];
+
+        // pda
+        let user_id = self.pda.registry_user_id(payer);
+        let id = self.registry_query_user_id(sender)?.id;
+        let user_account = self.pda.registry_user_account(id);
+
+        let accounts = accounts::WriteData {
+            sender: payer,
+            user_id,
+            user_account,
+        };
+
+        let instruction_data = instruction::WriteData {
+            data: data.to_string(),
+            nonce,
+        };
+
+        send_tx_with_ix(
+            self,
+            &program_id,
+            &accounts,
+            &instruction_data,
+            &payer,
+            &signers,
+        )
+    }
+
+    fn registry_try_request_account_rotation(
+        &mut self,
+        sender: AppUser,
+        new_owner: AppUser,
+    ) -> Result<TransactionMetadata> {
+        // programs
+        let ProgramId {
+            registry: program_id,
+            ..
+        } = self.program_id;
+
+        // signers
+        let payer = sender.pubkey();
+        let signers = [sender.keypair()];
+
+        // pda
+        let bump = self.pda.registry_bump();
+        let common_config = self.pda.registry_common_config();
+
+        let user_id = self.pda.registry_user_id(payer);
+        let id = self.registry_query_user_id(sender)?.id;
+        let user_rotation_state = self.pda.registry_user_rotation_state(id);
+
+        let accounts = accounts::RequestAccountRotation {
+            sender: payer,
+            bump,
+            common_config,
+            user_id,
+            user_rotation_state,
+        };
+
+        let instruction_data = instruction::RequestAccountRotation {
+            new_owner: new_owner.pubkey(),
+        };
+
+        send_tx_with_ix(
+            self,
+            &program_id,
+            &accounts,
+            &instruction_data,
+            &payer,
+            &signers,
+        )
+    }
+
+    fn registry_try_confirm_account_rotation(
+        &mut self,
+        sender: AppUser,
+    ) -> Result<TransactionMetadata> {
+        // programs
+        let ProgramId {
+            system_program,
+            registry: program_id,
+            ..
+        } = self.program_id;
+
+        // signers
+        let payer = sender.pubkey();
+        let signers = [sender.keypair()];
+
+        // pda
+        let user_id = self.pda.registry_user_id(payer);
+        let id = self.registry_query_user_id(sender)?.id;
+        let user_rotation_state = self.pda.registry_user_rotation_state(id);
+        let user_pre = self.registry_query_user_rotation_state(id)?.owner;
+        let user_id_pre = self.pda.registry_user_id(user_pre);
+
+        let accounts = accounts::ConfirmAccountRotation {
+            system_program,
+            sender: payer,
+            user_id_pre,
+            user_id,
+            user_rotation_state,
+        };
+
+        let instruction_data = instruction::ConfirmAccountRotation {};
 
         send_tx_with_ix(
             self,
