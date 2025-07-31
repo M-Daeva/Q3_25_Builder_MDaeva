@@ -41,7 +41,6 @@ impl<'info> UpdateCommonConfig<'info> {
     pub fn update_common_config(
         &mut self,
         admin: Option<Pubkey>,
-        dex_adapter: Option<Pubkey>,
         is_paused: Option<bool>,
         rotation_timeout: Option<u32>,
     ) -> Result<()> {
@@ -62,11 +61,6 @@ impl<'info> UpdateCommonConfig<'info> {
             admin_rotation_state.new_owner = Some(new_admin);
             admin_rotation_state.expiration_date =
                 get_clock_time()? + common_config.rotation_timeout as u64;
-            is_config_updated = true;
-        }
-
-        if let Some(x) = dex_adapter {
-            common_config.dex_adapter = Some(x);
             is_config_updated = true;
         }
 

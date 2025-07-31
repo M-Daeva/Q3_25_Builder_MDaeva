@@ -21,7 +21,6 @@ fn init_app() -> Result<App> {
     app.registry_try_init(
         AppUser::Admin,
         None,
-        None,
         Some(AssetItem {
             amount: ACCOUNT_REGISTRATION_FEE_AMOUNT,
             asset: AppToken::USDC.pubkey(&app),
@@ -40,7 +39,6 @@ fn init_default() -> Result<()> {
         app.registry_query_common_config()?,
         CommonConfig {
             admin: AppUser::Admin.pubkey(),
-            dex_adapter: None,
             is_paused: false,
             rotation_timeout: ROTATION_TIMEOUT
         }
@@ -54,7 +52,7 @@ fn transfer_admin() -> Result<()> {
     let mut app = init_app()?;
 
     let res = app
-        .registry_try_update_common_config(AppUser::Alice, Some(AppUser::Alice), None, None, None)
+        .registry_try_update_common_config(AppUser::Alice, Some(AppUser::Alice), None, None)
         .unwrap_err();
     assert_error(res, AuthError::Unauthorized);
 
@@ -63,7 +61,7 @@ fn transfer_admin() -> Result<()> {
         .unwrap_err();
     assert_error(res, AuthError::NoNewAdmin);
 
-    app.registry_try_update_common_config(AppUser::Admin, Some(AppUser::Alice), None, None, None)?;
+    app.registry_try_update_common_config(AppUser::Admin, Some(AppUser::Alice), None, None)?;
 
     app.wait(ROTATION_TIMEOUT as u64);
     let res = app
@@ -71,7 +69,7 @@ fn transfer_admin() -> Result<()> {
         .unwrap_err();
     assert_error(res, AuthError::TransferAdminDeadline);
 
-    app.registry_try_update_common_config(AppUser::Admin, Some(AppUser::Alice), None, None, None)?;
+    app.registry_try_update_common_config(AppUser::Admin, Some(AppUser::Alice), None, None)?;
 
     let res = app
         .registry_try_confirm_admin_rotation(AppUser::Bob)

@@ -13,14 +13,12 @@ use {
         accounts, instruction, state,
         types::{AssetItem, Range},
     },
-    solana_pubkey::Pubkey,
 };
 
 pub trait RegistryExtension {
     fn registry_try_init(
         &mut self,
         sender: AppUser,
-        dex_adapter: Option<Pubkey>,
         rotation_timeout: Option<u32>,
         account_registration_fee: Option<AssetItem>,
         account_data_size_range: Option<Range>,
@@ -30,7 +28,6 @@ pub trait RegistryExtension {
         &mut self,
         sender: AppUser,
         admin: Option<AppUser>,
-        dex_adapter: Option<Pubkey>,
         is_paused: Option<bool>,
         rotation_timeout: Option<u32>,
     ) -> Result<TransactionMetadata>;
@@ -88,7 +85,6 @@ impl RegistryExtension for App {
     fn registry_try_init(
         &mut self,
         sender: AppUser,
-        dex_adapter: Option<Pubkey>,
         rotation_timeout: Option<u32>,
         account_registration_fee: Option<AssetItem>,
         account_data_size_range: Option<Range>,
@@ -137,7 +133,6 @@ impl RegistryExtension for App {
         };
 
         let instruction_data = instruction::Init {
-            dex_adapter,
             rotation_timeout,
             account_registration_fee,
             account_data_size_range,
@@ -157,7 +152,6 @@ impl RegistryExtension for App {
         &mut self,
         sender: AppUser,
         admin: Option<AppUser>,
-        dex_adapter: Option<Pubkey>,
         is_paused: Option<bool>,
         rotation_timeout: Option<u32>,
     ) -> Result<TransactionMetadata> {
@@ -185,7 +179,6 @@ impl RegistryExtension for App {
 
         let instruction_data = instruction::UpdateCommonConfig {
             admin: admin.map(|x| x.pubkey()),
-            dex_adapter,
             is_paused,
             rotation_timeout,
         };

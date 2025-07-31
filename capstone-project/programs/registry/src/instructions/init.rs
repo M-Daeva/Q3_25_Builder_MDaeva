@@ -91,7 +91,6 @@ impl<'info> Init<'info> {
     pub fn init(
         &mut self,
         bumps: InitBumps,
-        dex_adapter: Option<Pubkey>,
         rotation_timeout: Option<u32>,
         account_registration_fee: Option<AssetItem>,
         account_data_size_range: Option<Range>,
@@ -115,7 +114,6 @@ impl<'info> Init<'info> {
 
         common_config.set_inner(CommonConfig {
             admin: sender.key(),
-            dex_adapter,
             is_paused: false,
             rotation_timeout: rotation_timeout.unwrap_or(ROTATION_TIMEOUT),
         });

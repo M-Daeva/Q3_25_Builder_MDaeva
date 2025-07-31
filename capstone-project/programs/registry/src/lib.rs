@@ -1,17 +1,17 @@
 #![allow(unexpected_cfgs)]
 #![allow(deprecated)]
 
-use anchor_lang::prelude::*;
-
 pub mod error;
 pub mod instructions;
 pub mod state;
 pub mod types;
 
 use {
+    anchor_lang::prelude::*,
     instructions::{
-        close_account::*, confirm_admin_rotation::*, create_account::*, init::*, reopen_account::*,
-        update_account_config::*, update_common_config::*, withdraw_revenue::*,
+        activate_account::*, close_account::*, confirm_admin_rotation::*, create_account::*,
+        init::*, reopen_account::*, update_account_config::*, update_common_config::*,
+        withdraw_revenue::*, write_data::*,
     },
     types::{AssetItem, Range},
 };
@@ -24,14 +24,12 @@ pub mod registry {
 
     pub fn init(
         ctx: Context<Init>,
-        dex_adapter: Option<Pubkey>,
         rotation_timeout: Option<u32>,
         account_registration_fee: Option<AssetItem>,
         account_data_size_range: Option<Range>,
     ) -> Result<()> {
         ctx.accounts.init(
             ctx.bumps,
-            dex_adapter,
             rotation_timeout,
             account_registration_fee,
             account_data_size_range,
@@ -41,12 +39,11 @@ pub mod registry {
     pub fn update_common_config(
         ctx: Context<UpdateCommonConfig>,
         admin: Option<Pubkey>,
-        dex_adapter: Option<Pubkey>,
         is_paused: Option<bool>,
         rotation_timeout: Option<u32>,
     ) -> Result<()> {
         ctx.accounts
-            .update_common_config(admin, dex_adapter, is_paused, rotation_timeout)
+            .update_common_config(admin, is_paused, rotation_timeout)
     }
 
     pub fn update_account_config(
@@ -76,27 +73,24 @@ pub mod registry {
             .create_account(ctx.bumps, max_data_size, expected_user_id)
     }
 
+    /// 1st step to to change allocated data space or just to redeem rent
     pub fn close_account(ctx: Context<CloseAccount>) -> Result<()> {
         ctx.accounts.close_account()
     }
 
+    /// 2nd step to to change allocated data space
     pub fn reopen_account(ctx: Context<ReopenAccount>, max_data_size: u32) -> Result<()> {
         ctx.accounts.reopen_account(max_data_size)
     }
 
-    // /// activates account with fee asset payment
-    // pub fn activate_account() -> Result<()> {
-    //     unimplemented!()
-    // }
+    /// activates account with fee asset payment
+    pub fn activate_account(ctx: Context<ActivateAccount>, user: Pubkey) -> Result<()> {
+        ctx.accounts.activate_account(user)
+    }
 
-    // /// automatic activation when fee asset is received from DEX Adapter
-    // pub fn receive_payment(user_account: Pubkey) -> Result<()> {
-    //     unimplemented!()
-    // }
-
-    // pub fn write_data(data: String, nonce: u64) -> Result<()> {
-    //     unimplemented!()
-    // }
+    pub fn write_data(ctx: Context<WriteData>, data: String, nonce: u64) -> Result<()> {
+        ctx.accounts.write_data(data, nonce)
+    }
 
     // pub fn request_account_rotation(new_owner: Pubkey) -> Result<()> {
     //     unimplemented!()

@@ -39,7 +39,6 @@ pub struct Bump {
 pub struct CommonConfig {
     /// can update the config and execute priveled instructions
     pub admin: Pubkey,
-    pub dex_adapter: Option<Pubkey>,
     pub is_paused: bool,
     pub rotation_timeout: u32,
 }

@@ -25,17 +25,26 @@ pub enum CustomError {
     #[msg("Max data size is out of range!")]
     MaxDataSizeIsOutOfRange,
 
+    #[msg("Max data size is exceeded!")]
+    MaxDataSizeIsExceeded,
+
     #[msg("Wrong user ID!")]
     WrongUserId,
+
+    #[msg("Account can't be activated twice!")]
+    ActivateAccountTwice,
+
+    #[msg("Account isn't activated!")]
+    AccountIsNotActivated,
+
+    #[msg("Nonce must be unique!")]
+    BadNonce,
     //
     // #[msg("Insufficient SOL amount for account creation")]
     // InsufficientSolAmount,
 
     // #[msg("Insufficient USDC amount for account activation")]
     // InsufficientUsdcAmount,
-
-    // #[msg("Account already activated")]
-    // AccountAlreadyActivated,
 }
 
 impl From<CustomError> for ProgError {
