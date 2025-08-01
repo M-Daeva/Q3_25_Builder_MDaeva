@@ -1,9 +1,7 @@
 import * as anchor from "@coral-xyz/anchor";
 import * as spl from "@solana/spl-token";
-import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
+import { PublicKey, SystemProgram } from "@solana/web3.js";
 import { TxParams } from "../interfaces";
-import { InitArgs } from "../interfaces/registry";
-import { convertInitArgs } from "../interfaces/registry.anchor";
 import {
   getHandleTx,
   getOrCreateAtaInstructions,
@@ -12,12 +10,32 @@ import {
   logAndReturn,
   publicKeyFromString,
 } from "../../common/utils";
+import {
+  ActivateAccountArgs,
+  CreateAccountArgs,
+  InitArgs,
+  ReopenAccountArgs,
+  RequestAccountRotationArgs,
+  UpdateConfigArgs,
+  WithdrawRevenueArgs,
+  WriteDataArgs,
+} from "../interfaces/registry";
+import {
+  convertCreateAccountArgs,
+  convertInitArgs,
+  convertReopenAccountArgs,
+  convertRequestAccountRotationArgs,
+  convertUpdateConfigArgs,
+  convertWithdrawRevenueArgs,
+  convertWriteDataArgs,
+} from "../interfaces/registry.anchor";
 
 import { Registry } from "../schema/types/registry";
 
 export class RegistryHelpers {
   private provider: anchor.AnchorProvider;
   private program: anchor.Program<Registry>;
+  private sender: PublicKey;
 
   private handleTx: (
     instructions: anchor.web3.TransactionInstruction[],
@@ -35,337 +53,185 @@ export class RegistryHelpers {
   ) {
     this.provider = provider;
     this.program = program;
+    this.sender = provider.wallet.publicKey;
     this.handleTx = getHandleTx(provider);
     this.getTokenProgram = getTokenProgramFactory(provider);
   }
 
   async tryInit(
-    initArgs: InitArgs,
+    args: InitArgs,
     revenueMint: PublicKey,
     params: TxParams = {},
     isDisplayed: boolean = false
   ): Promise<anchor.web3.TransactionSignature> {
     const ix = await this.program.methods
-      .init(...convertInitArgs(initArgs))
+      .init(...convertInitArgs(args))
       .accounts({
         tokenProgram: await this.getTokenProgram(revenueMint),
         revenueMint,
-        sender: this.provider.wallet.publicKey,
+        sender: this.sender,
       })
       .instruction();
 
     return await this.handleTx([ix], params, isDisplayed);
   }
 
-  // async tryCreateTrade(
-  //   userKeypair: Keypair,
-  //   nftProgram: anchor.Address,
-  //   nftMint: PublicKey,
-  //   tokenMint: PublicKey,
-  //   isSellNftTrade: boolean,
-  //   collection: PublicKey,
-  //   tokenId: number,
-  //   priceAmount: number,
-  //   priceAsset: PublicKey,
-  //   params: TxParams = {},
-  //   isDisplayed: boolean = false
-  // ): Promise<anchor.web3.TransactionSignature> {
-  //   const { admin } = await this.getMarketplace();
+  async tryUpdateConfig(
+    args: UpdateConfigArgs,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const ix = await this.program.methods
+      .updateConfig(...convertUpdateConfigArgs(args))
+      .accounts({
+        sender: this.sender,
+      })
+      .instruction();
 
-  //   let instructions: anchor.web3.TransactionInstruction[] = [];
+    return await this.handleTx([ix], params, isDisplayed);
+  }
 
-  //   if (isSellNftTrade) {
-  //     if (priceAsset.equals(PublicKey.default)) {
-  //       const tokenProgram = await this.getTokenProgram(nftMint);
+  async tryConfirmAdminRotation(
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const ix = await this.program.methods
+      .confirmAdminRotation()
+      .accounts({
+        sender: this.sender,
+      })
+      .instruction();
 
-  //       const ix = await this.program.methods
-  //         .createSellForSolTrade(collection, tokenId, {
-  //           amount: new anchor.BN(priceAmount),
-  //           asset: priceAsset,
-  //         })
-  //         .accounts({
-  //           admin,
-  //           seller: userKeypair.publicKey,
-  //           tokenProgram,
-  //           nftProgram,
-  //           nftMint,
-  //         })
-  //         .instruction();
+    return await this.handleTx([ix], params, isDisplayed);
+  }
 
-  //       instructions.push(ix);
-  //     } else {
-  //       const tokenProgram = await this.getTokenProgram(priceAsset);
+  async tryWithdrawRevenue(
+    args: WithdrawRevenueArgs,
+    revenueMint: PublicKey,
+    recipient?: PublicKey,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const ix = await this.program.methods
+      .withdrawRevenue(...convertWithdrawRevenueArgs(args))
+      .accounts({
+        tokenProgram: await this.getTokenProgram(revenueMint),
+        revenueMint,
+        sender: this.sender,
+        recipient: recipient || this.sender,
+      })
+      .instruction();
 
-  //       const ix = await this.program.methods
-  //         .createSellForTokenTrade(collection, tokenId, {
-  //           amount: new anchor.BN(priceAmount),
-  //           asset: priceAsset,
-  //         })
-  //         .accounts({
-  //           admin,
-  //           seller: userKeypair.publicKey,
-  //           tokenProgram,
-  //           nftProgram,
-  //           nftMint,
-  //           tokenMint,
-  //         })
-  //         .instruction();
+    return await this.handleTx([ix], params, isDisplayed);
+  }
 
-  //       instructions.push(ix);
-  //     }
-  //   } else {
-  //     if (priceAsset.equals(PublicKey.default)) {
-  //       const tokenProgram = await this.getTokenProgram(nftMint);
+  // TODO: add simulation
+  async tryCreateAccount(
+    args: CreateAccountArgs,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const ix = await this.program.methods
+      .createAccount(...convertCreateAccountArgs(args))
+      .accounts({
+        sender: this.sender,
+      })
+      .instruction();
 
-  //       const ix = await this.program.methods
-  //         .createBuyWithSolTrade(collection, tokenId, {
-  //           amount: new anchor.BN(priceAmount),
-  //           asset: priceAsset,
-  //         })
-  //         .accounts({
-  //           admin,
-  //           buyer: userKeypair.publicKey,
-  //           tokenProgram,
-  //           nftProgram,
-  //           nftMint,
-  //         })
-  //         .instruction();
+    return await this.handleTx([ix], params, isDisplayed);
+  }
 
-  //       instructions.push(ix);
-  //     } else {
-  //       const tokenProgram = await this.getTokenProgram(priceAsset);
+  async tryCloseAccount(
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const ix = await this.program.methods
+      .closeAccount()
+      .accounts({
+        sender: this.sender,
+      })
+      .instruction();
 
-  //       const ix = await this.program.methods
-  //         .createBuyWithTokenTrade(collection, tokenId, {
-  //           amount: new anchor.BN(priceAmount),
-  //           asset: priceAsset,
-  //         })
-  //         .accounts({
-  //           admin,
-  //           buyer: userKeypair.publicKey,
-  //           tokenProgram,
-  //           nftProgram,
-  //           nftMint,
-  //           tokenMint,
-  //         })
-  //         .instruction();
+    return await this.handleTx([ix], params, isDisplayed);
+  }
 
-  //       instructions.push(ix);
-  //     }
-  //   }
+  async tryReopenAccount(
+    args: ReopenAccountArgs,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const ix = await this.program.methods
+      .reopenAccount(...convertReopenAccountArgs(args))
+      .accounts({
+        sender: this.sender,
+      })
+      .instruction();
 
-  //   const modifiedParams = {
-  //     ...params,
-  //     signers: [...(params.signers || []), userKeypair],
-  //   };
+    return await this.handleTx([ix], params, isDisplayed);
+  }
 
-  //   return await this.handleTx(instructions, modifiedParams, isDisplayed);
-  // }
+  async tryActivateAccount(
+    args: ActivateAccountArgs,
+    revenueMint: PublicKey,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const ix = await this.program.methods
+      .activateAccount(args.user || this.sender)
+      .accounts({
+        tokenProgram: await this.getTokenProgram(revenueMint),
+        sender: this.sender,
+        revenueMint,
+      })
+      .instruction();
 
-  // async tryAcceptTrade(
-  //   userKeypair: Keypair,
-  //   nftProgram: anchor.Address,
-  //   nftMint: PublicKey,
-  //   tokenMint: PublicKey,
-  //   creator: PublicKey,
-  //   collection: PublicKey,
-  //   tokenId: number,
-  //   params: TxParams = {},
-  //   isDisplayed: boolean = false
-  // ): Promise<anchor.web3.TransactionSignature> {
-  //   const { admin } = await this.getMarketplace();
-  //   const trade = await this.getTrade(creator, collection, tokenId);
+    return await this.handleTx([ix], params, isDisplayed);
+  }
 
-  //   let instructions: anchor.web3.TransactionInstruction[] = [];
+  // TODO: add encryption
+  async tryWriteData(
+    args: WriteDataArgs,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const ix = await this.program.methods
+      .writeData(...convertWriteDataArgs(args))
+      .accounts({
+        sender: this.sender,
+      })
+      .instruction();
 
-  //   if (trade.isSellNftTrade) {
-  //     if (trade.price.asset.equals(PublicKey.default)) {
-  //       const tokenProgram = await this.getTokenProgram(nftMint);
+    return await this.handleTx([ix], params, isDisplayed);
+  }
 
-  //       const ix = await this.program.methods
-  //         .acceptSellForSolTrade(collection, tokenId)
-  //         .accounts({
-  //           admin,
-  //           buyer: userKeypair.publicKey,
-  //           seller: creator,
-  //           tokenProgram,
-  //           nftMint,
-  //         })
-  //         .instruction();
+  async tryRequestAccountRotation(
+    args: RequestAccountRotationArgs,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const ix = await this.program.methods
+      .requestAccountRotation(...convertRequestAccountRotationArgs(args))
+      .accounts({
+        sender: this.sender,
+      })
+      .instruction();
 
-  //       instructions.push(ix);
-  //     } else {
-  //       const tokenProgram = await this.getTokenProgram(trade.price.asset);
+    return await this.handleTx([ix], params, isDisplayed);
+  }
 
-  //       const ix = await this.program.methods
-  //         .acceptSellForTokenTrade(collection, tokenId)
-  //         .accounts({
-  //           admin,
-  //           buyer: userKeypair.publicKey,
-  //           seller: creator,
-  //           tokenProgram,
-  //           nftMint,
-  //           tokenMint,
-  //         })
-  //         .instruction();
+  async tryConfirmAccountRotation(
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const ix = await this.program.methods
+      .confirmAccountRotation()
+      .accounts({
+        sender: this.sender,
+      })
+      .instruction();
 
-  //       instructions.push(ix);
-  //     }
-  //   } else {
-  //     if (trade.price.asset.equals(PublicKey.default)) {
-  //       const tokenProgram = await this.getTokenProgram(nftMint);
-
-  //       const ix = await this.program.methods
-  //         .acceptBuyWithSolTrade(collection, tokenId)
-  //         .accounts({
-  //           admin,
-  //           buyer: creator,
-  //           seller: userKeypair.publicKey,
-  //           tokenProgram,
-  //           nftProgram,
-  //           nftMint,
-  //         })
-  //         .instruction();
-
-  //       instructions.push(ix);
-  //     } else {
-  //       const tokenProgram = await this.getTokenProgram(trade.price.asset);
-
-  //       const ix = await this.program.methods
-  //         .acceptBuyWithTokenTrade(collection, tokenId)
-  //         .accounts({
-  //           admin,
-  //           buyer: creator,
-  //           seller: userKeypair.publicKey,
-  //           tokenProgram,
-  //           nftProgram,
-  //           nftMint,
-  //           tokenMint,
-  //         })
-  //         .instruction();
-
-  //       instructions.push(ix);
-  //     }
-  //   }
-
-  //   const modifiedParams = {
-  //     ...params,
-  //     signers: [...(params.signers || []), userKeypair],
-  //   };
-
-  //   return await this.handleTx(instructions, modifiedParams, isDisplayed);
-  // }
-
-  // async tryRemoveTrade(
-  //   userKeypair: Keypair,
-  //   nftProgram: anchor.Address,
-  //   nftMint: PublicKey,
-  //   tokenMint: PublicKey,
-  //   creator: PublicKey,
-  //   collection: PublicKey,
-  //   tokenId: number,
-  //   params: TxParams = {},
-  //   isDisplayed: boolean = false
-  // ): Promise<anchor.web3.TransactionSignature> {
-  //   const { admin } = await this.getMarketplace();
-  //   const trade = await this.getTrade(creator, collection, tokenId);
-
-  //   let instructions: anchor.web3.TransactionInstruction[] = [];
-
-  //   if (trade.isSellNftTrade) {
-  //     const mint = trade.price.asset.equals(PublicKey.default)
-  //       ? nftMint
-  //       : trade.price.asset;
-  //     const tokenProgram = await this.getTokenProgram(mint);
-
-  //     const ix = await this.program.methods
-  //       .removeSellTrade(collection, tokenId)
-  //       .accounts({
-  //         admin,
-  //         seller: userKeypair.publicKey,
-  //         tokenProgram,
-  //         nftProgram,
-  //         nftMint,
-  //       })
-  //       .instruction();
-
-  //     instructions.push(ix);
-  //   } else {
-  //     if (trade.price.asset.equals(PublicKey.default)) {
-  //       const ix = await this.program.methods
-  //         .removeBuyWithSolTrade(collection, tokenId)
-  //         .accounts({
-  //           admin,
-  //           buyer: userKeypair.publicKey,
-  //         })
-  //         .instruction();
-
-  //       instructions.push(ix);
-  //     } else {
-  //       const tokenProgram = await this.getTokenProgram(trade.price.asset);
-
-  //       const ix = await this.program.methods
-  //         .removeBuyWithTokenTrade(collection, tokenId)
-  //         .accounts({
-  //           admin,
-  //           buyer: userKeypair.publicKey,
-  //           tokenProgram,
-  //           tokenMint,
-  //         })
-  //         .instruction();
-
-  //       instructions.push(ix);
-  //     }
-  //   }
-
-  //   const modifiedParams = {
-  //     ...params,
-  //     signers: [...(params.signers || []), userKeypair],
-  //   };
-
-  //   return await this.handleTx(instructions, modifiedParams, isDisplayed);
-  // }
-
-  // async tryWithdrawFee(
-  //   params: TxParams = {},
-  //   isDisplayed: boolean = false
-  // ): Promise<anchor.web3.TransactionSignature> {
-  //   const { admin } = await this.getMarketplace();
-  //   const { value: balances } = await this.getBalances();
-
-  //   let promiseList: Promise<anchor.web3.TransactionInstruction>[] = [];
-
-  //   for (const { asset } of balances) {
-  //     if (asset.equals(PublicKey.default)) {
-  //       const ix = this.program.methods
-  //         .withdrawSolFee()
-  //         .accounts({
-  //           admin,
-  //           sender: this.provider.wallet.publicKey,
-  //         })
-  //         .instruction();
-
-  //       promiseList.push(ix);
-  //     } else {
-  //       const tokenProgram = await this.getTokenProgram(asset);
-
-  //       const ix = this.program.methods
-  //         .withdrawTokenFee()
-  //         .accounts({
-  //           admin,
-  //           sender: this.provider.wallet.publicKey,
-  //           tokenProgram,
-  //           tokenMint: asset,
-  //         })
-  //         .instruction();
-
-  //       promiseList.push(ix);
-  //     }
-  //   }
-
-  //   const ixs = await Promise.all(promiseList);
-  //   return await this.handleTx(ixs, params, isDisplayed);
-  // }
+    return await this.handleTx([ix], params, isDisplayed);
+  }
 
   async queryConfig(isDisplayed: boolean = false) {
     const [pda] = PublicKey.findProgramAddressSync(

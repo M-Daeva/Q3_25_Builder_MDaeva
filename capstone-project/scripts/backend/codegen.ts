@@ -128,7 +128,16 @@ export class AnchorTypeGenerator {
     const name = prop.name.text;
     const isOptional = !!prop.questionToken;
     const type = this.typeChecker.getTypeAtLocation(prop);
-    const typeString = this.typeChecker.typeToString(type);
+    let typeString = this.typeChecker.typeToString(type);
+
+    // Check if the original source text contains N<T> pattern
+    // since TypeScript resolves N<64> to just "number"
+    if (prop.type && typeString === "number") {
+      const sourceText = prop.type.getText();
+      if (sourceText.match(/N<\d+>/)) {
+        typeString = sourceText;
+      }
+    }
 
     return {
       name,
@@ -231,6 +240,14 @@ export class AnchorTypeGenerator {
   private convertToAnchorType(prop: PropertyInfo): string {
     const baseType = this.getBaseType(prop.type);
 
+    // Handle N<T> sized number types
+    const nTypeMatch = this.extractNType(baseType);
+    if (nTypeMatch) {
+      const size = parseInt(nTypeMatch);
+      // N<64> should be anchor.BN, smaller sizes remain number
+      return size >= 64 ? "anchor.BN" : "number";
+    }
+
     // Handle specific type conversions
     switch (baseType) {
       case "number":
@@ -293,6 +310,25 @@ export class AnchorTypeGenerator {
     }
   }
 
+  /**
+   * Extract the size parameter from N<T> type
+   * @param typeString - The type string to check
+   * @returns The size as string if it's an N<T> type, null otherwise
+   */
+  private extractNType(typeString: string): string | null {
+    const nTypeMatch = typeString.match(/^N<(\d+)>$/);
+    return nTypeMatch ? nTypeMatch[1] : null;
+  }
+
+  /**
+   * Check if a type is a sized number type N<T>
+   * @param typeString - The type string to check
+   * @returns true if it's an N<T> type
+   */
+  private isNType(typeString: string): boolean {
+    return /^N<\d+>$/.test(typeString);
+  }
+
   private getBaseType(typeString: string): string {
     // Remove optional markers and whitespace
     let type = typeString.replace(/\s*\|\s*undefined/g, "").trim();
@@ -335,7 +371,8 @@ export class AnchorTypeGenerator {
     return (
       !primitiveTypes.includes(type) &&
       !type.includes("|") &&
-      !type.includes("undefined")
+      !type.includes("undefined") &&
+      !this.isNType(type)
     );
   }
 
@@ -460,6 +497,14 @@ export class AnchorTypeGenerator {
     accessor: string
   ): string {
     const baseType = this.getBaseType(prop.type);
+
+    // Handle N<T> sized number types in conversions
+    const nTypeMatch = this.extractNType(baseType);
+    if (nTypeMatch) {
+      const size = parseInt(nTypeMatch);
+      // N<64> should be converted to anchor.BN
+      return size >= 64 ? `new anchor.BN(${accessor})` : accessor;
+    }
 
     switch (baseType) {
       case "number":

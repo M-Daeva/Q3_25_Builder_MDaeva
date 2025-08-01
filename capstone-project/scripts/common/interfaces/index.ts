@@ -31,3 +31,6 @@ export interface TraderInfo {
   amount: number;
   mint: PublicKey | string;
 }
+
+type D = 8 | 16 | 32 | 64;
+export type N<T extends D> = number;
