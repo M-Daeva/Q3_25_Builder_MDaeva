@@ -29,11 +29,6 @@ export interface WithdrawRevenueArgs {
   amount?: N<64>;
 }
 
-export interface CreateAccountArgs {
-  maxDataSize: N<32>;
-  expectedUserId: N<32>;
-}
-
 export interface ReopenAccountArgs {
   maxDataSize: N<32>;
 }

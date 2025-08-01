@@ -1,7 +1,7 @@
 // Auto-generated Anchor types and converters
 import * as anchor from '@coral-xyz/anchor';
 import { PublicKey } from '@solana/web3.js';
-import { InitArgs, AssetItem, Range, UpdateConfigArgs, WithdrawRevenueArgs, CreateAccountArgs, ReopenAccountArgs, ActivateAccountArgs, WriteDataArgs, RequestAccountRotationArgs } from './registry';
+import { InitArgs, AssetItem, Range, UpdateConfigArgs, WithdrawRevenueArgs, ReopenAccountArgs, ActivateAccountArgs, WriteDataArgs, RequestAccountRotationArgs } from './registry';
 
 // Anchor-generated types
 export type AnchorInitArgs = [
@@ -30,11 +30,6 @@ export type AnchorUpdateConfigArgs = [
 
 export type AnchorWithdrawRevenueArgs = [
   anchor.BN | null
-];
-
-export type AnchorCreateAccountArgs = [
-  number,
-  number
 ];
 
 export type AnchorReopenAccountArgs = [
@@ -101,15 +96,6 @@ export function convertWithdrawRevenueArgs(
 ): AnchorWithdrawRevenueArgs {
   return [
     args.amount !== undefined ? new anchor.BN(args.amount) : null
-  ];
-}
-
-export function convertCreateAccountArgs(
-  args: CreateAccountArgs
-): AnchorCreateAccountArgs {
-  return [
-    args.maxDataSize,
-    args.expectedUserId
   ];
 }
 

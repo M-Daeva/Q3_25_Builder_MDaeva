@@ -1,6 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import * as spl from "@solana/spl-token";
-import { PublicKey, SystemProgram } from "@solana/web3.js";
+import { LAMPORTS_PER_SOL, PublicKey, SystemProgram } from "@solana/web3.js";
 import { TxParams } from "../interfaces";
 import {
   getHandleTx,
@@ -12,7 +12,6 @@ import {
 } from "../../common/utils";
 import {
   ActivateAccountArgs,
-  CreateAccountArgs,
   InitArgs,
   ReopenAccountArgs,
   RequestAccountRotationArgs,
@@ -21,7 +20,6 @@ import {
   WriteDataArgs,
 } from "../interfaces/registry";
 import {
-  convertCreateAccountArgs,
   convertInitArgs,
   convertReopenAccountArgs,
   convertRequestAccountRotationArgs,
@@ -125,20 +123,59 @@ export class RegistryHelpers {
     return await this.handleTx([ix], params, isDisplayed);
   }
 
-  // TODO: add simulation
   async tryCreateAccount(
-    args: CreateAccountArgs,
+    maxDataSize: number,
     params: TxParams = {},
     isDisplayed: boolean = false
   ): Promise<anchor.web3.TransactionSignature> {
+    const { lastUserId } = await this.queryUserCounter();
+    const expectedUserId = lastUserId + 1;
+
     const ix = await this.program.methods
-      .createAccount(...convertCreateAccountArgs(args))
+      .createAccount(maxDataSize, expectedUserId)
       .accounts({
         sender: this.sender,
       })
       .instruction();
 
     return await this.handleTx([ix], params, isDisplayed);
+  }
+
+  // get estimated tx cost in SOL
+  async simulateCreateAccount(
+    maxDataSize: number,
+    lamportsPerCu: number = 10_000,
+    isDisplayed: boolean = false
+  ) {
+    const { lastUserId } = await this.queryUserCounter();
+    const expectedUserId = lastUserId + 1;
+
+    const res = await this.program.methods
+      .createAccount(maxDataSize, expectedUserId)
+      .accounts({
+        sender: this.sender,
+      })
+      .simulate();
+
+    const cuRegex = /consumed\s+(\d+)\s+of\s+(\d+)\s+compute units/i;
+    let cu = 0;
+
+    for (const line of res.raw) {
+      const match = line.match(cuRegex);
+      if (match) {
+        cu = parseInt(match[1], 10);
+        break;
+      }
+    }
+
+    const txPrice = (cu * lamportsPerCu) / LAMPORTS_PER_SOL;
+    const info = {
+      cu,
+      lamportsPerCu,
+      txPrice,
+    };
+
+    return logAndReturn(info, isDisplayed);
   }
 
   async tryCloseAccount(
@@ -516,5 +553,44 @@ export class ChainHelpers {
     const tx = await this.provider.connection.getParsedTransaction(signature);
 
     return logAndReturn(tx, isDisplayed);
+  }
+
+  async getCuPrice(
+    endpoint: string,
+    programId: PublicKey | undefined = undefined,
+    isDisplayed: boolean = false
+  ) {
+    const myHeaders = new Headers();
+    myHeaders.append("Content-Type", "application/json");
+
+    const raw = JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "qn_estimatePriorityFees",
+      params: {
+        last_n_blocks: 100,
+        api_version: 2,
+        ...(programId ? { account: programId } : {}),
+      },
+    });
+
+    const requestOptions = {
+      method: "POST",
+      headers: myHeaders,
+      body: raw,
+      redirect: "follow",
+    };
+
+    const res = await fetch(endpoint, {
+      method: requestOptions.method,
+      headers: requestOptions.headers,
+      body: requestOptions.body,
+      redirect: "follow",
+    }).then((response) => response.text());
+
+    const lamportsPerCu =
+      Number(JSON.parse(res)?.result?.per_compute_unit?.medium) || 0;
+
+    return logAndReturn(lamportsPerCu, isDisplayed);
   }
 }
