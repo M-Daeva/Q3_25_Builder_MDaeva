@@ -1,38 +1,37 @@
-import fs from "fs";
-import path from "path";
-import { rootPath } from "./utils";
-import { AnchorTypeGenerator } from "./codegen";
+import { ChainHelpers, RegistryHelpers } from "../common/account";
+import { COMMITMENT, PATH, REVENUE_MINT } from "../common/config";
+import { getProgram, getProvider, getRpc } from "../common/utils";
+import { getWallet, parseNetwork, readKeypair, rootPath } from "./utils";
+import { PublicKey } from "@solana/web3.js";
+
+import { Registry } from "../common/schema/types/registry";
+import RegistryIdl from "../common/schema/idl/registry.json";
 
 async function main() {
-  const inputDir = rootPath("./scripts/common/interfaces");
-  const files = fs.readdirSync(inputDir);
-
-  const tsFiles = files.filter(
-    (file) =>
-      file.endsWith(".ts") &&
-      file !== "index.ts" &&
-      !file.endsWith(".anchor.ts")
+  const ownerKeypair = await readKeypair(rootPath(PATH.OWNER_KEYPAIR));
+  const provider = getProvider(
+    getWallet(ownerKeypair),
+    getRpc("DEVNET"),
+    COMMITMENT
   );
 
-  if (tsFiles.length === 0) {
-    console.log("No valid .ts files found for code generation.");
-    return;
-  }
+  const chain = new ChainHelpers(provider);
+  const TX_PARAMS = {
+    cpu: { k: 1, b: 150 },
+  };
 
-  for (const file of tsFiles) {
-    const inputFile = path.join(inputDir, file);
-    const outputFile = inputFile.replace(/\.ts$/, ".anchor.ts");
+  const registry = new RegistryHelpers(
+    provider,
+    getProgram<Registry>(provider, RegistryIdl as any)
+  );
 
-    try {
-      const generator = new AnchorTypeGenerator(inputFile);
-      const generatedCode = generator.generate();
+  await registry.tryInit(
+    { accountRegistrationFee: { amount: 100_000, asset: REVENUE_MINT.DEVNET } },
+    REVENUE_MINT.DEVNET,
+    TX_PARAMS
+  );
 
-      fs.writeFileSync(outputFile, generatedCode);
-      console.log(`Generated anchor types and converters for ${file}`);
-    } catch (error) {
-      console.error(`Error generating types for ${file}:`, error);
-    }
-  }
+  await registry.queryConfig(true);
 }
 
 main();

@@ -9,7 +9,8 @@
   },
   "private": true,
   "scripts": {
-    "codegen": "bun run scripts/backend/app.ts",
+    "app": "bun run scripts/backend/app.ts",
+    "codegen": "bun run scripts/backend/generate-types.ts",
     "dev": "bun run --watch scripts/backend/app.ts",
     "test-rs": "./build.sh && cd tests-rs && clear && cargo show && cd ..",
     "test-rs-l": "cd tests-rs && clear && cargo show && cd ..",

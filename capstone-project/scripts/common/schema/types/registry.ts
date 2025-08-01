@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/registry.json`.
  */
 export type Registry = {
-  "address": "FxZRyQVFZMXme1ooxchyzNa3vCLhehxToByYHrr65is3",
+  "address": "3RVBZDA6dgcjkGJtXRJxLvLh5g8qY6QwGHoribyKPN2E",
   "metadata": {
     "name": "registry",
     "version": "1.0.0",

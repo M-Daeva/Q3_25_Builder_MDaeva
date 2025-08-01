@@ -16,7 +16,7 @@ use {
     types::{AssetItem, Range},
 };
 
-declare_id!("FxZRyQVFZMXme1ooxchyzNa3vCLhehxToByYHrr65is3");
+declare_id!("3RVBZDA6dgcjkGJtXRJxLvLh5g8qY6QwGHoribyKPN2E");
 
 #[program]
 pub mod registry {

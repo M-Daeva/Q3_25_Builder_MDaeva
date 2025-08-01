@@ -5,11 +5,11 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-registry = "FxZRyQVFZMXme1ooxchyzNa3vCLhehxToByYHrr65is3"
+registry = "3RVBZDA6dgcjkGJtXRJxLvLh5g8qY6QwGHoribyKPN2E"
 dex-adapter = "FMsjKKPk7FQb1B9H8UQTLrdCUZ9MaoAeTnNK9kdVJmtt"
 
 [programs.devnet]
-registry = "FxZRyQVFZMXme1ooxchyzNa3vCLhehxToByYHrr65is3"
+registry = "3RVBZDA6dgcjkGJtXRJxLvLh5g8qY6QwGHoribyKPN2E"
 dex-adapter = "FMsjKKPk7FQb1B9H8UQTLrdCUZ9MaoAeTnNK9kdVJmtt"
 
 [registry]
