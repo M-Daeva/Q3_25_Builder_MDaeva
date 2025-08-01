@@ -367,49 +367,75 @@ export class RegistryHelpers {
   //   return await this.handleTx(ixs, params, isDisplayed);
   // }
 
-  // TODO
-  // async getMarketplace(isDisplayed: boolean = false) {
-  //   const [pda] = PublicKey.findProgramAddressSync(
-  //     [Buffer.from("marketplace"), this.provider.wallet.publicKey.toBuffer()],
-  //     this.program.programId
-  //   );
+  async queryConfig(isDisplayed: boolean = false) {
+    const [pda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("config")],
+      this.program.programId
+    );
+    const res = await this.program.account.config.fetch(pda);
 
-  //   const res = await this.program.account.marketplace.fetch(pda);
+    return logAndReturn(res, isDisplayed);
+  }
 
-  //   return logAndReturn(res, isDisplayed);
-  // }
+  async queryUserCounter(isDisplayed: boolean = false) {
+    const [pda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("user_counter")],
+      this.program.programId
+    );
+    const res = await this.program.account.userCounter.fetch(pda);
 
-  // async getBalances(isDisplayed: boolean = false) {
-  //   const [pda] = PublicKey.findProgramAddressSync(
-  //     [Buffer.from("balances"), this.provider.wallet.publicKey.toBuffer()],
-  //     this.program.programId
-  //   );
+    return logAndReturn(res, isDisplayed);
+  }
 
-  //   const res = await this.program.account.balances.fetch(pda);
+  async queryAdminRotationState(isDisplayed: boolean = false) {
+    const [pda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("admin_rotation_state")],
+      this.program.programId
+    );
+    const res = await this.program.account.rotationState.fetch(pda);
 
-  //   return logAndReturn(res, isDisplayed);
-  // }
+    return logAndReturn(res, isDisplayed);
+  }
 
-  // async getTrade(
-  //   user: PublicKey,
-  //   collection: PublicKey,
-  //   tokenId: number,
-  //   isDisplayed: boolean = false
-  // ) {
-  //   const [pda] = PublicKey.findProgramAddressSync(
-  //     [
-  //       Buffer.from("trade"),
-  //       user.toBuffer(),
-  //       collection.toBuffer(),
-  //       new anchor.BN(tokenId).toArrayLike(Buffer, "le", 2),
-  //     ],
-  //     this.program.programId
-  //   );
+  async queryUserId(user: PublicKey, isDisplayed: boolean = false) {
+    const [pda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("user_id"), user.toBuffer()],
+      this.program.programId
+    );
+    const res = await this.program.account.userId.fetch(pda);
 
-  //   const res = await this.program.account.trade.fetch(pda);
+    return logAndReturn(res, isDisplayed);
+  }
 
-  //   return logAndReturn(res, isDisplayed);
-  // }
+  async queryUserAccount(user: PublicKey, isDisplayed: boolean = false) {
+    const { id } = await this.queryUserId(user);
+
+    const [pda] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("user_account"),
+        new anchor.BN(id).toArrayLike(Buffer, "le", 1),
+      ],
+      this.program.programId
+    );
+    const res = await this.program.account.userAccount.fetch(pda);
+
+    return logAndReturn(res, isDisplayed);
+  }
+
+  async queryUserRotationState(user: PublicKey, isDisplayed: boolean = false) {
+    const { id } = await this.queryUserId(user);
+
+    const [pda] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("user_rotation_state"),
+        new anchor.BN(id).toArrayLike(Buffer, "le", 1),
+      ],
+      this.program.programId
+    );
+    const res = await this.program.account.rotationState.fetch(pda);
+
+    return logAndReturn(res, isDisplayed);
+  }
 }
 
 export class ChainHelpers {
