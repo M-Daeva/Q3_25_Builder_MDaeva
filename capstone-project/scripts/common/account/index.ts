@@ -1,10 +1,13 @@
 import * as anchor from "@coral-xyz/anchor";
 import * as spl from "@solana/spl-token";
 import { LAMPORTS_PER_SOL, PublicKey, SystemProgram } from "@solana/web3.js";
-import { TxParams } from "../interfaces";
+import { DataRecord, TxParams } from "../interfaces";
+import { decryptDeserialize, serializeEncrypt } from "./converters";
+import { generateEncryptionKey, MessageSigningWallet } from "./encryption";
 import {
   getHandleTx,
   getOrCreateAtaInstructions,
+  getTimestamp,
   getTokenProgramFactory,
   li,
   logAndReturn,
@@ -17,7 +20,6 @@ import {
   RequestAccountRotationArgs,
   UpdateConfigArgs,
   WithdrawRevenueArgs,
-  WriteDataArgs,
 } from "../interfaces/registry";
 import {
   convertInitArgs,
@@ -25,7 +27,6 @@ import {
   convertRequestAccountRotationArgs,
   convertUpdateConfigArgs,
   convertWithdrawRevenueArgs,
-  convertWriteDataArgs,
 } from "../interfaces/registry.anchor";
 
 import { Registry } from "../schema/types/registry";
@@ -225,14 +226,18 @@ export class RegistryHelpers {
     return await this.handleTx([ix], params, isDisplayed);
   }
 
-  // TODO: add encryption
   async tryWriteData(
-    args: WriteDataArgs,
+    wallet: MessageSigningWallet,
+    data: DataRecord[],
     params: TxParams = {},
     isDisplayed: boolean = false
   ): Promise<anchor.web3.TransactionSignature> {
+    const encKey = await generateEncryptionKey(wallet);
+    const timestamp = getTimestamp();
+    const { value } = serializeEncrypt(encKey, timestamp, data);
+
     const ix = await this.program.methods
-      .writeData(...convertWriteDataArgs(args))
+      .writeData(value, new anchor.BN(timestamp))
       .accounts({
         sender: this.sender,
       })
@@ -321,6 +326,22 @@ export class RegistryHelpers {
       this.program.programId
     );
     const res = await this.program.account.userAccount.fetch(pda);
+
+    return logAndReturn(res, isDisplayed);
+  }
+
+  async readUserData(
+    wallet: MessageSigningWallet,
+    dataEncrypted: string,
+    nonce: anchor.BN,
+    isDisplayed: boolean = false
+  ) {
+    const encKey = await generateEncryptionKey(wallet);
+    const res: DataRecord[] = decryptDeserialize(
+      encKey,
+      nonce.toString(),
+      dataEncrypted
+    );
 
     return logAndReturn(res, isDisplayed);
   }
@@ -555,6 +576,9 @@ export class ChainHelpers {
     return logAndReturn(tx, isDisplayed);
   }
 
+  // https://www.quicknode.com/guides/solana-development/transactions/how-to-use-priority-fees
+  // https://www.quicknode.com/docs/solana/qn_estimatePriorityFees
+  // https://dashboard.quicknode.com/endpoints
   async getCuPrice(
     endpoint: string,
     programId: PublicKey | undefined = undefined,

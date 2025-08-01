@@ -37,11 +37,6 @@ export interface ActivateAccountArgs {
   user?: PublicKey;
 }
 
-export interface WriteDataArgs {
-  data: string;
-  nonce: N<64>;
-}
-
 export interface RequestAccountRotationArgs {
   newOwner: PublicKey;
 }

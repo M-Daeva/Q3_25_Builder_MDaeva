@@ -26,11 +26,17 @@ export interface TxParams {
   signers?: Keypair[];
 }
 
-export interface TraderInfo {
-  trader: PublicKey | string;
-  amount: number;
-  mint: PublicKey | string;
-}
-
 type D = 8 | 16 | 32 | 64;
 export type N<T extends D> = number;
+
+export interface Backup {
+  nonce: number;
+  data: string;
+}
+
+export interface DataRecord {
+  Date: number;
+  label: string;
+  password: string;
+  note: string;
+}

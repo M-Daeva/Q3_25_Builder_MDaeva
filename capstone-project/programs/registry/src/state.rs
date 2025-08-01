@@ -10,8 +10,8 @@ pub const ROTATION_TIMEOUT: u32 = SECONDS_PER_DAY;
 pub const ACCOUNT_REGISTRATION_FEE_AMOUNT: u64 = 10_000_000; // 10 $
 pub const ACCOUNT_REGISTRATION_FEE_ASSET: Pubkey =
     Pubkey::from_str_const("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"); // mainnet USDC
-pub const ACCOUNT_DATA_SIZE_MIN: u32 = 512;
-pub const ACCOUNT_DATA_SIZE_MAX: u32 = 8_192;
+pub const ACCOUNT_DATA_SIZE_MIN: u32 = 100;
+pub const ACCOUNT_DATA_SIZE_MAX: u32 = 100_000;
 
 pub const SEED_BUMP: &str = "bump";
 pub const SEED_CONFIG: &str = "config";

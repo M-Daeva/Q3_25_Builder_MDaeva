@@ -127,15 +127,6 @@ export async function specifyTimeout(
   ]).finally(() => clearTimeout(timer));
 }
 
-export function getLocalBlockTime(): number {
-  return floor(Date.now() / 1e3);
-}
-
-// blockTimeOffset = contractBlockTime - localBlockTime
-export function getBlockTime(blockTimeOffset: number): number {
-  return blockTimeOffset + getLocalBlockTime();
-}
-
 export async function readKeypair(keypairPath: string): Promise<Keypair> {
   const secretKey = await readFile(keypairPath, {
     encoding: ENCODING as BufferEncoding,

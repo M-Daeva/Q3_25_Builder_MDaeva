@@ -62,6 +62,19 @@ export function dedupVector<T>(arr: T[]): T[] {
   return Array.from(new Set(arr));
 }
 
+export function getTimestamp(): string {
+  return Date.now().toString();
+}
+
+export function getLocalBlockTime(): number {
+  return floor(Date.now() / 1e3);
+}
+
+// blockTimeOffset = contractBlockTime - localBlockTime
+export function getBlockTime(blockTimeOffset: number): number {
+  return blockTimeOffset + getLocalBlockTime();
+}
+
 export async function wait(delayInMilliseconds: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, delayInMilliseconds);

@@ -1,7 +1,7 @@
 // Auto-generated Anchor types and converters
 import * as anchor from '@coral-xyz/anchor';
 import { PublicKey } from '@solana/web3.js';
-import { InitArgs, AssetItem, Range, UpdateConfigArgs, WithdrawRevenueArgs, ReopenAccountArgs, ActivateAccountArgs, WriteDataArgs, RequestAccountRotationArgs } from './registry';
+import { InitArgs, AssetItem, Range, UpdateConfigArgs, WithdrawRevenueArgs, ReopenAccountArgs, ActivateAccountArgs, RequestAccountRotationArgs } from './registry';
 
 // Anchor-generated types
 export type AnchorInitArgs = [
@@ -38,11 +38,6 @@ export type AnchorReopenAccountArgs = [
 
 export type AnchorActivateAccountArgs = [
   PublicKey | null
-];
-
-export type AnchorWriteDataArgs = [
-  string,
-  anchor.BN
 ];
 
 export type AnchorRequestAccountRotationArgs = [
@@ -112,15 +107,6 @@ export function convertActivateAccountArgs(
 ): AnchorActivateAccountArgs {
   return [
     args.user !== undefined ? args.user : null
-  ];
-}
-
-export function convertWriteDataArgs(
-  args: WriteDataArgs
-): AnchorWriteDataArgs {
-  return [
-    args.data,
-    new anchor.BN(args.nonce)
   ];
 }
 
