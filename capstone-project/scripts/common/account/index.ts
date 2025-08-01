@@ -2,6 +2,8 @@ import * as anchor from "@coral-xyz/anchor";
 import * as spl from "@solana/spl-token";
 import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import { TxParams } from "../interfaces";
+import { InitArgs } from "../interfaces/registry";
+import { convertInitArgs } from "../interfaces/registry.anchor";
 import {
   getHandleTx,
   getOrCreateAtaInstructions,
@@ -12,42 +14,6 @@ import {
 } from "../../common/utils";
 
 import { Registry } from "../schema/types/registry";
-import { number } from "mathjs";
-
-
-// "args": [
-//         {
-//           "name": "rotationTimeout",
-//           "type": {
-//             "option": "u32"
-//           }
-//         },
-//         {
-//           "name": "accountRegistrationFee",
-//           "type": {
-//             "option": {
-//               "defined": {
-//                 "name": "assetItem"
-//               }
-//             }
-//           }
-//         },
-//         {
-//           "name": "accountDataSizeRange",
-//           "type": {
-//             "option": {
-//               "defined": {
-//                 "name": "range"
-//               }
-//             }
-//           }
-//         }
-//       ]
-
-// type RotationTimeout = number | undefined
-// type AccountRegistrationFee = AssetItem | undefined
-// type accountDataSizeRange = Range | undefined
-
 
 export class RegistryHelpers {
   private provider: anchor.AnchorProvider;
@@ -73,58 +39,23 @@ export class RegistryHelpers {
     this.getTokenProgram = getTokenProgramFactory(provider);
   }
 
-  // rotationTimeout: Option<u32>,
-  // accountRegistrationFee: Option<AssetItem>,
-  // accountDataSizeRange: Option<Range>
+  async tryInit(
+    initArgs: InitArgs,
+    revenueMint: PublicKey,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const ix = await this.program.methods
+      .init(...convertInitArgs(initArgs))
+      .accounts({
+        tokenProgram: await this.getTokenProgram(revenueMint),
+        revenueMint,
+        sender: this.provider.wallet.publicKey,
+      })
+      .instruction();
 
-
-  // async tryInit(
-  //   initArgs: InitArgs,
-  //   revenueMint: PublicKey,
-  //   params: TxParams = {},
-  //   isDisplayed: boolean = false
-  // ): Promise<anchor.web3.TransactionSignature> {
-  //   const ix = await this.program.methods
-  //     .init(...convertInitArgs(initArgs))
-  //     .accounts({
-  //       tokenProgram: await this.getTokenProgram(revenueMint),
-  //       revenueMint,
-  //       sender: this.provider.wallet.publicKey,
-  //     })
-  //     .instruction();
-
-  //   return await this.handleTx([ix], params, isDisplayed);
-  // }
-
-  // async tryInit(
-  //   revenueMint: PublicKey,
-  //   {
-  //     rotationTimeout,
-  //     accountRegistrationFee,
-  //     accountDataSizeRange,
-  //   }: {
-  //     rotationTimeout?: number;
-  //     accountRegistrationFee?: AssetItem;
-  //     accountDataSizeRange?: Range;
-  //   },
-  //   params: TxParams = {},
-  //   isDisplayed: boolean = false
-  // ): Promise<anchor.web3.TransactionSignature> {
-  //   const ix = await this.program.methods
-  //     .init(
-  //       rotationTimeout ? new anchor.BN(rotationTimeout) : null,
-  //       // accountRegistrationFee,
-  //       // accountDataSizeRange
-  //     )
-  //     .accounts({
-  //       tokenProgram: await this.getTokenProgram(revenueMint),
-  //       revenueMint,
-  //       sender: this.provider.wallet.publicKey,
-  //     })
-  //     .instruction();
-
-  //   return await this.handleTx([ix], params, isDisplayed);
-  // }
+    return await this.handleTx([ix], params, isDisplayed);
+  }
 
   // async tryCreateTrade(
   //   userKeypair: Keypair,
