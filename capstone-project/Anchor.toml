@@ -5,12 +5,12 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-registry = "3XEw4Ta4PU5NMET3xJhc71yagoB85awhTzzcNdFbAyBt"
-dex-adapter = "3XEw4Ta4PU5NMET3xJhc71yagoB85awhTzzcNdFbAyBt"
+registry = "3RVBZDA6dgcjkGJtXRJxLvLh5g8qY6QwGHoribyKPN2E"
+dex-adapter = "FMsjKKPk7FQb1B9H8UQTLrdCUZ9MaoAeTnNK9kdVJmtt"
 
 [programs.devnet]
-registry = "3XEw4Ta4PU5NMET3xJhc71yagoB85awhTzzcNdFbAyBt"
-dex-adapter = "3XEw4Ta4PU5NMET3xJhc71yagoB85awhTzzcNdFbAyBt"
+registry = "3RVBZDA6dgcjkGJtXRJxLvLh5g8qY6QwGHoribyKPN2E"
+dex-adapter = "FMsjKKPk7FQb1B9H8UQTLrdCUZ9MaoAeTnNK9kdVJmtt"
 
 [registry]
 url = "https://api.apr.dev"

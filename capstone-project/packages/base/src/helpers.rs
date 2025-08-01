@@ -46,6 +46,10 @@ pub fn get_space(struct_space: usize) -> usize {
     DISCRIMINATOR_SPACE + struct_space
 }
 
+pub fn get_clock_time() -> Result<u64> {
+    Ok(Clock::get()?.unix_timestamp as u64)
+}
+
 pub fn get_rent_exempt<'a, T>(account: &T) -> Result<u64>
 where
     T: ToAccountInfo<'a>,
