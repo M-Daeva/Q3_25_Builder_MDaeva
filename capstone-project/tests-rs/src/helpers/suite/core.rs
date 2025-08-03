@@ -90,6 +90,14 @@ impl Pda {
         .0
     }
 
+    pub fn clmm_operation_account(&self) -> Pubkey {
+        get_pda_and_bump(
+            &seeds![raydium_amm_v3::states::OPERATION_SEED],
+            &self.clmm_program_id,
+        )
+        .0
+    }
+
     // registry
     //
     pub fn registry_bump(&self) -> Pubkey {
