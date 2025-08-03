@@ -226,7 +226,7 @@ impl App {
         };
 
         // upload 3rd party programs
-        upload_program(&mut litesvm, "clmm", &program_id.clmm);
+        upload_program(&mut litesvm, "raydium_amm_v3", &program_id.clmm);
 
         // upload custom programs
         upload_program(&mut litesvm, "registry", &program_id.registry);

@@ -22,7 +22,13 @@ overflow-checks = true
 
 [workspace.dependencies]
 anchor-lang = { version = "0.31.1", features = ["init-if-needed"] }
-anchor-spl = { version = "0.31.1", features = ["token"] }
+anchor-spl = { version = "0.31.1", features = ["token", "metadata", "memo"] }
+
+# raydium-amm-v3 deps
+spl-token-2022 = { version = "7.0.0", features = ["no-entrypoint"] }
+uint = { git = "https://github.com/raydium-io/parity-common", package = "uint" }
+bytemuck = { version = "1.19.0", features = ["derive", "min_const_generics"] }
+arrayref = "0.3.6"
 
 # testing
 serde_json = "1.0.141"
@@ -44,8 +50,8 @@ spl-token = "8.0.0"
 solana-kite = "0.1.4"
 
 # TODO: resolve version conflict: https://github.com/raydium-io/raydium-cpi/blob/master/programs/clmm-cpi/Cargo.toml#L21-L22
-# raydium-clmm-cpi = { git = "https://github.com/raydium-io/raydium-cpi", package = "raydium-clmm-cpi" }
-raydium-amm-v3 = { git = "https://github.com/raydium-io/raydium-clmm" }
+# we need to clone and modify it due to hardcoded admin addresses
+raydium-amm-v3 = { path = "./programs/amm" } # { git = "https://github.com/raydium-io/raydium-cpi", package = "raydium-clmm-cpi" }
 
 base = { path = "./packages/base" }
 registry = { path = "./programs/registry" }

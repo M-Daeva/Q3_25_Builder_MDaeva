@@ -2335,13 +2335,11 @@ dependencies = [
 [[package]]
 name = "raydium-amm-v3"
 version = "0.1.0"
-source = "git+https://github.com/raydium-io/raydium-clmm#d4ec101534724a20e1eb38a9b997f8b391c5100f"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
  "arrayref",
  "bytemuck",
- "solana-security-txt",
  "spl-token-2022 7.0.0",
  "uint",
 ]
