@@ -11,16 +11,52 @@ use {
     solana_instruction::Instruction,
     solana_keypair::Keypair,
     solana_kite::{
-        create_associated_token_account, create_token_mint, deploy_program, get_pda_and_bump,
-        get_token_account_balance, mint_tokens_to_account, seeds,
+        create_token_mint, deploy_program, get_pda_and_bump, get_token_account_balance,
+        mint_tokens_to_account, seeds,
     },
-    solana_program::{native_token::LAMPORTS_PER_SOL, system_program},
+    solana_program::{native_token::LAMPORTS_PER_SOL, system_instruction, system_program},
     solana_pubkey::Pubkey,
     solana_signer::{signers::Signers, Signer},
     solana_transaction::Transaction,
     spl_associated_token_account::get_associated_token_address,
     strum::IntoEnumIterator,
 };
+
+pub mod sol_kite {
+    use {
+        litesvm::LiteSVM, solana_keypair::Keypair, solana_kite::SolanaKiteError,
+        solana_message::Message, solana_pubkey::Pubkey, solana_signer::Signer,
+        solana_transaction::Transaction,
+        spl_associated_token_account::instruction::create_associated_token_account as create_ata_instruction,
+    };
+
+    pub fn create_associated_token_account(
+        litesvm: &mut LiteSVM,
+        owner: &Pubkey,
+        mint: &Pubkey,
+        payer: &Keypair,
+    ) -> Result<Pubkey, SolanaKiteError> {
+        let associated_token_account =
+            spl_associated_token_account::get_associated_token_address(owner, mint);
+
+        let create_ata_instruction =
+            create_ata_instruction(&payer.pubkey(), owner, mint, &spl_token::id());
+
+        let message = Message::new(&[create_ata_instruction], Some(&payer.pubkey()));
+        let mut transaction = Transaction::new_unsigned(message);
+        let blockhash = litesvm.latest_blockhash();
+        transaction.sign(&[payer], blockhash);
+
+        litesvm.send_transaction(transaction).map_err(|e| {
+            SolanaKiteError::TokenOperationFailed(format!(
+                "Failed to create associated token account: {:?}",
+                e
+            ))
+        })?;
+
+        Ok(associated_token_account)
+    }
+}
 
 pub struct ProgramId {
     // standard
@@ -223,9 +259,9 @@ impl App {
         // mint tokens
         for user in AppUser::iter() {
             for (token, mint) in &token_registry {
-                let ata = create_associated_token_account(
+                let ata = sol_kite::create_associated_token_account(
                     &mut litesvm,
-                    &user.keypair(),
+                    &user.pubkey(),
                     &mint.pubkey(),
                     &AppUser::Admin.keypair(),
                 )
@@ -257,6 +293,71 @@ impl App {
         clock.slot += 25 * delay_s / 10;
 
         self.litesvm.set_sysvar::<Clock>(&clock);
+    }
+
+    pub fn transfer_asset(
+        &mut self,
+        sender: AppUser,
+        recipient: &Pubkey,
+        amount: u64,
+        asset: impl Into<AppAsset>,
+    ) -> Result<TransactionMetadata> {
+        match asset.into() {
+            AppAsset::Coin(_) => self.transfer_sol(sender, recipient, amount),
+            AppAsset::Token(mint) => self.transfer_token(sender, recipient, amount, mint),
+        }
+    }
+
+    pub fn transfer_sol(
+        &mut self,
+        sender: AppUser,
+        recipient: &Pubkey,
+        amount: u64,
+    ) -> Result<TransactionMetadata> {
+        let payer = sender.pubkey();
+        let signers = [sender.keypair()];
+        let ix = system_instruction::transfer(&payer, recipient, amount);
+
+        extension::send_tx(&mut self.litesvm, &[ix], &payer, &signers)
+    }
+
+    pub fn transfer_token(
+        &mut self,
+        sender: AppUser,
+        recipient: &Pubkey,
+        amount: u64,
+        token: AppToken,
+    ) -> Result<TransactionMetadata> {
+        let payer = sender.pubkey();
+        let signers = [sender.keypair()];
+
+        let mint = token.pubkey(&self);
+
+        let sender_ata = sol_kite::create_associated_token_account(
+            &mut self.litesvm,
+            &sender.pubkey(),
+            &mint,
+            &sender.keypair(),
+        )
+        .unwrap();
+        let recipient_ata = sol_kite::create_associated_token_account(
+            &mut self.litesvm,
+            recipient,
+            &mint,
+            &sender.keypair(),
+        )
+        .unwrap();
+
+        let ix = spl_token::instruction::transfer(
+            &self.program_id.token_program,
+            &sender_ata,
+            &recipient_ata,
+            &payer,
+            &[&payer],
+            amount,
+        )?;
+
+        extension::send_tx(&mut self.litesvm, &[ix], &payer, &signers)
     }
 
     pub fn get_balance(&self, user: AppUser, asset: impl Into<AppAsset>) -> Result<u64> {
