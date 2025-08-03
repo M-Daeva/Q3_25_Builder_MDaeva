@@ -43,6 +43,10 @@ spl-associated-token-account = "7.0.0"
 spl-token = "8.0.0"
 solana-kite = "0.1.4"
 
+# TODO: resolve version conflict: https://github.com/raydium-io/raydium-cpi/blob/master/programs/clmm-cpi/Cargo.toml#L21-L22
+# raydium-clmm-cpi = { git = "https://github.com/raydium-io/raydium-cpi", package = "raydium-clmm-cpi" }
+raydium-amm-v3 = { git = "https://github.com/raydium-io/raydium-clmm" }
+
 base = { path = "./packages/base" }
 registry = { path = "./programs/registry" }
 dex-adapter = { path = "./programs/dex-adapter" }

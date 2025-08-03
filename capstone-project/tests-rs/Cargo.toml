@@ -39,6 +39,8 @@ spl-associated-token-account = { workspace = true }
 spl-token = { workspace = true }
 solana-kite = { workspace = true }
 
+raydium-amm-v3 = { workspace = true }
+
 base = { workspace = true }
 registry = { workspace = true, features = ["cpi"] }
 dex-adapter = { workspace = true, features = ["cpi"] }

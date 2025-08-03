@@ -39,6 +39,8 @@ pub struct Pda {
 }
 
 impl Pda {
+    // registry
+    //
     pub fn registry_bump(&self) -> Pubkey {
         get_pda_and_bump(
             &seeds![registry::state::SEED_BUMP],
@@ -101,6 +103,8 @@ impl Pda {
         .0
     }
 
+    // dex-adapter
+    //
     pub fn dex_adapter_bump(&self) -> Pubkey {
         get_pda_and_bump(
             &seeds![dex_adapter::state::SEED_BUMP],
@@ -124,6 +128,17 @@ impl Pda {
         )
         .0
     }
+
+    // TODO
+    // clmm
+    //
+    // pub fn clmm_amm_config(&self) -> Pubkey {
+    //     get_pda_and_bump(
+    //         &seeds![raydium_amm_v3::states::AMM_CONFIG_SEED],
+    //         &self.dex_adapter_program_id,
+    //     )
+    //     .0
+    // }
 }
 
 pub struct App {
