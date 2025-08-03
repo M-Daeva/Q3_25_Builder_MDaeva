@@ -1,6 +1,6 @@
 use {
     crate::helpers::{
-        registry::RegistryExtension,
+        extensions::registry::RegistryExtension,
         suite::{
             core::{assert_error, token::WithTokenKeys, App},
             types::{AppToken, AppUser},

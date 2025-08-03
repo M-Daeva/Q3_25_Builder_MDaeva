@@ -1,6 +1,6 @@
 use {
     crate::helpers::{
-        dex_adapter::DexAdapterExtension,
+        extensions::dex_adapter::DexAdapterExtension,
         suite::{
             core::{token::WithTokenKeys, App},
             types::{AppToken, AppUser},

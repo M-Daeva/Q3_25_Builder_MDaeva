@@ -64,17 +64,32 @@ pub struct ProgramId {
     pub token_program: Pubkey,
     pub associated_token_program: Pubkey,
 
+    // 3rd party
+    pub clmm: Pubkey,
+
     // custom
     pub registry: Pubkey,
     pub dex_adapter: Pubkey,
 }
 
 pub struct Pda {
+    clmm_program_id: Pubkey,
+
     registry_program_id: Pubkey,
     dex_adapter_program_id: Pubkey,
 }
 
 impl Pda {
+    // clmm
+    //
+    pub fn clmm_amm_config(&self) -> Pubkey {
+        get_pda_and_bump(
+            &seeds![raydium_amm_v3::states::AMM_CONFIG_SEED],
+            &self.clmm_program_id,
+        )
+        .0
+    }
+
     // registry
     //
     pub fn registry_bump(&self) -> Pubkey {
@@ -164,17 +179,6 @@ impl Pda {
         )
         .0
     }
-
-    // TODO
-    // clmm
-    //
-    // pub fn clmm_amm_config(&self) -> Pubkey {
-    //     get_pda_and_bump(
-    //         &seeds![raydium_amm_v3::states::AMM_CONFIG_SEED],
-    //         &self.dex_adapter_program_id,
-    //     )
-    //     .0
-    // }
 }
 
 pub struct App {
@@ -197,6 +201,9 @@ impl App {
             token_program: spl_token::ID,
             associated_token_program: AssociatedToken::id(),
 
+            // 3rd party
+            clmm: raydium_amm_v3::ID,
+
             // custom
             registry: registry::ID,
             dex_adapter: dex_adapter::ID,
@@ -204,9 +211,14 @@ impl App {
 
         // specify PDA
         let pda = Pda {
+            clmm_program_id: program_id.clmm,
+
             registry_program_id: program_id.registry,
             dex_adapter_program_id: program_id.dex_adapter,
         };
+
+        // upload 3rd party programs
+        upload_program(&mut litesvm, "clmm", &program_id.clmm);
 
         // upload custom programs
         upload_program(&mut litesvm, "registry", &program_id.registry);
@@ -402,13 +414,15 @@ pub fn to_anchor_err(message: impl ToString) -> anchor_lang::error::Error {
 
 fn upload_program(litesvm: &mut LiteSVM, program_name: &str, program_id: &Pubkey) {
     const PROGRAM_PATH: &str = "../target/deploy/";
+    const DUMPS_PATH: &str = "./src/helpers/dumps/";
 
-    deploy_program(
-        litesvm,
-        program_id,
-        &format!("{}{}.so", PROGRAM_PATH, program_name),
-    )
-    .unwrap();
+    let path_a = &format!("{}{}.so", PROGRAM_PATH, program_name);
+    let path_b = &format!("{}{}.so", DUMPS_PATH, program_name);
+
+    // try to deploy custom programs first, if it doesn't work then deploy dumps
+    if let Err(_) = deploy_program(litesvm, program_id, path_a) {
+        deploy_program(litesvm, program_id, path_b).unwrap()
+    }
 }
 
 pub mod token {

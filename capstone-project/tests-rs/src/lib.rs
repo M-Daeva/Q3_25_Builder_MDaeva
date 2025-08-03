@@ -4,9 +4,11 @@ pub mod dex_adapter;
 pub mod registry;
 
 pub mod helpers {
-    pub mod dex_adapter;
-    pub mod registry;
-    pub mod wsol;
+    pub mod extensions {
+        pub mod dex_adapter;
+        pub mod registry;
+        pub mod wsol;
+    }
 
     pub mod suite {
         pub mod core;
