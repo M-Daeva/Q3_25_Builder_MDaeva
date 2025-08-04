@@ -3,7 +3,10 @@ use {
         core::token::WithTokenKeys,
         types::{AppAsset, AppToken, AppUser, GetDecimals},
     },
-    anchor_lang::{prelude::Clock, AnchorDeserialize, Id, InstructionData, Result, ToAccountMetas},
+    anchor_lang::{
+        prelude::{AccountInfo, AccountLoader, Clock},
+        AnchorDeserialize, Id, InstructionData, Result, ToAccountMetas,
+    },
     anchor_spl::associated_token::AssociatedToken,
     dex_adapter,
     litesvm::{types::TransactionMetadata, LiteSVM},
@@ -82,9 +85,12 @@ pub struct Pda {
 impl Pda {
     // clmm
     //
-    pub fn clmm_amm_config(&self) -> Pubkey {
+    pub fn clmm_amm_config(&self, index: u16) -> Pubkey {
         get_pda_and_bump(
-            &seeds![raydium_amm_v3::states::AMM_CONFIG_SEED],
+            &seeds![
+                raydium_amm_v3::states::AMM_CONFIG_SEED,
+                index.to_be_bytes().as_ref()
+            ],
             &self.clmm_program_id,
         )
         .0
@@ -485,6 +491,33 @@ pub mod extension {
                 }
             }
             _ => Err(to_anchor_err("Account data is not found!")),
+        }
+    }
+
+    pub fn get_data_zero_copy<T>(litesvm: &LiteSVM, pda: &Pubkey) -> Result<T>
+    where
+        T: anchor_lang::Owner + anchor_lang::ZeroCopy,
+    {
+        match litesvm.get_account(pda) {
+            Some(mut account) => {
+                // create a mock account info
+                let account_info = AccountInfo::new(
+                    pda,
+                    false,
+                    false,
+                    &mut account.lamports,
+                    &mut account.data,
+                    &account.owner,
+                    account.executable,
+                    account.rent_epoch,
+                );
+
+                let loader = AccountLoader::try_from(&account_info)?;
+                let state = loader.load()?;
+
+                Ok(*state)
+            }
+            None => Err(to_anchor_err("Account data is not found!")),
         }
     }
 

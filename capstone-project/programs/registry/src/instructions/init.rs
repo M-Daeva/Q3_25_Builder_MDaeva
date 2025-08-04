@@ -100,6 +100,7 @@ impl<'info> Init<'info> {
             rotation_state: bumps.admin_rotation_state,
         });
 
+        // TODO: add localnet/mainnet admin guard based on clock_time
         config.set_inner(Config {
             admin: sender.key(),
             is_paused: false,
