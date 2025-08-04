@@ -17,7 +17,7 @@ use {
         create_token_mint, deploy_program, get_pda_and_bump, get_token_account_balance,
         mint_tokens_to_account, seeds,
     },
-    solana_program::{native_token::LAMPORTS_PER_SOL, system_instruction, system_program},
+    solana_program::{native_token::LAMPORTS_PER_SOL, rent, system_instruction, system_program},
     solana_pubkey::Pubkey,
     solana_signer::{signers::Signers, Signer},
     solana_transaction::Transaction,
@@ -66,6 +66,7 @@ pub struct ProgramId {
     pub system_program: Pubkey,
     pub token_program: Pubkey,
     pub associated_token_program: Pubkey,
+    pub rent: Pubkey,
 
     // 3rd party
     pub clmm: Pubkey,
@@ -99,6 +100,67 @@ impl Pda {
     pub fn clmm_operation_account(&self) -> Pubkey {
         get_pda_and_bump(
             &seeds![raydium_amm_v3::states::OPERATION_SEED],
+            &self.clmm_program_id,
+        )
+        .0
+    }
+
+    pub fn clmm_pool_state(
+        &self,
+        amm_config: Pubkey,
+        token_mint_0: Pubkey,
+        token_mint_1: Pubkey,
+    ) -> Pubkey {
+        get_pda_and_bump(
+            &seeds![
+                raydium_amm_v3::states::POOL_SEED,
+                amm_config,
+                token_mint_0,
+                token_mint_1
+            ],
+            &self.clmm_program_id,
+        )
+        .0
+    }
+
+    pub fn clmm_token_vault_0(&self, pool_state: Pubkey, token_mint_0: Pubkey) -> Pubkey {
+        get_pda_and_bump(
+            &seeds![
+                raydium_amm_v3::states::POOL_VAULT_SEED,
+                pool_state,
+                token_mint_0
+            ],
+            &self.clmm_program_id,
+        )
+        .0
+    }
+
+    pub fn clmm_token_vault_1(&self, pool_state: Pubkey, token_mint_1: Pubkey) -> Pubkey {
+        get_pda_and_bump(
+            &seeds![
+                raydium_amm_v3::states::POOL_VAULT_SEED,
+                pool_state,
+                token_mint_1
+            ],
+            &self.clmm_program_id,
+        )
+        .0
+    }
+
+    pub fn clmm_observation_state(&self, pool_state: Pubkey) -> Pubkey {
+        get_pda_and_bump(
+            &seeds![raydium_amm_v3::states::OBSERVATION_SEED, pool_state,],
+            &self.clmm_program_id,
+        )
+        .0
+    }
+
+    pub fn clmm_tick_array_bitmap(&self, pool_state: Pubkey) -> Pubkey {
+        get_pda_and_bump(
+            &seeds![
+                raydium_amm_v3::states::POOL_TICK_ARRAY_BITMAP_SEED,
+                pool_state,
+            ],
             &self.clmm_program_id,
         )
         .0
@@ -214,6 +276,7 @@ impl App {
             system_program: system_program::ID,
             token_program: spl_token::ID,
             associated_token_program: AssociatedToken::id(),
+            rent: rent::sysvar::ID,
 
             // 3rd party
             clmm: raydium_amm_v3::ID,
