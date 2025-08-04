@@ -49,7 +49,7 @@ spl-associated-token-account = "7.0.0"
 spl-token = "8.0.0"
 solana-kite = "0.1.4"
 
-# TODO: resolve version conflict: https://github.com/raydium-io/raydium-cpi/blob/master/programs/clmm-cpi/Cargo.toml#L21-L22
+raydium-clmm-cpi = { path = "./packages/clmm-cpi" }
 # we need to clone and modify it due to hardcoded admin addresses
 raydium-amm-v3 = { path = "./programs/amm" } # { git = "https://github.com/raydium-io/raydium-cpi", package = "raydium-clmm-cpi" }
 

@@ -968,6 +968,7 @@ dependencies = [
  "anchor-lang",
  "anchor-spl",
  "base",
+ "raydium-clmm-cpi",
 ]
 
 [[package]]
@@ -2342,6 +2343,14 @@ dependencies = [
  "bytemuck",
  "spl-token-2022 7.0.0",
  "uint",
+]
+
+[[package]]
+name = "raydium-clmm-cpi"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
+ "anchor-spl",
 ]
 
 [[package]]
