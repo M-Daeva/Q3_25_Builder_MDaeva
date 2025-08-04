@@ -35,12 +35,12 @@ arrayref = { workspace = true }
 # proptest = "1.0"
 # rand = "0.8.5"
 
-[profile.release]
-lto = "fat"
-codegen-units = 1
-panic = "abort"
-overflow-checks = true
-[profile.release.build-override]
-opt-level = 3
-incremental = false
-codegen-units = 1
+# [profile.release]
+# lto = "fat"
+# codegen-units = 1
+# panic = "abort"
+# overflow-checks = true
+# [profile.release.build-override]
+# opt-level = 3
+# incremental = false
+# codegen-units = 1
