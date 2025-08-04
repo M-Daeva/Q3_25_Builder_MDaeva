@@ -10,7 +10,10 @@ use {
     anchor_lang::Result,
     litesvm::types::TransactionMetadata,
     raydium_amm_v3::{accounts, instruction, states},
+    solana_keypair::Keypair,
     solana_pubkey::Pubkey,
+    solana_signer::Signer,
+    spl_associated_token_account::get_associated_token_address,
 };
 
 pub trait ClmmExtension {
@@ -32,6 +35,23 @@ pub trait ClmmExtension {
         sender: AppUser,
         sqrt_price_x64: u128,
         open_time: u64,
+        amm_config_index: u16,
+        token_mint_0: &Pubkey,
+        token_mint_1: &Pubkey,
+    ) -> Result<TransactionMetadata>;
+
+    fn clmm_try_open_position(
+        &mut self,
+        sender: AppUser,
+        tick_lower_index: i32,
+        tick_upper_index: i32,
+        tick_array_lower_start_index: i32,
+        tick_array_upper_start_index: i32,
+        liquidity: u128,
+        amount_0_max: u64,
+        amount_1_max: u64,
+        with_metadata: bool,
+        base_flag: Option<bool>,
         amm_config_index: u16,
         token_mint_0: &Pubkey,
         token_mint_1: &Pubkey,
@@ -187,6 +207,114 @@ impl ClmmExtension for App {
         let instruction_data = instruction::CreatePool {
             sqrt_price_x64,
             open_time,
+        };
+
+        send_tx_with_ix(
+            self,
+            &program_id,
+            &accounts,
+            &instruction_data,
+            &payer,
+            &signers,
+        )
+    }
+
+    fn clmm_try_open_position(
+        &mut self,
+        sender: AppUser,
+        tick_lower_index: i32,
+        tick_upper_index: i32,
+        tick_array_lower_start_index: i32,
+        tick_array_upper_start_index: i32,
+        liquidity: u128,
+        amount_0_max: u64,
+        amount_1_max: u64,
+        with_metadata: bool,
+        base_flag: Option<bool>,
+        amm_config_index: u16,
+        token_mint_0: &Pubkey,
+        token_mint_1: &Pubkey,
+    ) -> Result<TransactionMetadata> {
+        // programs
+        let ProgramId {
+            system_program,
+            token_program_2022,
+            token_program,
+            associated_token_program,
+            rent,
+            clmm: program_id,
+            ..
+        } = self.program_id;
+
+        // signers
+        let payer = sender.pubkey();
+
+        // generate new keypair for position NFT mint
+        let position_nft_mint_keypair = Keypair::new();
+        let position_nft_mint = position_nft_mint_keypair.pubkey();
+
+        // include position_nft_mint in signers
+        let signers = [sender.keypair(), position_nft_mint_keypair];
+
+        // mint addresses
+        let (token_mint_0, token_mint_1) = (*token_mint_0, *token_mint_1);
+
+        // pda
+        let amm_config = self.pda.clmm_amm_config(amm_config_index);
+        let pool_state = self
+            .pda
+            .clmm_pool_state(amm_config, token_mint_0, token_mint_1);
+        let token_vault_0 = self.pda.clmm_token_vault_0(pool_state, token_mint_0);
+        let token_vault_1 = self.pda.clmm_token_vault_1(pool_state, token_mint_1);
+
+        let tick_array_lower = self
+            .pda
+            .clmm_tick_array_lower(pool_state, tick_array_lower_start_index);
+        let tick_array_upper = self
+            .pda
+            .clmm_tick_array_upper(pool_state, tick_array_upper_start_index);
+
+        let personal_position = self.pda.clmm_personal_position(position_nft_mint);
+
+        // ata
+        // position_nft_account will be created during instruction execution
+        let position_nft_account = get_associated_token_address(&payer, &position_nft_mint);
+        let token_account_0 = self.get_or_create_ata(sender, &payer, &token_mint_0)?;
+        let token_account_1 = self.get_or_create_ata(sender, &payer, &token_mint_1)?;
+
+        let accounts = accounts::OpenPositionWithToken22Nft {
+            payer,
+            position_nft_owner: payer,
+            position_nft_mint,
+            position_nft_account,
+            pool_state,
+            protocol_position: Pubkey::default(), // deprecated field
+            tick_array_lower,
+            tick_array_upper,
+            personal_position,
+            token_account_0,
+            token_account_1,
+            token_vault_0,
+            token_vault_1,
+            rent,
+            system_program,
+            token_program,
+            associated_token_program,
+            token_program_2022,
+            vault_0_mint: token_mint_0,
+            vault_1_mint: token_mint_1,
+        };
+
+        let instruction_data = instruction::OpenPositionWithToken22Nft {
+            tick_lower_index,
+            tick_upper_index,
+            tick_array_lower_start_index,
+            tick_array_upper_start_index,
+            liquidity,
+            amount_0_max,
+            amount_1_max,
+            with_metadata,
+            base_flag,
         };
 
         send_tx_with_ix(

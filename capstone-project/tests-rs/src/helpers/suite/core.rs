@@ -7,7 +7,7 @@ use {
         prelude::{AccountInfo, AccountLoader, Clock},
         AnchorDeserialize, Id, InstructionData, Result, ToAccountMetas,
     },
-    anchor_spl::associated_token::AssociatedToken,
+    anchor_spl::{associated_token::AssociatedToken, token_2022::spl_token_2022},
     dex_adapter,
     litesvm::{types::TransactionMetadata, LiteSVM},
     registry,
@@ -64,6 +64,7 @@ pub mod sol_kite {
 pub struct ProgramId {
     // standard
     pub system_program: Pubkey,
+    pub token_program_2022: Pubkey,
     pub token_program: Pubkey,
     pub associated_token_program: Pubkey,
     pub rent: Pubkey,
@@ -161,6 +162,46 @@ impl Pda {
                 raydium_amm_v3::states::POOL_TICK_ARRAY_BITMAP_SEED,
                 pool_state,
             ],
+            &self.clmm_program_id,
+        )
+        .0
+    }
+
+    pub fn clmm_tick_array_lower(
+        &self,
+        pool_state: Pubkey,
+        tick_array_lower_start_index: i32,
+    ) -> Pubkey {
+        get_pda_and_bump(
+            &seeds![
+                raydium_amm_v3::states::TICK_ARRAY_SEED,
+                pool_state,
+                tick_array_lower_start_index.to_be_bytes().as_ref()
+            ],
+            &self.clmm_program_id,
+        )
+        .0
+    }
+
+    pub fn clmm_tick_array_upper(
+        &self,
+        pool_state: Pubkey,
+        tick_array_upper_start_index: i32,
+    ) -> Pubkey {
+        get_pda_and_bump(
+            &seeds![
+                raydium_amm_v3::states::TICK_ARRAY_SEED,
+                pool_state,
+                tick_array_upper_start_index.to_be_bytes().as_ref()
+            ],
+            &self.clmm_program_id,
+        )
+        .0
+    }
+
+    pub fn clmm_personal_position(&self, position_nft_mint: Pubkey) -> Pubkey {
+        get_pda_and_bump(
+            &seeds![raydium_amm_v3::states::POSITION_SEED, position_nft_mint],
             &self.clmm_program_id,
         )
         .0
@@ -274,6 +315,7 @@ impl App {
         let program_id = ProgramId {
             // standard
             system_program: system_program::ID,
+            token_program_2022: spl_token_2022::ID,
             token_program: spl_token::ID,
             associated_token_program: AssociatedToken::id(),
             rent: rent::sysvar::ID,
@@ -348,11 +390,11 @@ impl App {
         // mint tokens
         for user in AppUser::iter() {
             for (token, mint) in &token_registry {
-                let ata = sol_kite::create_associated_token_account(
+                let ata = App::create_ata(
                     &mut litesvm,
+                    &AppUser::Admin.keypair(),
                     &user.pubkey(),
                     &mint.pubkey(),
-                    &AppUser::Admin.keypair(),
                 )
                 .unwrap();
 
@@ -421,21 +463,8 @@ impl App {
         let signers = [sender.keypair()];
 
         let mint = token.pubkey(&self);
-
-        let sender_ata = sol_kite::create_associated_token_account(
-            &mut self.litesvm,
-            &sender.pubkey(),
-            &mint,
-            &sender.keypair(),
-        )
-        .unwrap();
-        let recipient_ata = sol_kite::create_associated_token_account(
-            &mut self.litesvm,
-            recipient,
-            &mint,
-            &sender.keypair(),
-        )
-        .unwrap();
+        let sender_ata = self.get_or_create_ata(sender, &sender.pubkey(), &mint)?;
+        let recipient_ata = self.get_or_create_ata(sender, recipient, &mint)?;
 
         let ix = spl_token::instruction::transfer(
             &self.program_id.token_program,
@@ -469,8 +498,35 @@ impl App {
             .map_err(to_anchor_err)
     }
 
+    pub fn get_or_create_ata(
+        &mut self,
+        sender: AppUser,
+        owner: &Pubkey,
+        mint: &Pubkey,
+    ) -> Result<Pubkey> {
+        let ata_address = Self::get_ata(owner, mint);
+
+        // check if the ATA already exists
+        match self.litesvm.get_account(&ata_address) {
+            // ATA exists, return its address
+            Some(_) => Ok(ata_address),
+            // ATA doesn't exist, create it
+            None => Self::create_ata(&mut self.litesvm, &sender.keypair(), owner, mint),
+        }
+    }
+
     pub fn get_ata(owner: &Pubkey, mint: &Pubkey) -> Pubkey {
         get_associated_token_address(owner, mint)
+    }
+
+    pub fn create_ata(
+        litesvm: &mut LiteSVM,
+        sender: &Keypair,
+        owner: &Pubkey,
+        mint: &Pubkey,
+    ) -> Result<Pubkey> {
+        sol_kite::create_associated_token_account(litesvm, owner, mint, &sender)
+            .map_err(to_anchor_err)
     }
 }
 

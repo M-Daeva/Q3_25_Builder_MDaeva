@@ -25,7 +25,7 @@ use states::*;
 
 // #[cfg(feature = "devnet")]
 // declare_id!("DRayAUgENGQBKVaX8owNhgzkEDyoHTGVEGHVJT1E9pfH");
-#[cfg(not(feature = "devnet"))]
+// #[cfg(not(feature = "devnet"))]
 declare_id!("CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK");
 
 pub mod admin {

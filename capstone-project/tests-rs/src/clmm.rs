@@ -10,7 +10,7 @@ use {
 };
 
 #[test]
-fn operation_account_default() -> Result<()> {
+fn swap_default() -> Result<()> {
     const AMM_CONFIG_INDEX: u16 = 0;
 
     let mut app = App::new();
@@ -49,6 +49,24 @@ fn operation_account_default() -> Result<()> {
         &token_mint_0,
         &token_mint_1,
     )?;
+
+    // TODO: fix: tick arrays don't exist
+    // check get_or_create_tick_array
+    // app.clmm_try_open_position(
+    //     AppUser::Alice,
+    //     -1000,         // Lower price boundary
+    //     1000,          // Upper price boundary
+    //     -1024,         // Tick array containing lower tick
+    //     0,             // Tick array containing upper tick
+    //     1_000_000_000, // 1B units of liquidity
+    //     1_000_000,     // Max 1 USDC (6 decimals)
+    //     100_000_000,   // Max 0.1 SOL (9 decimals)
+    //     true,          // Create NFT with metadata
+    //     None,          // Use exact liquidity amount
+    //     AMM_CONFIG_INDEX,
+    //     &token_mint_0,
+    //     &token_mint_1,
+    // )?;
 
     Ok(())
 }
