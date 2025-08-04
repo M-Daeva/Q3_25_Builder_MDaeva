@@ -115,11 +115,11 @@ fn create_and_activate_account_default() -> Result<()> {
         }
     );
 
-    let alice_usdc_before = app.get_balance(AppUser::Alice, AppToken::USDC)?;
+    let alice_usdc_before = app.get_balance(AppUser::Alice, AppToken::USDC);
 
     app.registry_try_activate_account(AppUser::Alice, None, None)?;
 
-    let alice_usdc_after = app.get_balance(AppUser::Alice, AppToken::USDC)?;
+    let alice_usdc_after = app.get_balance(AppUser::Alice, AppToken::USDC);
     assert_eq!(
         alice_usdc_before - alice_usdc_after,
         ACCOUNT_REGISTRATION_FEE_AMOUNT
@@ -142,11 +142,11 @@ fn withdraw_revenue_default() -> Result<()> {
     app.registry_try_create_account(AppUser::Alice, MAX_DATA_SIZE)?;
     app.registry_try_activate_account(AppUser::Alice, None, None)?;
 
-    let admin_usdc_before = app.get_balance(AppUser::Admin, AppToken::USDC)?;
+    let admin_usdc_before = app.get_balance(AppUser::Admin, AppToken::USDC);
 
     app.registry_try_withdraw_revenue(AppUser::Admin, None, None, None)?;
 
-    let admin_usdc_after = app.get_balance(AppUser::Admin, AppToken::USDC)?;
+    let admin_usdc_after = app.get_balance(AppUser::Admin, AppToken::USDC);
     assert_eq!(
         admin_usdc_after - admin_usdc_before,
         ACCOUNT_REGISTRATION_FEE_AMOUNT

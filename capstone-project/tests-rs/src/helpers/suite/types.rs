@@ -75,6 +75,7 @@ pub enum AppToken {
     USDC,
     PYTH,
     WBTC,
+    WSOL,
 }
 
 pub trait GetPrice {
@@ -106,6 +107,7 @@ impl GetPrice for AppToken {
             Self::USDC => PRICE_TOKEN_USDC,
             Self::PYTH => PRICE_TOKEN_PYTH,
             Self::WBTC => PRICE_TOKEN_WBTC,
+            Self::WSOL => PRICE_COIN_SOL,
         };
 
         str_to_dec(price)
@@ -139,6 +141,7 @@ impl GetDecimals for AppToken {
             Self::USDC => DECIMALS_TOKEN_DEFAULT,
             Self::PYTH => DECIMALS_TOKEN_DEFAULT,
             Self::WBTC => DECIMALS_TOKEN_WBTC,
+            Self::WSOL => DECIMALS_COIN_SOL,
         }
     }
 }

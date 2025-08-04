@@ -7,7 +7,7 @@ use {
         prelude::{AccountInfo, AccountLoader, Clock},
         AnchorDeserialize, Id, InstructionData, Result, ToAccountMetas,
     },
-    anchor_spl::{associated_token::AssociatedToken, token_2022::spl_token_2022},
+    anchor_spl::{associated_token::AssociatedToken, token::Mint, token_2022::spl_token_2022},
     dex_adapter,
     litesvm::{types::TransactionMetadata, LiteSVM},
     registry,
@@ -17,7 +17,10 @@ use {
         create_token_mint, deploy_program, get_pda_and_bump, get_token_account_balance,
         mint_tokens_to_account, seeds,
     },
-    solana_program::{native_token::LAMPORTS_PER_SOL, rent, system_instruction, system_program},
+    solana_program::{
+        native_token::LAMPORTS_PER_SOL, program_option::COption, program_pack::Pack, rent,
+        system_instruction, system_program,
+    },
     solana_pubkey::Pubkey,
     solana_signer::{signers::Signers, Signer},
     solana_transaction::Transaction,
@@ -353,7 +356,8 @@ impl App {
     }
 
     pub fn new() -> Self {
-        let app = Self::create_app_with_programs();
+        let mut app = Self::create_app_with_programs();
+        app.create_wsol();
 
         // prepare programs
         // ...
@@ -377,6 +381,11 @@ impl App {
 
         // create tokens
         for token in AppToken::iter() {
+            // skip WSOL
+            if token == AppToken::WSOL {
+                continue;
+            }
+
             let mint = create_token_mint(
                 &mut litesvm,
                 &AppUser::Admin.keypair(),
@@ -390,6 +399,11 @@ impl App {
         // mint tokens
         for user in AppUser::iter() {
             for (token, mint) in &token_registry {
+                // skip WSOL
+                if token == &AppToken::WSOL {
+                    continue;
+                }
+
                 let ata = App::create_ata(
                     &mut litesvm,
                     &AppUser::Admin.keypair(),
@@ -410,6 +424,28 @@ impl App {
         }
 
         (litesvm, token_registry)
+    }
+
+    fn create_wsol(&mut self) {
+        let mut mint_account = solana_account::Account {
+            lamports: 0,
+            data: vec![0; Mint::LEN],
+            owner: spl_token::ID,
+            executable: false,
+            rent_epoch: 0,
+        };
+
+        let mut mint_data = spl_token::state::Mint::unpack_unchecked(&mint_account.data).unwrap();
+        mint_data.mint_authority = COption::Some(Pubkey::new_unique());
+        mint_data.decimals = 9;
+        mint_data.supply = 0;
+        mint_data.is_initialized = true;
+        mint_data.freeze_authority = COption::None;
+        mint_data.pack_into_slice(&mut mint_account.data);
+
+        self.litesvm
+            .set_account(AppToken::WSOL.pubkey(&self), mint_account)
+            .unwrap();
     }
 
     // utils
@@ -478,7 +514,7 @@ impl App {
         extension::send_tx(&mut self.litesvm, &[ix], &payer, &signers)
     }
 
-    pub fn get_balance(&self, user: AppUser, asset: impl Into<AppAsset>) -> Result<u64> {
+    pub fn get_balance(&self, user: AppUser, asset: impl Into<AppAsset>) -> u64 {
         let address = &user.pubkey();
 
         match asset.into() {
@@ -487,15 +523,12 @@ impl App {
         }
     }
 
-    pub fn get_coin_balance(&self, address: &Pubkey) -> Result<u64> {
-        self.litesvm
-            .get_balance(address)
-            .ok_or(to_anchor_err("SOL balance error"))
+    pub fn get_coin_balance(&self, address: &Pubkey) -> u64 {
+        self.litesvm.get_balance(address).unwrap_or_default()
     }
 
-    pub fn get_token_balance(&self, address: &Pubkey, mint: &Pubkey) -> Result<u64> {
-        get_token_account_balance(&self.litesvm, &Self::get_ata(address, mint))
-            .map_err(to_anchor_err)
+    pub fn get_token_balance(&self, address: &Pubkey, mint: &Pubkey) -> u64 {
+        get_token_account_balance(&self.litesvm, &Self::get_ata(address, mint)).unwrap_or_default()
     }
 
     pub fn get_or_create_ata(
@@ -568,22 +601,30 @@ pub mod token {
 
     impl WithTokenKeys for AppToken {
         fn keypair(&self, app: &App) -> Keypair {
-            let base58_string = app
-                .token_registry
-                .iter()
-                .find(|(token, _)| token == self)
-                .map(|(_, keypair)| keypair.to_base58_string())
-                .unwrap();
+            if self == &Self::WSOL {
+                panic!("WSOL doesn't have keypair!")
+            } else {
+                let base58_string = app
+                    .token_registry
+                    .iter()
+                    .find(|(token, _)| token == self)
+                    .map(|(_, keypair)| keypair.to_base58_string())
+                    .unwrap();
 
-            Keypair::from_base58_string(&base58_string)
+                Keypair::from_base58_string(&base58_string)
+            }
         }
 
         fn pubkey(&self, app: &App) -> Pubkey {
-            app.token_registry
-                .iter()
-                .find(|(token, _)| token == self)
-                .map(|(_, keypair)| keypair.pubkey())
-                .unwrap()
+            if self == &Self::WSOL {
+                spl_token::native_mint::id()
+            } else {
+                app.token_registry
+                    .iter()
+                    .find(|(token, _)| token == self)
+                    .map(|(_, keypair)| keypair.pubkey())
+                    .unwrap()
+            }
         }
     }
 }
