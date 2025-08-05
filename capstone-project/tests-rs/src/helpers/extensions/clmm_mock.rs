@@ -4,11 +4,11 @@ use {
             extension::{get_data, get_data_zero_copy, send_tx_with_ix},
             App, ProgramId,
         },
-        decimal::{u128_to_dec, Decimal},
+        decimal::Decimal,
         types::AppUser,
     },
     anchor_lang::Result,
-    clmm_mock::{accounts, instruction, instructions::sort_token_mints, state},
+    clmm_mock::{accounts, instruction, state},
     litesvm::types::TransactionMetadata,
     raydium_clmm_cpi,
     solana_keypair::Keypair,
@@ -42,13 +42,6 @@ pub trait ClmmMockExtension {
         token_mint_0: &Pubkey,
         token_mint_1: &Pubkey,
     ) -> Result<TransactionMetadata>;
-
-    // fn clmm_mock_try_create_pool_new(
-    //     &mut self,
-    //     sender: AppUser,
-    //     amount_and_token_a: (u64, AppToken),
-    //     amount_and_token_b: (u64, AppToken),
-    // ) -> Result<TransactionMetadata>;
 
     fn clmm_mock_try_open_position(
         &mut self,
@@ -90,12 +83,6 @@ pub trait ClmmMockExtension {
         token_mint_0: &Pubkey,
         token_mint_1: &Pubkey,
     ) -> Result<raydium_clmm_cpi::states::PoolState>;
-
-    fn clmm_mock_query_pool_config(
-        &self,
-        mint_a: &Pubkey,
-        mint_b: &Pubkey,
-    ) -> Result<state::PoolConfig>;
 }
 
 impl ClmmMockExtension for App {
@@ -247,73 +234,6 @@ impl ClmmMockExtension for App {
             &signers,
         )
     }
-
-    // fn clmm_mock_try_create_pool_new(
-    //     &mut self,
-    //     sender: AppUser,
-    //     amount_and_token_a: (u64, AppToken),
-    //     amount_and_token_b: (u64, AppToken),
-    // ) -> Result<TransactionMetadata> {
-    //     // programs
-    //     let ProgramId {
-    //         system_program,
-    //         token_program,
-    //         associated_token_program,
-    //         clmm_mock: program_id,
-    //         ..
-    //     } = self.program_id;
-
-    //     let (amount_a, token_a) = amount_and_token_a;
-    //     let (amount_b, token_b) = amount_and_token_b;
-
-    //     // signers
-    //     let payer = sender.pubkey();
-    //     let signers = [sender.keypair()];
-
-    //     // mint
-    //     let mint_a = token_a.pubkey(self);
-    //     let mint_b = token_b.pubkey(self);
-
-    //     // make sure tokens are sorted initially
-    //     let (mint_a_sorted, _) = sort_token_mints(&mint_a, &mint_b);
-    //     if mint_a_sorted != mint_a {
-    //         panic!("Tokens aren't sorted!");
-    //     }
-
-    //     // pda
-    //     let pool_config = self.pda.clmm_mock_pool_config(&mint_a, &mint_b);
-
-    //     // ata
-    //     let sender_a_ata = self.get_or_create_ata(sender, &payer, &mint_a)?;
-    //     let sender_b_ata = self.get_or_create_ata(sender, &payer, &mint_b)?;
-    //     let app_a_ata = self.get_or_create_ata(sender, &pool_config, &mint_a)?;
-    //     let app_b_ata = self.get_or_create_ata(sender, &pool_config, &mint_b)?;
-
-    //     let accounts = accounts::CreatePool {
-    //         system_program,
-    //         token_program,
-    //         associated_token_program,
-    //         sender: payer,
-    //         pool_config,
-    //         mint_a,
-    //         mint_b,
-    //         sender_a_ata,
-    //         sender_b_ata,
-    //         app_a_ata,
-    //         app_b_ata,
-    //     };
-
-    //     let instruction_data = instruction::CreatePool { amount_a, amount_b };
-
-    //     send_tx_with_ix(
-    //         self,
-    //         &program_id,
-    //         &accounts,
-    //         &instruction_data,
-    //         &payer,
-    //         &signers,
-    //     )
-    // }
 
     fn clmm_mock_try_open_position(
         &mut self,
@@ -526,96 +446,23 @@ impl ClmmMockExtension for App {
                 .clmm_mock_pool_state(*amm_config, *token_mint_0, *token_mint_1),
         )
     }
-
-    fn clmm_mock_query_pool_config(
-        &self,
-        mint_a: &Pubkey,
-        mint_b: &Pubkey,
-    ) -> Result<state::PoolConfig> {
-        get_data(
-            &self.litesvm,
-            &&self.pda.clmm_mock_pool_config(&mint_a, &mint_b),
-        )
-    }
 }
 
-/// returns (token_mint_0, token_mint_1, sqrt_price_x64)
+// TODO: return sorted token_info_list
+/// returns (token_mint_0, token_mint_1)
 pub fn get_token_info_for_pool_creation(
     token_info_list: &[(Pubkey, u8, Decimal)], // (mint, decimals, price)
-) -> (Pubkey, Pubkey, u128) {
+) -> (Pubkey, Pubkey) {
     let (token_mint_0, token_mint_1) =
         &sort_token_mints(&token_info_list[0].0, &token_info_list[1].0);
 
-    let (_, token_decimals_0, token_price_0) = *token_info_list
-        .iter()
-        .find(|x| &x.0 == token_mint_0)
-        .unwrap();
-    let (_, token_decimals_1, token_price_1) = *token_info_list
-        .iter()
-        .find(|x| &x.0 == token_mint_1)
-        .unwrap();
-
-    let sqrt_price_x64 = calculate_sqrt_price_x64(
-        token_price_0,
-        token_decimals_0,
-        token_price_1,
-        token_decimals_1,
-    );
-
-    (*token_mint_0, *token_mint_1, sqrt_price_x64)
+    (*token_mint_0, *token_mint_1)
 }
 
-/// Calculate sqrt_price_x64 for AMM pools using Decimal for precision
-///
-/// Formula: sqrt_price_x64 = sqrt(price_ratio) * 2^64
-/// where price_ratio = (price_token1 / price_token0) * (10^decimals0 / 10^decimals1)
-fn calculate_sqrt_price_x64(
-    price_token0_usd: Decimal,
-    decimals_token0: u8,
-    price_token1_usd: Decimal,
-    decimals_token1: u8,
-) -> u128 {
-    // Step 1: Calculate the price ratio (token1/token0)
-    let price_ratio = price_token1_usd / price_token0_usd;
-
-    // Step 2: Adjust for decimal differences
-    let decimal_diff = decimals_token0 as i8 - decimals_token1 as i8;
-    let decimal_adjustment = if decimal_diff >= 0 {
-        u128_to_dec(10u128.pow(decimal_diff as u32))
+fn sort_token_mints(mint_a: &Pubkey, mint_b: &Pubkey) -> (Pubkey, Pubkey) {
+    if mint_a < mint_b {
+        (*mint_a, *mint_b)
     } else {
-        Decimal::from_ratio(1, 10u128.pow((-decimal_diff) as u32))
-    };
-
-    let adjusted_price_ratio = price_ratio * decimal_adjustment;
-
-    // Step 3: Take square root using integer square root
-    // Since we don't have a built-in sqrt for Decimal, we'll use integer square root
-    let sqrt_price = integer_sqrt(adjusted_price_ratio.atomics());
-
-    // Step 4: Convert to Q64.64 format
-    // We need to adjust because we took sqrt of the raw atomics
-    // sqrt(atomics) = sqrt(actual_value * 10^18) = sqrt(actual_value) * sqrt(10^18)
-    // So we need to divide by sqrt(10^18) = 10^9, then multiply by 2^64
-
-    let sqrt_decimal_fractional = 1_000_000_000u128; // sqrt(10^18) = 10^9
-    let q64_64_factor = 1u128 << 64; // 2^64
-
-    (sqrt_price * q64_64_factor) / sqrt_decimal_fractional
-}
-
-/// Integer square root using Newton's method
-fn integer_sqrt(value: u128) -> u128 {
-    if value == 0 {
-        return 0;
+        (*mint_b, *mint_a)
     }
-
-    let mut x = value;
-    let mut y = (x + 1) / 2;
-
-    while y < x {
-        x = y;
-        y = (x + value / x) / 2;
-    }
-
-    x
 }

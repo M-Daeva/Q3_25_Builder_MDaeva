@@ -9,7 +9,7 @@ pub mod util;
 use {
     anchor_lang::prelude::*,
     instructions::{
-        create_amm_config::*, create_operation_account::*, create_pool::*, create_pool_new::*,
+        create_amm_config::*, create_operation_account::*, create_pool::*,
         open_position_with_token22_nft::*, swap_v2::*,
     },
     raydium_clmm_cpi::states::FEE_RATE_DENOMINATOR_VALUE,
@@ -54,14 +54,6 @@ pub mod clmm_mock {
         open_time: u64,
     ) -> Result<()> {
         instructions::create_pool(ctx, sqrt_price_x64, open_time)
-    }
-
-    pub fn create_pool_new(
-        ctx: Context<CreatePoolNew>,
-        amount_a: u64,
-        amount_b: u64,
-    ) -> Result<()> {
-        ctx.accounts.create_pool_new(ctx.bumps, amount_a, amount_b)
     }
 
     pub fn open_position_with_token22_nft<'a, 'b, 'c: 'info, 'info>(

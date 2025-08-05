@@ -17,7 +17,7 @@ fn swap_default() -> Result<()> {
     let mut app = App::new();
     app.wait(1_000);
 
-    let (token_mint_0, token_mint_1, sqrt_price_x64) = get_token_info_for_pool_creation(&[
+    let (token_mint_0, token_mint_1) = get_token_info_for_pool_creation(&[
         (
             AppToken::USDC.pubkey(&app),
             AppToken::USDC.get_decimals(),
@@ -34,7 +34,7 @@ fn swap_default() -> Result<()> {
     app.clmm_mock_try_create_amm_config(AppUser::Admin, AMM_CONFIG_INDEX, 1, 1, 1, 1)?;
     app.clmm_mock_try_create_pool(
         AppUser::Alice,
-        sqrt_price_x64,
+        1,
         app.get_clock_time() - 1,
         AMM_CONFIG_INDEX,
         &token_mint_0,
@@ -44,6 +44,7 @@ fn swap_default() -> Result<()> {
     let alice_token_0_before = app.get_ata_token_balance(&AppUser::Alice.pubkey(), &token_mint_0);
     let alice_token_1_before = app.get_ata_token_balance(&AppUser::Alice.pubkey(), &token_mint_1);
 
+    // TODO: set amounts based on price
     app.clmm_mock_try_open_position(
         AppUser::Alice,
         0,

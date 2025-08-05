@@ -426,18 +426,6 @@ impl Pda {
         )
         .0
     }
-
-    pub fn clmm_mock_pool_config(&self, mint_a: &Pubkey, mint_b: &Pubkey) -> Pubkey {
-        get_pda_and_bump(
-            &seeds![
-                clmm_mock::state::SEED_POOL_CONFIG,
-                mint_a.to_bytes().as_ref(),
-                mint_b.to_bytes().as_ref()
-            ],
-            &self.clmm_mock_program_id,
-        )
-        .0
-    }
 }
 
 pub struct App {

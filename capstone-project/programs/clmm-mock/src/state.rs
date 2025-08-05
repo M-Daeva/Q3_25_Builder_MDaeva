@@ -5,20 +5,6 @@ use {
     std::collections::HashSet,
 };
 
-pub const SEED_POOL_CONFIG: &str = "pool_config";
-
-#[account]
-#[derive(InitSpace)]
-pub struct PoolConfig {
-    pub bump: u8,
-    pub mint_a: Pubkey,
-    pub mint_b: Pubkey,
-    pub amount_a: u64,
-    pub amount_b: u64,
-}
-
-// clmm -----------------------------------
-
 pub const OPERATION_SEED: &str = "operation";
 pub const OPERATION_SIZE_USIZE: usize = 10;
 pub const WHITE_MINT_SIZE_USIZE: usize = 100;
@@ -98,8 +84,6 @@ impl OperationState {
         self.whitelist_mints[0..whitelist_mints.len()].copy_from_slice(whitelist_mints.as_slice());
     }
 }
-
-// TODO
 
 /// Seed to derive account address and signature
 pub const POOL_SEED: &str = "pool";
