@@ -567,7 +567,6 @@ impl Observation {
     pub const LEN: usize = 4 + 8 + 8 * 4;
 }
 
-// TODO: #[derive(Debug)]
 #[account(zero_copy(unsafe))]
 #[repr(C, packed)]
 #[cfg_attr(feature = "client", derive(Debug))]

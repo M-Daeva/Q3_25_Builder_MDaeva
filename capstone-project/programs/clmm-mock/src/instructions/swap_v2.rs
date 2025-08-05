@@ -1,10 +1,17 @@
-use crate::state::{ObservationState, PoolState};
-use anchor_lang::prelude::*;
-use anchor_spl::memo::Memo;
-use anchor_spl::token::Token;
-use anchor_spl::token_interface::{Mint, Token2022, TokenAccount};
-use raydium_clmm_cpi::states::AmmConfig;
-// use raydium_clmm_cpi::states::{AmmConfig, ObservationState, PoolState};
+use {
+    crate::{
+        error::ErrorCode,
+        state::{ObservationState, PoolState},
+        util::{transfer_from_pool_vault_to_user, transfer_from_user_to_pool_vault},
+    },
+    anchor_lang::prelude::*,
+    anchor_spl::{
+        memo::Memo,
+        token::Token,
+        token_interface::{Mint, Token2022, TokenAccount},
+    },
+    raydium_clmm_cpi::states::AmmConfig,
+};
 
 #[derive(Accounts)]
 pub struct SwapSingleV2<'info> {
@@ -66,40 +73,120 @@ impl<'info> SwapSingleV2<'info> {
         &mut self,
         amount: u64,
         other_amount_threshold: u64,
-        sqrt_price_limit_x64: u128,
+        _sqrt_price_limit_x64: u128,
         is_base_input: bool,
     ) -> Result<()> {
-        let SwapSingleV2 {
+        let Self {
             payer,
-            amm_config,
             pool_state,
             input_token_account,
             output_token_account,
             input_vault,
             output_vault,
-            observation_state,
             token_program,
             token_program_2022,
-            memo_program,
             input_vault_mint,
             output_vault_mint,
             ..
         } = self;
 
-        msg!("payer {:#?}", payer);
-        msg!("amm_config {:#?}", amm_config);
-        msg!("pool_state {:#?}", pool_state);
-        msg!("input_token_account {:#?}", input_token_account);
-        msg!("output_token_account {:#?}", output_token_account);
-        msg!("input_vault {:#?}", input_vault);
-        msg!("output_vault {:#?}", output_vault);
-        msg!("observation_state {:#?}", observation_state);
-        msg!("token_program {:#?}", token_program.key());
-        msg!("token_program_2022 {:#?}", token_program_2022.key());
-        msg!("memo_program {:#?}", memo_program.key());
-        msg!("input_vault_mint {:#?}", input_vault_mint);
-        msg!("output_vault_mint {:#?}", output_vault_mint);
+        // Get current reserves from vaults
+        let reserve_0 = input_vault.amount;
+        let reserve_1 = output_vault.amount;
+
+        // Determine if we're swapping token0 for token1 or vice versa
+        let zero_for_one = input_vault.mint == pool_state.load()?.token_mint_0;
+
+        let (amount_in, amount_out) = if is_base_input {
+            // Exact input swap - calculate output using constant product formula
+            let amount_in = amount;
+            let amount_out = if zero_for_one {
+                calculate_amount_out(amount_in, reserve_0, reserve_1)?
+            } else {
+                calculate_amount_out(amount_in, reserve_1, reserve_0)?
+            };
+
+            // Check slippage
+            require!(
+                amount_out >= other_amount_threshold,
+                ErrorCode::TooLittleOutputReceived
+            );
+
+            (amount_in, amount_out)
+        } else {
+            // Exact output swap - calculate input using constant product formula
+            let amount_out = amount;
+            let amount_in = if zero_for_one {
+                calculate_amount_in(amount_out, reserve_0, reserve_1)?
+            } else {
+                calculate_amount_in(amount_out, reserve_1, reserve_0)?
+            };
+
+            // Check slippage
+            require!(
+                amount_in <= other_amount_threshold,
+                ErrorCode::TooMuchInputPaid
+            );
+
+            (amount_in, amount_out)
+        };
+
+        // Transfer input tokens from user to vault
+        transfer_from_user_to_pool_vault(
+            &payer,
+            &input_token_account.to_account_info(),
+            &input_vault.to_account_info(),
+            Some(input_vault_mint.clone()),
+            &token_program,
+            Some(token_program_2022.to_account_info()),
+            amount_in,
+        )?;
+
+        // Transfer output tokens from vault to user
+        transfer_from_pool_vault_to_user(
+            &pool_state,
+            &output_vault.to_account_info(),
+            &output_token_account.to_account_info(),
+            Some(output_vault_mint.clone()),
+            &token_program,
+            Some(token_program_2022.to_account_info()),
+            amount_out,
+        )?;
 
         Ok(())
     }
+}
+
+// Helper function to calculate output amount using constant product formula
+fn calculate_amount_out(amount_in: u64, reserve_in: u64, reserve_out: u64) -> Result<u64> {
+    require!(amount_in > 0, ErrorCode::TooSmallInputOrOutputAmount);
+    require!(
+        reserve_in > 0 && reserve_out > 0,
+        ErrorCode::InsufficientLiquidityForDirection
+    );
+
+    // Apply 0.3% fee (997/1000)
+    let amount_in_with_fee = (amount_in as u128) * 997;
+    let numerator = amount_in_with_fee * (reserve_out as u128);
+    let denominator = (reserve_in as u128) * 1000 + amount_in_with_fee;
+
+    Ok((numerator / denominator) as u64)
+}
+
+// Helper function to calculate input amount using constant product formula
+fn calculate_amount_in(amount_out: u64, reserve_in: u64, reserve_out: u64) -> Result<u64> {
+    require!(amount_out > 0, ErrorCode::TooSmallInputOrOutputAmount);
+    require!(
+        reserve_in > 0 && reserve_out > 0,
+        ErrorCode::InsufficientLiquidityForDirection
+    );
+    require!(
+        amount_out < reserve_out,
+        ErrorCode::InsufficientLiquidityForDirection
+    );
+
+    let numerator = (reserve_in as u128) * (amount_out as u128) * 1000;
+    let denominator = (reserve_out as u128 - amount_out as u128) * 997;
+
+    Ok((numerator / denominator + 1) as u64) // Add 1 to round up
 }
