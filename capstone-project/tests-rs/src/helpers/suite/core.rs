@@ -8,7 +8,7 @@ use {
         AnchorDeserialize, Id, InstructionData, Result, ToAccountMetas,
     },
     anchor_spl::{associated_token::AssociatedToken, token::Mint, token_2022::spl_token_2022},
-    dex_adapter,
+    clmm_mock, dex_adapter,
     litesvm::{types::TransactionMetadata, LiteSVM},
     registry,
     solana_instruction::Instruction,
@@ -78,6 +78,7 @@ pub struct ProgramId {
     // custom
     pub registry: Pubkey,
     pub dex_adapter: Pubkey,
+    pub clmm_mock: Pubkey,
 }
 
 pub struct Pda {
@@ -85,6 +86,7 @@ pub struct Pda {
 
     registry_program_id: Pubkey,
     dex_adapter_program_id: Pubkey,
+    clmm_mock_program_id: Pubkey,
 }
 
 impl Pda {
@@ -299,6 +301,14 @@ impl Pda {
         )
         .0
     }
+
+    pub fn clmm_mock_pool_state(&self, id: u8) -> Pubkey {
+        get_pda_and_bump(
+            &seeds![clmm_mock::state::SEED_POOL_STATE, id.to_le_bytes().as_ref()],
+            &self.clmm_mock_program_id,
+        )
+        .0
+    }
 }
 
 pub struct App {
@@ -329,6 +339,7 @@ impl App {
             // custom
             registry: registry::ID,
             dex_adapter: dex_adapter::ID,
+            clmm_mock: clmm_mock::ID,
         };
 
         // specify PDA
@@ -337,6 +348,7 @@ impl App {
 
             registry_program_id: program_id.registry,
             dex_adapter_program_id: program_id.dex_adapter,
+            clmm_mock_program_id: program_id.clmm_mock,
         };
 
         // upload 3rd party programs
@@ -345,6 +357,7 @@ impl App {
         // upload custom programs
         upload_program(&mut litesvm, "registry", &program_id.registry);
         upload_program(&mut litesvm, "dex_adapter", &program_id.dex_adapter);
+        upload_program(&mut litesvm, "clmm_mock", &program_id.clmm_mock);
 
         Self {
             litesvm,

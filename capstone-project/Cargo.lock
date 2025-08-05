@@ -779,6 +779,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "clmm-mock"
+version = "1.0.0"
+dependencies = [
+ "anchor-lang",
+ "anchor-spl",
+ "base",
+]
+
+[[package]]
 name = "combine"
 version = "3.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5212,6 +5221,7 @@ dependencies = [
  "anchor-lang",
  "anchor-spl",
  "base",
+ "clmm-mock",
  "dex-adapter",
  "litesvm",
  "pretty_assertions",

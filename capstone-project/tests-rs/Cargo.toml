@@ -44,3 +44,4 @@ raydium-amm-v3 = { workspace = true, features = ["cpi"] }
 base = { workspace = true }
 registry = { workspace = true, features = ["cpi"] }
 dex-adapter = { workspace = true, features = ["cpi"] }
+clmm-mock = { workspace = true, features = ["cpi"] }

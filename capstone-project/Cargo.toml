@@ -56,3 +56,4 @@ raydium-amm-v3 = { path = "./programs/amm" } # { git = "https://github.com/raydi
 base = { path = "./packages/base" }
 registry = { path = "./programs/registry" }
 dex-adapter = { path = "./programs/dex-adapter" }
+clmm-mock = { path = "./programs/clmm-mock" }
