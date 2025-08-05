@@ -11,7 +11,8 @@ use {
     raydium_clmm_cpi::states::FEE_RATE_DENOMINATOR_VALUE,
 };
 
-declare_id!("AyzvQE5M1Xqs4YQxP4Sf6giH82X4bKFUF3oVv7DTkoD4");
+// same as original program id
+declare_id!("CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK");
 
 #[program]
 pub mod clmm_mock {

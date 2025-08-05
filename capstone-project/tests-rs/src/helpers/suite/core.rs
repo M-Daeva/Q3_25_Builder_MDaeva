@@ -478,12 +478,12 @@ impl App {
         };
 
         // upload 3rd party programs
-        upload_program(&mut litesvm, "raydium_amm_v3", &program_id.clmm);
+        upload_program(&mut litesvm, "clmm_mock", &program_id.clmm_mock);
+        // upload_program(&mut litesvm, "raydium_amm_v3", &program_id.clmm);
 
         // upload custom programs
         upload_program(&mut litesvm, "registry", &program_id.registry);
         upload_program(&mut litesvm, "dex_adapter", &program_id.dex_adapter);
-        upload_program(&mut litesvm, "clmm_mock", &program_id.clmm_mock);
 
         Self {
             litesvm,
