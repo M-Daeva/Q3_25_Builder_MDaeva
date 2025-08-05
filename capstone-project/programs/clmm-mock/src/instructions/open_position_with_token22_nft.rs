@@ -2,11 +2,10 @@ use {
     crate::{
         instructions::open_position,
         state::{PersonalPositionState, PoolState},
-        util::create_position_nft_mint_with_extensions,
     },
     anchor_lang::prelude::*,
     anchor_spl::{
-        associated_token::{create, AssociatedToken, Create},
+        associated_token::AssociatedToken,
         token::Token,
         token_interface::{Mint, Token2022, TokenAccount},
     },
@@ -140,28 +139,28 @@ pub fn open_position_with_token22_nft<'a, 'b, 'c: 'info, 'info>(
     with_metadata: bool,
     base_flag: Option<bool>,
 ) -> Result<()> {
-    create_position_nft_mint_with_extensions(
-        &ctx.accounts.payer,
-        &ctx.accounts.position_nft_mint,
-        &ctx.accounts.pool_state.to_account_info(),
-        &ctx.accounts.personal_position.to_account_info(),
-        &ctx.accounts.system_program,
-        &ctx.accounts.token_program_2022,
-        with_metadata,
-    )?;
+    // create_position_nft_mint_with_extensions(
+    //     &ctx.accounts.payer,
+    //     &ctx.accounts.position_nft_mint,
+    //     &ctx.accounts.pool_state.to_account_info(),
+    //     &ctx.accounts.personal_position.to_account_info(),
+    //     &ctx.accounts.system_program,
+    //     &ctx.accounts.token_program_2022,
+    //     with_metadata,
+    // )?;
 
-    // create user position nft account
-    create(CpiContext::new(
-        ctx.accounts.associated_token_program.to_account_info(),
-        Create {
-            payer: ctx.accounts.payer.to_account_info(),
-            associated_token: ctx.accounts.position_nft_account.to_account_info(),
-            authority: ctx.accounts.position_nft_owner.to_account_info(),
-            mint: ctx.accounts.position_nft_mint.to_account_info(),
-            system_program: ctx.accounts.system_program.to_account_info(),
-            token_program: ctx.accounts.token_program_2022.to_account_info(),
-        },
-    ))?;
+    // // create user position nft account
+    // create(CpiContext::new(
+    //     ctx.accounts.associated_token_program.to_account_info(),
+    //     Create {
+    //         payer: ctx.accounts.payer.to_account_info(),
+    //         associated_token: ctx.accounts.position_nft_account.to_account_info(),
+    //         authority: ctx.accounts.position_nft_owner.to_account_info(),
+    //         mint: ctx.accounts.position_nft_mint.to_account_info(),
+    //         system_program: ctx.accounts.system_program.to_account_info(),
+    //         token_program: ctx.accounts.token_program_2022.to_account_info(),
+    //     },
+    // ))?;
 
     open_position(
         &ctx.accounts.payer,

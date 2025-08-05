@@ -48,11 +48,6 @@ fn swap_default() -> Result<()> {
         &token_mint_0,
         &token_mint_1,
     )?;
-    let _pool_state = app.clmm_query_pool_state(
-        &app.pda.clmm_amm_config(AMM_CONFIG_INDEX),
-        &token_mint_0,
-        &token_mint_1,
-    )?;
 
     app.clmm_mock_try_open_position(
         AppUser::Alice,
@@ -69,6 +64,14 @@ fn swap_default() -> Result<()> {
         &token_mint_0,
         &token_mint_1,
     )?;
+
+    let pool_state = app.clmm_query_pool_state(
+        &app.pda.clmm_amm_config(AMM_CONFIG_INDEX),
+        &token_mint_0,
+        &token_mint_1,
+    )?;
+
+    println!("{:#?}", pool_state);
 
     // let token_info_list = sort_token_info_list(
     //     &app,

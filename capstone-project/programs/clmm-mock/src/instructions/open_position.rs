@@ -221,95 +221,47 @@ pub fn open_position<'a, 'b, 'c: 'info, 'info>(
     _use_metadata_extension: bool,
 ) -> Result<()> {
     let mut liquidity = liquidity;
-    {
-        let pool_state = &mut pool_state_loader.load_mut()?;
+    let pool_state = &mut pool_state_loader.load_mut()?;
 
-        // // Why not use anchor's `init-if-needed` to create?
-        // // Beacuse `tick_array_lower` and `tick_array_upper` can be the same account, anchor can initialze tick_array_lower but it causes a crash when anchor to initialze the `tick_array_upper`,
-        // // the problem is variable scope, tick_array_lower_loader not exit to save the discriminator while build tick_array_upper_loader.
-        // let tick_array_lower_loader = TickArrayState::get_or_create_tick_array(
-        //     payer.to_account_info(),
-        //     tick_array_lower_loader.to_account_info(),
-        //     system_program.to_account_info(),
-        //     &pool_state_loader,
-        //     tick_array_lower_start_index,
-        //     pool_state.tick_spacing,
-        // )?;
+    let LiquidityChangeResult {
+        fee_growth_inside_0_x64,
+        fee_growth_inside_1_x64,
+        reward_growths_inside,
+        ..
+    } = add_liquidity(
+        payer,
+        token_account_0,
+        token_account_1,
+        token_vault_0,
+        token_vault_1,
+        // &tick_array_lower_loader,
+        // &tick_array_upper_loader,
+        token_program_2022,
+        token_program,
+        vault_0_mint,
+        vault_1_mint,
+        None,
+        pool_state,
+        &mut liquidity,
+        amount_0_max,
+        amount_1_max,
+        tick_lower_index,
+        tick_upper_index,
+        base_flag,
+    )?;
 
-        // let tick_array_upper_loader =
-        //     if tick_array_lower_start_index == tick_array_upper_start_index {
-        //         AccountLoad::<TickArrayState>::try_from(&tick_array_upper_loader.to_account_info())?
-        //     } else {
-        //         TickArrayState::get_or_create_tick_array(
-        //             payer.to_account_info(),
-        //             tick_array_upper_loader.to_account_info(),
-        //             system_program.to_account_info(),
-        //             &pool_state_loader,
-        //             tick_array_upper_start_index,
-        //             pool_state.tick_spacing,
-        //         )?
-        //     };
-
-        let LiquidityChangeResult {
-            // amount_0,
-            // amount_1,
-            // amount_0_transfer_fee,
-            // amount_1_transfer_fee,
-            fee_growth_inside_0_x64,
-            fee_growth_inside_1_x64,
-            reward_growths_inside,
-            ..
-        } = add_liquidity(
-            payer,
-            token_account_0,
-            token_account_1,
-            token_vault_0,
-            token_vault_1,
-            // &tick_array_lower_loader,
-            // &tick_array_upper_loader,
-            token_program_2022,
-            token_program,
-            vault_0_mint,
-            vault_1_mint,
-            None,
-            pool_state,
-            &mut liquidity,
-            amount_0_max,
-            amount_1_max,
-            tick_lower_index,
-            tick_upper_index,
-            base_flag,
-        )?;
-
-        personal_position.initialize(
-            personal_position_bump,
-            position_nft_mint.key(),
-            pool_state_loader.key(),
-            tick_lower_index,
-            tick_upper_index,
-            liquidity,
-            fee_growth_inside_0_x64,
-            fee_growth_inside_1_x64,
-            reward_growths_inside,
-            0,
-        )?;
-    }
-
-    // mint_nft_and_remove_mint_authority(
-    //     payer,
-    //     pool_state_loader,
-    //     personal_position,
-    //     position_nft_mint,
-    //     position_nft_account,
-    //     metadata_account,
-    //     metadata_program,
-    //     token_program,
-    //     token_program_2022,
-    //     system_program,
-    //     rent,
-    //     with_metadata,
-    //     use_metadata_extension,
-    // )
+    personal_position.initialize(
+        personal_position_bump,
+        position_nft_mint.key(),
+        pool_state_loader.key(),
+        tick_lower_index,
+        tick_upper_index,
+        liquidity,
+        fee_growth_inside_0_x64,
+        fee_growth_inside_1_x64,
+        reward_growths_inside,
+        0,
+    )?;
 
     Ok(())
 }
@@ -354,111 +306,20 @@ pub fn add_liquidity<'b, 'c: 'info, 'info>(
             // when establishing a new position , liquidity allows for further additions
             return Ok(LiquidityChangeResult::default());
         }
-
-        // if base_flag.unwrap() {
-        //     // must deduct transfer fee before calculate liquidity
-        //     // because only v2 instruction support token_2022, vault_0_mint must be exist
-        //     let amount_0_transfer_fee =
-        //         get_transfer_fee(vault_0_mint.clone().unwrap(), amount_0_max).unwrap();
-        //     *liquidity = liquidity_math::get_liquidity_from_single_amount_0(
-        //         pool_state.sqrt_price_x64,
-        //         tick_math::get_sqrt_price_at_tick(tick_lower_index)?,
-        //         tick_math::get_sqrt_price_at_tick(tick_upper_index)?,
-        //         amount_0_max.checked_sub(amount_0_transfer_fee).unwrap(),
-        //     );
-
-        // } else {
-        //     // must deduct transfer fee before calculate liquidity
-        //     // because only v2 instruction support token_2022, vault_1_mint must be exist
-        //     let amount_1_transfer_fee =
-        //         get_transfer_fee(vault_1_mint.clone().unwrap(), amount_1_max).unwrap();
-        //     *liquidity = liquidity_math::get_liquidity_from_single_amount_1(
-        //         pool_state.sqrt_price_x64,
-        //         tick_math::get_sqrt_price_at_tick(tick_lower_index)?,
-        //         tick_math::get_sqrt_price_at_tick(tick_upper_index)?,
-        //         amount_1_max.checked_sub(amount_1_transfer_fee).unwrap(),
-        //     );
-
-        // }
     }
     assert!(*liquidity > 0);
-    // let liquidity_before = pool_state.liquidity;
-    // require_keys_eq!(tick_array_lower_loader.load()?.pool_id, pool_state.key());
-    // require_keys_eq!(tick_array_upper_loader.load()?.pool_id, pool_state.key());
 
-    // get tick_state
-    // let mut tick_lower_state = *tick_array_lower_loader
-    //     .load_mut()?
-    //     .get_tick_state_mut(tick_lower_index, pool_state.tick_spacing)?;
-    // let mut tick_upper_state = *tick_array_upper_loader
-    //     .load_mut()?
-    //     .get_tick_state_mut(tick_upper_index, pool_state.tick_spacing)?;
-    // If the tickState is not initialized, assign a value to tickState.tick here
-    // if tick_lower_state.tick == 0 {
-    //     tick_lower_state.tick = tick_lower_index;
-    // }
-    // if tick_upper_state.tick == 0 {
-    //     tick_upper_state.tick = tick_upper_index;
-    // }
-    // let clock = Clock::get()?;
     let result = LiquidityChangeResult::default();
-
-    // // update tick_state
-    // tick_array_lower_loader.load_mut()?.update_tick_state(
-    //     tick_lower_index,
-    //     pool_state.tick_spacing,
-    //     tick_lower_state,
-    // )?;
-    // tick_array_upper_loader.load_mut()?.update_tick_state(
-    //     tick_upper_index,
-    //     pool_state.tick_spacing,
-    //     tick_upper_state,
-    // )?;
-
-    // if result.tick_lower_flipped {
-    //     let mut tick_array_lower = tick_array_lower_loader.load_mut()?;
-    //     let before_init_tick_count = tick_array_lower.initialized_tick_count;
-    //     tick_array_lower.update_initialized_tick_count(true)?;
-
-    //     if before_init_tick_count == 0 {
-    //         pool_state.flip_tick_array_bit(
-    //             tick_array_bitmap_extension,
-    //             tick_array_lower.start_tick_index,
-    //         )?;
-    //     }
-    // }
-    // if result.tick_upper_flipped {
-    //     let mut tick_array_upper = tick_array_upper_loader.load_mut()?;
-    //     let before_init_tick_count = tick_array_upper.initialized_tick_count;
-    //     tick_array_upper.update_initialized_tick_count(true)?;
-
-    //     if before_init_tick_count == 0 {
-    //         pool_state.flip_tick_array_bit(
-    //             tick_array_bitmap_extension,
-    //             tick_array_upper.start_tick_index,
-    //         )?;
-    //     }
-    // }
 
     let amount_0 = result.amount_0;
     let amount_1 = result.amount_1;
-    require!(
-        amount_0 > 0 || amount_1 > 0,
-        ErrorCode::ForbidBothZeroForSupplyLiquidity
-    );
+    // require!(
+    //     amount_0 > 0 || amount_1 > 0,
+    //     ErrorCode::ForbidBothZeroForSupplyLiquidity
+    // );
 
     let amount_0_transfer_fee = 0;
     let amount_1_transfer_fee = 0;
-    // if vault_0_mint.is_some() {
-    //     amount_0_transfer_fee =
-    //         get_transfer_inverse_fee(vault_0_mint.clone().unwrap(), amount_0).unwrap();
-    //     result.amount_0_transfer_fee = amount_0_transfer_fee;
-    // };
-    // if vault_1_mint.is_some() {
-    //     amount_1_transfer_fee =
-    //         get_transfer_inverse_fee(vault_1_mint.clone().unwrap(), amount_1).unwrap();
-    //     result.amount_1_transfer_fee = amount_1_transfer_fee;
-    // }
 
     require_gte!(
         amount_0_max,
