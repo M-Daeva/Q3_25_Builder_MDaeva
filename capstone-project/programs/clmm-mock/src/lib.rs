@@ -10,7 +10,7 @@ use {
     anchor_lang::prelude::*,
     instructions::{
         create_amm_config::*, create_operation_account::*, create_pool::*, create_pool_new::*,
-        swap_v2::*,
+        open_position_with_token22_nft::*, swap_v2::*,
     },
     raydium_clmm_cpi::states::FEE_RATE_DENOMINATOR_VALUE,
 };
@@ -62,6 +62,32 @@ pub mod clmm_mock {
         amount_b: u64,
     ) -> Result<()> {
         ctx.accounts.create_pool_new(ctx.bumps, amount_a, amount_b)
+    }
+
+    pub fn open_position_with_token22_nft<'a, 'b, 'c: 'info, 'info>(
+        ctx: Context<'a, 'b, 'c, 'info, OpenPositionWithToken22Nft<'info>>,
+        tick_lower_index: i32,
+        tick_upper_index: i32,
+        tick_array_lower_start_index: i32,
+        tick_array_upper_start_index: i32,
+        liquidity: u128,
+        amount_0_max: u64,
+        amount_1_max: u64,
+        with_metadata: bool,
+        base_flag: Option<bool>,
+    ) -> Result<()> {
+        instructions::open_position_with_token22_nft(
+            ctx,
+            liquidity,
+            amount_0_max,
+            amount_1_max,
+            tick_lower_index,
+            tick_upper_index,
+            tick_array_lower_start_index,
+            tick_array_upper_start_index,
+            with_metadata,
+            base_flag,
+        )
     }
 
     pub fn swap_v2(

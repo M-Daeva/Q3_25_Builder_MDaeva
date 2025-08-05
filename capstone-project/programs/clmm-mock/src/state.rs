@@ -1,6 +1,8 @@
 use {
-    anchor_lang::prelude::*, anchor_spl::token_interface::Mint,
-    raydium_clmm_cpi::states::AmmConfig, std::collections::HashSet,
+    anchor_lang::prelude::*,
+    anchor_spl::token_interface::Mint,
+    raydium_clmm_cpi::states::{AmmConfig, POSITION_SEED},
+    std::collections::HashSet,
 };
 
 pub const SEED_POOL_CONFIG: &str = "pool_config";
@@ -658,4 +660,96 @@ pub fn block_timestamp_mock() -> u64 {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_secs()
+}
+
+#[account]
+#[derive(Default, Debug)]
+pub struct PersonalPositionState {
+    /// Bump to identify PDA
+    pub bump: [u8; 1],
+
+    /// Mint address of the tokenized position
+    pub nft_mint: Pubkey,
+
+    /// The ID of the pool with which this token is connected
+    pub pool_id: Pubkey,
+
+    /// The lower bound tick of the position
+    pub tick_lower_index: i32,
+
+    /// The upper bound tick of the position
+    pub tick_upper_index: i32,
+
+    /// The amount of liquidity owned by this position
+    pub liquidity: u128,
+
+    /// The token_0 fee growth of the aggregate position as of the last action on the individual position
+    pub fee_growth_inside_0_last_x64: u128,
+
+    /// The token_1 fee growth of the aggregate position as of the last action on the individual position
+    pub fee_growth_inside_1_last_x64: u128,
+
+    /// The fees owed to the position owner in token_0, as of the last computation
+    pub token_fees_owed_0: u64,
+
+    /// The fees owed to the position owner in token_1, as of the last computation
+    pub token_fees_owed_1: u64,
+
+    // Position reward info
+    pub reward_infos: [PositionRewardInfo; REWARD_NUM],
+    // account update recent epoch
+    pub recent_epoch: u64,
+    // Unused bytes for future upgrades.
+    pub padding: [u64; 7],
+}
+
+impl PersonalPositionState {
+    pub const LEN: usize =
+        8 + 1 + 32 + 32 + 4 + 4 + 16 + 16 + 16 + 8 + 8 + PositionRewardInfo::LEN * REWARD_NUM + 64;
+
+    pub fn seeds(&self) -> [&[u8]; 3] {
+        [
+            &POSITION_SEED.as_bytes(),
+            self.nft_mint.as_ref(),
+            self.bump.as_ref(),
+        ]
+    }
+
+    pub fn initialize(
+        &mut self,
+        bump: u8,
+        nft_mint: Pubkey,
+        pool_id: Pubkey,
+        tick_lower_index: i32,
+        tick_upper_index: i32,
+        liquidity: u128,
+        fee_growth_inside_0_x64: u128,
+        fee_growth_inside_1_x64: u128,
+        _reward_growths_inside: [u128; REWARD_NUM],
+        _recent_epoch: u64,
+    ) -> Result<()> {
+        self.bump = [bump];
+        self.nft_mint = nft_mint;
+        self.pool_id = pool_id;
+        self.tick_lower_index = tick_lower_index;
+        self.tick_upper_index = tick_upper_index;
+        self.fee_growth_inside_0_last_x64 = fee_growth_inside_0_x64;
+        self.fee_growth_inside_1_last_x64 = fee_growth_inside_1_x64;
+        self.token_fees_owed_0 = 0;
+        self.token_fees_owed_1 = 0;
+        self.liquidity = liquidity;
+        self.padding = [0; 7];
+        Ok(())
+    }
+}
+
+#[derive(Copy, Clone, AnchorSerialize, AnchorDeserialize, Default, Debug, PartialEq)]
+pub struct PositionRewardInfo {
+    // Q64.64
+    pub growth_inside_last_x64: u128,
+    pub reward_amount_owed: u64,
+}
+
+impl PositionRewardInfo {
+    pub const LEN: usize = 16 + 8;
 }

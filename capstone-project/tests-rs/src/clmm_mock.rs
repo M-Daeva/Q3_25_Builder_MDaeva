@@ -48,13 +48,27 @@ fn swap_default() -> Result<()> {
         &token_mint_0,
         &token_mint_1,
     )?;
-    let pool_state = app.clmm_query_pool_state(
+    let _pool_state = app.clmm_query_pool_state(
         &app.pda.clmm_amm_config(AMM_CONFIG_INDEX),
         &token_mint_0,
         &token_mint_1,
     )?;
 
-    println!("{:#?}", pool_state);
+    app.clmm_mock_try_open_position(
+        AppUser::Alice,
+        -1000,         // Lower price boundary
+        1000,          // Upper price boundary
+        -1024,         // Tick array containing lower tick
+        0,             // Tick array containing upper tick
+        1_000_000_000, // 1B units of liquidity
+        1_000_000,     // Max 1 USDC (6 decimals)
+        100_000_000,   // Max 0.1 SOL (9 decimals)
+        true,          // Create NFT with metadata
+        None,          // Use exact liquidity amount
+        AMM_CONFIG_INDEX,
+        &token_mint_0,
+        &token_mint_1,
+    )?;
 
     // let token_info_list = sort_token_info_list(
     //     &app,

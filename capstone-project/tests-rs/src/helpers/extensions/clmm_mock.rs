@@ -2,17 +2,19 @@ use {
     crate::helpers::suite::{
         core::{
             extension::{get_data, get_data_zero_copy, send_tx_with_ix},
-            token::WithTokenKeys,
             App, ProgramId,
         },
         decimal::{u128_to_dec, Decimal},
-        types::{AppToken, AppUser},
+        types::AppUser,
     },
     anchor_lang::Result,
     clmm_mock::{accounts, instruction, instructions::sort_token_mints, state},
     litesvm::types::TransactionMetadata,
     raydium_clmm_cpi,
+    solana_keypair::Keypair,
     solana_pubkey::Pubkey,
+    solana_signer::Signer,
+    spl_associated_token_account::get_associated_token_address,
 };
 
 pub trait ClmmMockExtension {
@@ -47,6 +49,23 @@ pub trait ClmmMockExtension {
     //     amount_and_token_a: (u64, AppToken),
     //     amount_and_token_b: (u64, AppToken),
     // ) -> Result<TransactionMetadata>;
+
+    fn clmm_mock_try_open_position(
+        &mut self,
+        sender: AppUser,
+        tick_lower_index: i32,
+        tick_upper_index: i32,
+        tick_array_lower_start_index: i32,
+        tick_array_upper_start_index: i32,
+        liquidity: u128,
+        amount_0_max: u64,
+        amount_1_max: u64,
+        with_metadata: bool,
+        base_flag: Option<bool>,
+        amm_config_index: u16,
+        token_mint_0: &Pubkey,
+        token_mint_1: &Pubkey,
+    ) -> Result<TransactionMetadata>;
 
     fn clmm_mock_query_operation_account(&self) -> Result<state::OperationState>;
 
@@ -283,6 +302,114 @@ impl ClmmMockExtension for App {
     //         &signers,
     //     )
     // }
+
+    fn clmm_mock_try_open_position(
+        &mut self,
+        sender: AppUser,
+        tick_lower_index: i32,
+        tick_upper_index: i32,
+        tick_array_lower_start_index: i32,
+        tick_array_upper_start_index: i32,
+        liquidity: u128,
+        amount_0_max: u64,
+        amount_1_max: u64,
+        with_metadata: bool,
+        base_flag: Option<bool>,
+        amm_config_index: u16,
+        token_mint_0: &Pubkey,
+        token_mint_1: &Pubkey,
+    ) -> Result<TransactionMetadata> {
+        // programs
+        let ProgramId {
+            system_program,
+            token_program_2022,
+            token_program,
+            associated_token_program,
+            rent,
+            clmm_mock: program_id,
+            ..
+        } = self.program_id;
+
+        // signers
+        let payer = sender.pubkey();
+
+        // generate new keypair for position NFT mint
+        let position_nft_mint_keypair = Keypair::new();
+        let position_nft_mint = position_nft_mint_keypair.pubkey();
+
+        // include position_nft_mint in signers
+        let signers = [sender.keypair(), position_nft_mint_keypair];
+
+        // mint addresses
+        let (token_mint_0, token_mint_1) = (*token_mint_0, *token_mint_1);
+
+        // pda
+        let amm_config = self.pda.clmm_mock_amm_config(amm_config_index);
+        let pool_state = self
+            .pda
+            .clmm_mock_pool_state(amm_config, token_mint_0, token_mint_1);
+        let token_vault_0 = self.pda.clmm_mock_token_vault_0(pool_state, token_mint_0);
+        let token_vault_1 = self.pda.clmm_mock_token_vault_1(pool_state, token_mint_1);
+
+        let tick_array_lower = self
+            .pda
+            .clmm_mock_tick_array_lower(pool_state, tick_array_lower_start_index);
+        let tick_array_upper = self
+            .pda
+            .clmm_mock_tick_array_upper(pool_state, tick_array_upper_start_index);
+
+        let personal_position = self.pda.clmm_mock_personal_position(position_nft_mint);
+
+        // ata
+        // position_nft_account will be created during instruction execution
+        let position_nft_account = get_associated_token_address(&payer, &position_nft_mint);
+        let token_account_0 = self.get_or_create_ata(sender, &payer, &token_mint_0)?;
+        let token_account_1 = self.get_or_create_ata(sender, &payer, &token_mint_1)?;
+
+        let accounts = accounts::OpenPositionWithToken22Nft {
+            payer,
+            position_nft_owner: payer,
+            position_nft_mint,
+            position_nft_account,
+            pool_state,
+            protocol_position: Pubkey::default(), // deprecated field
+            tick_array_lower,
+            tick_array_upper,
+            personal_position,
+            token_account_0,
+            token_account_1,
+            token_vault_0,
+            token_vault_1,
+            rent,
+            system_program,
+            token_program,
+            associated_token_program,
+            token_program_2022,
+            vault_0_mint: token_mint_0,
+            vault_1_mint: token_mint_1,
+        };
+
+        let instruction_data = instruction::OpenPositionWithToken22Nft {
+            tick_lower_index,
+            tick_upper_index,
+            tick_array_lower_start_index,
+            tick_array_upper_start_index,
+            liquidity,
+            amount_0_max,
+            amount_1_max,
+            with_metadata,
+            base_flag,
+        };
+
+        send_tx_with_ix(
+            self,
+            &program_id,
+            &accounts,
+            &instruction_data,
+            &payer,
+            &signers,
+        )
+    }
 
     fn clmm_mock_query_operation_account(&self) -> Result<state::OperationState> {
         get_data_zero_copy(&self.litesvm, &self.pda.clmm_mock_operation_account())

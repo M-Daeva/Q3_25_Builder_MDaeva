@@ -834,6 +834,259 @@
       ]
     },
     {
+      "name": "open_position_with_token22_nft",
+      "discriminator": [
+        77,
+        255,
+        174,
+        82,
+        125,
+        29,
+        201,
+        46
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "Pays to mint the position"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "position_nft_owner"
+        },
+        {
+          "name": "position_nft_mint",
+          "docs": [
+            "Unique token mint address, initialize in contract"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "position_nft_account",
+          "writable": true
+        },
+        {
+          "name": "pool_state",
+          "docs": [
+            "Add liquidity for this pool"
+          ],
+          "writable": true
+        },
+        {
+          "name": "protocol_position"
+        },
+        {
+          "name": "tick_array_lower",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  105,
+                  99,
+                  107,
+                  95,
+                  97,
+                  114,
+                  114,
+                  97,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool_state"
+              },
+              {
+                "kind": "arg",
+                "path": "tick_array_lower_start_index"
+              }
+            ]
+          }
+        },
+        {
+          "name": "tick_array_upper",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  105,
+                  99,
+                  107,
+                  95,
+                  97,
+                  114,
+                  114,
+                  97,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool_state"
+              },
+              {
+                "kind": "arg",
+                "path": "tick_array_upper_start_index"
+              }
+            ]
+          }
+        },
+        {
+          "name": "personal_position",
+          "docs": [
+            "personal position state"
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  115,
+                  105,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "position_nft_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_account_0",
+          "docs": [
+            "The token_0 account deposit token to the pool"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_account_1",
+          "docs": [
+            "The token_1 account deposit token to the pool"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_vault_0",
+          "docs": [
+            "The address that holds pool tokens for token_0"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_vault_1",
+          "docs": [
+            "The address that holds pool tokens for token_1"
+          ],
+          "writable": true
+        },
+        {
+          "name": "rent",
+          "docs": [
+            "Sysvar for token mint and ATA creation"
+          ],
+          "address": "SysvarRent111111111111111111111111111111111"
+        },
+        {
+          "name": "system_program",
+          "docs": [
+            "Program to create the position manager state account"
+          ],
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "Program to transfer for token account"
+          ],
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "associated_token_program",
+          "docs": [
+            "Program to create an ATA for receiving position NFT"
+          ],
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "token_program_2022",
+          "docs": [
+            "Program to create NFT mint/token account and transfer for token22 account"
+          ],
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "vault_0_mint",
+          "docs": [
+            "The mint of token vault 0"
+          ]
+        },
+        {
+          "name": "vault_1_mint",
+          "docs": [
+            "The mint of token vault 1"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "tick_lower_index",
+          "type": "i32"
+        },
+        {
+          "name": "tick_upper_index",
+          "type": "i32"
+        },
+        {
+          "name": "tick_array_lower_start_index",
+          "type": "i32"
+        },
+        {
+          "name": "tick_array_upper_start_index",
+          "type": "i32"
+        },
+        {
+          "name": "liquidity",
+          "type": "u128"
+        },
+        {
+          "name": "amount_0_max",
+          "type": "u64"
+        },
+        {
+          "name": "amount_1_max",
+          "type": "u64"
+        },
+        {
+          "name": "with_metadata",
+          "type": "bool"
+        },
+        {
+          "name": "base_flag",
+          "type": {
+            "option": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "swap_v2",
       "discriminator": [
         43,
@@ -993,6 +1246,19 @@
         222,
         183,
         252
+      ]
+    },
+    {
+      "name": "PersonalPositionState",
+      "discriminator": [
+        70,
+        111,
+        150,
+        126,
+        230,
+        15,
+        25,
+        117
       ]
     },
     {
@@ -1649,6 +1915,115 @@
       }
     },
     {
+      "name": "PersonalPositionState",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bump",
+            "docs": [
+              "Bump to identify PDA"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                1
+              ]
+            }
+          },
+          {
+            "name": "nft_mint",
+            "docs": [
+              "Mint address of the tokenized position"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "pool_id",
+            "docs": [
+              "The ID of the pool with which this token is connected"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "tick_lower_index",
+            "docs": [
+              "The lower bound tick of the position"
+            ],
+            "type": "i32"
+          },
+          {
+            "name": "tick_upper_index",
+            "docs": [
+              "The upper bound tick of the position"
+            ],
+            "type": "i32"
+          },
+          {
+            "name": "liquidity",
+            "docs": [
+              "The amount of liquidity owned by this position"
+            ],
+            "type": "u128"
+          },
+          {
+            "name": "fee_growth_inside_0_last_x64",
+            "docs": [
+              "The token_0 fee growth of the aggregate position as of the last action on the individual position"
+            ],
+            "type": "u128"
+          },
+          {
+            "name": "fee_growth_inside_1_last_x64",
+            "docs": [
+              "The token_1 fee growth of the aggregate position as of the last action on the individual position"
+            ],
+            "type": "u128"
+          },
+          {
+            "name": "token_fees_owed_0",
+            "docs": [
+              "The fees owed to the position owner in token_0, as of the last computation"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "token_fees_owed_1",
+            "docs": [
+              "The fees owed to the position owner in token_1, as of the last computation"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "reward_infos",
+            "type": {
+              "array": [
+                {
+                  "defined": {
+                    "name": "PositionRewardInfo"
+                  }
+                },
+                3
+              ]
+            }
+          },
+          {
+            "name": "recent_epoch",
+            "type": "u64"
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u64",
+                7
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "PoolConfig",
       "type": {
         "kind": "struct",
@@ -2002,6 +2377,22 @@
                 32
               ]
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "PositionRewardInfo",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "growth_inside_last_x64",
+            "type": "u128"
+          },
+          {
+            "name": "reward_amount_owed",
+            "type": "u64"
           }
         ]
       }

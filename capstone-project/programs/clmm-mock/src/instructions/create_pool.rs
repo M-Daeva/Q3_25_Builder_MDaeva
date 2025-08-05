@@ -9,6 +9,7 @@ use {
         AmmConfig, OBSERVATION_SEED, POOL_SEED, POOL_TICK_ARRAY_BITMAP_SEED, POOL_VAULT_SEED,
     },
 };
+
 #[derive(Accounts)]
 pub struct CreatePool<'info> {
     /// Address paying to create the pool. Can be anyone
