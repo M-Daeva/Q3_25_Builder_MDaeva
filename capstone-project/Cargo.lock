@@ -785,6 +785,7 @@ dependencies = [
  "anchor-lang",
  "anchor-spl",
  "base",
+ "raydium-clmm-cpi",
 ]
 
 [[package]]

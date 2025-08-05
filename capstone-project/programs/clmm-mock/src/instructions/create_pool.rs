@@ -1,5 +1,5 @@
 use {
-    crate::state::{PoolState, SEED_POOL_STATE},
+    crate::state::{PoolConfig, SEED_POOL_CONFIG},
     anchor_lang::prelude::*,
     anchor_spl::{
         associated_token::AssociatedToken,
@@ -8,8 +8,15 @@ use {
     base::helpers::{get_space, transfer_token_from_user},
 };
 
+pub fn sort_token_mints(mint_a: &Pubkey, mint_b: &Pubkey) -> (Pubkey, Pubkey) {
+    if mint_a < mint_b {
+        (*mint_a, *mint_b)
+    } else {
+        (*mint_b, *mint_a)
+    }
+}
+
 #[derive(Accounts)]
-#[instruction(id: u8)]
 pub struct CreatePool<'info> {
     pub system_program: Program<'info, System>,
     pub token_program: Interface<'info, TokenInterface>,
@@ -23,11 +30,12 @@ pub struct CreatePool<'info> {
     #[account(
         init,
         payer = sender,
-        space = get_space(PoolState::INIT_SPACE),
-        seeds = [SEED_POOL_STATE.as_bytes(), id.to_le_bytes().as_ref()],
+        space = get_space(PoolConfig::INIT_SPACE),
+        // mints must be sorted
+        seeds = [SEED_POOL_CONFIG.as_bytes(), mint_a.key().to_bytes().as_ref(), mint_b.key().to_bytes().as_ref()],
         bump
     )]
-    pub pool_state: Account<'info, PoolState>,
+    pub pool_config: Account<'info, PoolConfig>,
 
     // mint
     //
@@ -54,7 +62,7 @@ pub struct CreatePool<'info> {
         init_if_needed,
         payer = sender,
         associated_token::mint = mint_a,
-        associated_token::authority = pool_state,
+        associated_token::authority = pool_config,
     )]
     pub app_a_ata: InterfaceAccount<'info, TokenAccount>,
 
@@ -62,17 +70,22 @@ pub struct CreatePool<'info> {
         init_if_needed,
         payer = sender,
         associated_token::mint = mint_b,
-        associated_token::authority = pool_state,
+        associated_token::authority = pool_config,
     )]
     pub app_b_ata: InterfaceAccount<'info, TokenAccount>,
 }
 
 impl<'info> CreatePool<'info> {
-    pub fn create_pool(&mut self, id: u8, amount_a: u64, amount_b: u64) -> Result<()> {
+    pub fn create_pool(
+        &mut self,
+        bumps: CreatePoolBumps,
+        amount_a: u64,
+        amount_b: u64,
+    ) -> Result<()> {
         let CreatePool {
             token_program,
             sender,
-            pool_state,
+            pool_config,
             mint_a,
             mint_b,
             sender_a_ata,
@@ -82,18 +95,12 @@ impl<'info> CreatePool<'info> {
             ..
         } = self;
 
-        // price_ratio = amount_b / amount_a (scaled by 1e9 for precision)
-        let price_ratio = if amount_a > 0 {
-            (amount_b as u128 * 1_000_000_000) / amount_a as u128
-        } else {
-            0
-        };
-
-        pool_state.set_inner(PoolState {
-            id,
+        pool_config.set_inner(PoolConfig {
+            bump: bumps.pool_config,
             mint_a: mint_a.key(),
             mint_b: mint_b.key(),
-            price_ratio,
+            amount_a,
+            amount_b,
         });
 
         for (amount, mint, from, to) in [

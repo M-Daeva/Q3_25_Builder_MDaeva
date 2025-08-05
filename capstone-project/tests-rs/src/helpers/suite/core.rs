@@ -90,6 +90,128 @@ pub struct Pda {
 }
 
 impl Pda {
+    // clmm-mock
+    //
+    pub fn clmm_mock_amm_config(&self, index: u16) -> Pubkey {
+        get_pda_and_bump(
+            &seeds![
+                raydium_amm_v3::states::AMM_CONFIG_SEED,
+                index.to_be_bytes().as_ref()
+            ],
+            &self.clmm_mock_program_id,
+        )
+        .0
+    }
+
+    pub fn clmm_mock_operation_account(&self) -> Pubkey {
+        get_pda_and_bump(
+            &seeds![raydium_amm_v3::states::OPERATION_SEED],
+            &self.clmm_mock_program_id,
+        )
+        .0
+    }
+
+    pub fn clmm_mock_pool_state(
+        &self,
+        amm_config: Pubkey,
+        token_mint_0: Pubkey,
+        token_mint_1: Pubkey,
+    ) -> Pubkey {
+        get_pda_and_bump(
+            &seeds![
+                raydium_amm_v3::states::POOL_SEED,
+                amm_config,
+                token_mint_0,
+                token_mint_1
+            ],
+            &self.clmm_mock_program_id,
+        )
+        .0
+    }
+
+    pub fn clmm_mock_token_vault_0(&self, pool_state: Pubkey, token_mint_0: Pubkey) -> Pubkey {
+        get_pda_and_bump(
+            &seeds![
+                raydium_amm_v3::states::POOL_VAULT_SEED,
+                pool_state,
+                token_mint_0
+            ],
+            &self.clmm_mock_program_id,
+        )
+        .0
+    }
+
+    pub fn clmm_mock_token_vault_1(&self, pool_state: Pubkey, token_mint_1: Pubkey) -> Pubkey {
+        get_pda_and_bump(
+            &seeds![
+                raydium_amm_v3::states::POOL_VAULT_SEED,
+                pool_state,
+                token_mint_1
+            ],
+            &self.clmm_mock_program_id,
+        )
+        .0
+    }
+
+    pub fn clmm_mock_observation_state(&self, pool_state: Pubkey) -> Pubkey {
+        get_pda_and_bump(
+            &seeds![raydium_amm_v3::states::OBSERVATION_SEED, pool_state,],
+            &self.clmm_mock_program_id,
+        )
+        .0
+    }
+
+    pub fn clmm_mock_tick_array_bitmap(&self, pool_state: Pubkey) -> Pubkey {
+        get_pda_and_bump(
+            &seeds![
+                raydium_amm_v3::states::POOL_TICK_ARRAY_BITMAP_SEED,
+                pool_state,
+            ],
+            &self.clmm_mock_program_id,
+        )
+        .0
+    }
+
+    pub fn clmm_mock_tick_array_lower(
+        &self,
+        pool_state: Pubkey,
+        tick_array_lower_start_index: i32,
+    ) -> Pubkey {
+        get_pda_and_bump(
+            &seeds![
+                raydium_amm_v3::states::TICK_ARRAY_SEED,
+                pool_state,
+                tick_array_lower_start_index.to_be_bytes().as_ref()
+            ],
+            &self.clmm_mock_program_id,
+        )
+        .0
+    }
+
+    pub fn clmm_mock_tick_array_upper(
+        &self,
+        pool_state: Pubkey,
+        tick_array_upper_start_index: i32,
+    ) -> Pubkey {
+        get_pda_and_bump(
+            &seeds![
+                raydium_amm_v3::states::TICK_ARRAY_SEED,
+                pool_state,
+                tick_array_upper_start_index.to_be_bytes().as_ref()
+            ],
+            &self.clmm_mock_program_id,
+        )
+        .0
+    }
+
+    pub fn clmm_mock_personal_position(&self, position_nft_mint: Pubkey) -> Pubkey {
+        get_pda_and_bump(
+            &seeds![raydium_amm_v3::states::POSITION_SEED, position_nft_mint],
+            &self.clmm_mock_program_id,
+        )
+        .0
+    }
+
     // clmm
     //
     pub fn clmm_amm_config(&self, index: u16) -> Pubkey {
@@ -302,9 +424,13 @@ impl Pda {
         .0
     }
 
-    pub fn clmm_mock_pool_state(&self, id: u8) -> Pubkey {
+    pub fn clmm_mock_pool_config(&self, mint_a: &Pubkey, mint_b: &Pubkey) -> Pubkey {
         get_pda_and_bump(
-            &seeds![clmm_mock::state::SEED_POOL_STATE, id.to_le_bytes().as_ref()],
+            &seeds![
+                clmm_mock::state::SEED_POOL_CONFIG,
+                mint_a.to_bytes().as_ref(),
+                mint_b.to_bytes().as_ref()
+            ],
             &self.clmm_mock_program_id,
         )
         .0
