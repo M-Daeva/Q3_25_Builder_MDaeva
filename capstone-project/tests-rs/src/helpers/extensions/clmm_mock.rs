@@ -10,6 +10,7 @@ use {
     anchor_lang::Result,
     clmm_mock::{accounts, instruction, instructions::sort_token_mints, state},
     litesvm::types::TransactionMetadata,
+    raydium_clmm_cpi,
     solana_pubkey::Pubkey,
 };
 
@@ -17,6 +18,16 @@ pub trait ClmmMockExtension {
     fn clmm_mock_try_create_operation_account(
         &mut self,
         sender: AppUser,
+    ) -> Result<TransactionMetadata>;
+
+    fn clmm_mock_try_create_amm_config(
+        &mut self,
+        sender: AppUser,
+        index: u16,
+        tick_spacing: u16,
+        trade_fee_rate: u32,
+        protocol_fee_rate: u32,
+        fund_fee_rate: u32,
     ) -> Result<TransactionMetadata>;
 
     fn clmm_mock_try_create_pool(
@@ -27,6 +38,9 @@ pub trait ClmmMockExtension {
     ) -> Result<TransactionMetadata>;
 
     fn clmm_mock_query_operation_account(&self) -> Result<state::OperationState>;
+
+    fn clmm_mock_query_amm_config(&self, index: u16)
+        -> Result<raydium_clmm_cpi::states::AmmConfig>;
 
     fn clmm_mock_query_pool_state(
         &self,
@@ -61,6 +75,53 @@ impl ClmmMockExtension for App {
         };
 
         let instruction_data = instruction::CreateOperationAccount {};
+
+        send_tx_with_ix(
+            self,
+            &program_id,
+            &accounts,
+            &instruction_data,
+            &payer,
+            &signers,
+        )
+    }
+
+    fn clmm_mock_try_create_amm_config(
+        &mut self,
+        sender: AppUser,
+        index: u16,
+        tick_spacing: u16,
+        trade_fee_rate: u32,
+        protocol_fee_rate: u32,
+        fund_fee_rate: u32,
+    ) -> Result<TransactionMetadata> {
+        // programs
+        let ProgramId {
+            system_program,
+            clmm_mock: program_id,
+            ..
+        } = self.program_id;
+
+        // signers
+        let payer = sender.pubkey();
+        let signers = [sender.keypair()];
+
+        // pda
+        let amm_config = self.pda.clmm_mock_amm_config(index);
+
+        let accounts = accounts::CreateAmmConfig {
+            owner: payer,
+            amm_config,
+            system_program,
+        };
+
+        let instruction_data = instruction::CreateAmmConfig {
+            index,
+            tick_spacing,
+            trade_fee_rate,
+            protocol_fee_rate,
+            fund_fee_rate,
+        };
 
         send_tx_with_ix(
             self,
@@ -141,6 +202,13 @@ impl ClmmMockExtension for App {
 
     fn clmm_mock_query_operation_account(&self) -> Result<state::OperationState> {
         get_data_zero_copy(&self.litesvm, &self.pda.clmm_mock_operation_account())
+    }
+
+    fn clmm_mock_query_amm_config(
+        &self,
+        index: u16,
+    ) -> Result<raydium_clmm_cpi::states::AmmConfig> {
+        get_data(&self.litesvm, &self.pda.clmm_mock_amm_config(index))
     }
 
     fn clmm_mock_query_pool_state(

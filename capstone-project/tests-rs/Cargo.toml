@@ -39,6 +39,7 @@ spl-associated-token-account = { workspace = true }
 spl-token = { workspace = true }
 solana-kite = { workspace = true }
 
+raydium-clmm-cpi = { workspace = true }
 raydium-amm-v3 = { workspace = true, features = ["cpi"] }
 
 base = { workspace = true }

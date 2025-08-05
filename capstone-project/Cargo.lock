@@ -5227,6 +5227,7 @@ dependencies = [
  "litesvm",
  "pretty_assertions",
  "raydium-amm-v3",
+ "raydium-clmm-cpi",
  "registry",
  "serde_json",
  "solana-account",

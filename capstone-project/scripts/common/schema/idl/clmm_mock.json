@@ -9,6 +9,85 @@
   },
   "instructions": [
     {
+      "name": "create_amm_config",
+      "discriminator": [
+        137,
+        52,
+        237,
+        212,
+        215,
+        117,
+        108,
+        104
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "docs": [
+            "Address to be set as protocol owner."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "amm_config",
+          "docs": [
+            "Initialize config state account to store protocol owner address and fee rates."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  109,
+                  109,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "index"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u16"
+        },
+        {
+          "name": "tick_spacing",
+          "type": "u16"
+        },
+        {
+          "name": "trade_fee_rate",
+          "type": "u32"
+        },
+        {
+          "name": "protocol_fee_rate",
+          "type": "u32"
+        },
+        {
+          "name": "fund_fee_rate",
+          "type": "u32"
+        }
+      ]
+    },
+    {
       "name": "create_operation_account",
       "discriminator": [
         63,

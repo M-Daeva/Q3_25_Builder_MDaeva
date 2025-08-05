@@ -7,7 +7,8 @@ pub mod state;
 
 use {
     anchor_lang::prelude::*,
-    instructions::{create_operation_account::*, create_pool::*, swap_v2::*},
+    instructions::{create_amm_config::*, create_operation_account::*, create_pool::*, swap_v2::*},
+    raydium_clmm_cpi::states::FEE_RATE_DENOMINATOR_VALUE,
 };
 
 declare_id!("AyzvQE5M1Xqs4YQxP4Sf6giH82X4bKFUF3oVv7DTkoD4");
@@ -18,6 +19,28 @@ pub mod clmm_mock {
 
     pub fn create_operation_account(ctx: Context<CreateOperationAccount>) -> Result<()> {
         instructions::create_operation_account(ctx)
+    }
+
+    pub fn create_amm_config(
+        ctx: Context<CreateAmmConfig>,
+        index: u16,
+        tick_spacing: u16,
+        trade_fee_rate: u32,
+        protocol_fee_rate: u32,
+        fund_fee_rate: u32,
+    ) -> Result<()> {
+        assert!(trade_fee_rate < FEE_RATE_DENOMINATOR_VALUE);
+        assert!(protocol_fee_rate <= FEE_RATE_DENOMINATOR_VALUE);
+        assert!(fund_fee_rate <= FEE_RATE_DENOMINATOR_VALUE);
+        assert!(fund_fee_rate + protocol_fee_rate <= FEE_RATE_DENOMINATOR_VALUE);
+        instructions::create_amm_config(
+            ctx,
+            index,
+            tick_spacing,
+            trade_fee_rate,
+            protocol_fee_rate,
+            fund_fee_rate,
+        )
     }
 
     pub fn create_pool(ctx: Context<CreatePool>, amount_a: u64, amount_b: u64) -> Result<()> {

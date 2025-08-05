@@ -15,6 +15,85 @@ export type ClmmMock = {
   },
   "instructions": [
     {
+      "name": "createAmmConfig",
+      "discriminator": [
+        137,
+        52,
+        237,
+        212,
+        215,
+        117,
+        108,
+        104
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "docs": [
+            "Address to be set as protocol owner."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "ammConfig",
+          "docs": [
+            "Initialize config state account to store protocol owner address and fee rates."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  109,
+                  109,
+                  95,
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "index"
+              }
+            ]
+          }
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u16"
+        },
+        {
+          "name": "tickSpacing",
+          "type": "u16"
+        },
+        {
+          "name": "tradeFeeRate",
+          "type": "u32"
+        },
+        {
+          "name": "protocolFeeRate",
+          "type": "u32"
+        },
+        {
+          "name": "fundFeeRate",
+          "type": "u32"
+        }
+      ]
+    },
+    {
       "name": "createOperationAccount",
       "discriminator": [
         63,
