@@ -4,10 +4,14 @@
 pub mod error;
 pub mod instructions;
 pub mod state;
+pub mod util;
 
 use {
     anchor_lang::prelude::*,
-    instructions::{create_amm_config::*, create_operation_account::*, create_pool::*, swap_v2::*},
+    instructions::{
+        create_amm_config::*, create_operation_account::*, create_pool::*, create_pool_new::*,
+        swap_v2::*,
+    },
     raydium_clmm_cpi::states::FEE_RATE_DENOMINATOR_VALUE,
 };
 
@@ -44,8 +48,20 @@ pub mod clmm_mock {
         )
     }
 
-    pub fn create_pool(ctx: Context<CreatePool>, amount_a: u64, amount_b: u64) -> Result<()> {
-        ctx.accounts.create_pool(ctx.bumps, amount_a, amount_b)
+    pub fn create_pool(
+        ctx: Context<CreatePool>,
+        sqrt_price_x64: u128,
+        open_time: u64,
+    ) -> Result<()> {
+        instructions::create_pool(ctx, sqrt_price_x64, open_time)
+    }
+
+    pub fn create_pool_new(
+        ctx: Context<CreatePoolNew>,
+        amount_a: u64,
+        amount_b: u64,
+    ) -> Result<()> {
+        ctx.accounts.create_pool_new(ctx.bumps, amount_a, amount_b)
     }
 
     pub fn swap_v2(

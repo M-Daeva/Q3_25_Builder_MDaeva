@@ -1,8 +1,10 @@
+use crate::state::{ObservationState, PoolState};
 use anchor_lang::prelude::*;
 use anchor_spl::memo::Memo;
 use anchor_spl::token::Token;
 use anchor_spl::token_interface::{Mint, Token2022, TokenAccount};
-use raydium_clmm_cpi::states::{AmmConfig, ObservationState, PoolState};
+use raydium_clmm_cpi::states::AmmConfig;
+// use raydium_clmm_cpi::states::{AmmConfig, ObservationState, PoolState};
 
 #[derive(Accounts)]
 pub struct SwapSingleV2<'info> {

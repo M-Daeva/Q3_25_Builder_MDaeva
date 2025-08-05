@@ -1,9 +1,9 @@
 use {
     crate::helpers::{
-        extensions::clmm_mock::ClmmMockExtension,
+        extensions::clmm_mock::{get_token_info_for_pool_creation, ClmmMockExtension},
         suite::{
             core::{token::WithTokenKeys, App},
-            types::{AppToken, AppUser},
+            types::{AppToken, AppUser, GetDecimals, GetPrice},
         },
     },
     anchor_lang::Result,
@@ -26,6 +26,35 @@ fn swap_default() -> Result<()> {
     // https://explorer.solana.com/address/9iFER3bpjf1PTTCQCfTRu17EJgvsxo9pVyA9QWwEuX4x/anchor-account
     app.clmm_mock_try_create_amm_config(AppUser::Admin, AMM_CONFIG_INDEX, 1, 100, 120_000, 40_000)?;
     let _amm_config = app.clmm_mock_query_amm_config(AMM_CONFIG_INDEX)?;
+
+    let (token_mint_0, token_mint_1, sqrt_price_x64) = get_token_info_for_pool_creation(&[
+        (
+            AppToken::USDC.pubkey(&app),
+            AppToken::USDC.get_decimals(),
+            AppToken::USDC.get_price(),
+        ),
+        (
+            AppToken::PYTH.pubkey(&app),
+            AppToken::PYTH.get_decimals(),
+            AppToken::PYTH.get_price(),
+        ),
+    ]);
+
+    app.clmm_mock_try_create_pool(
+        AppUser::Alice,
+        sqrt_price_x64,
+        app.get_clock_time() - 1,
+        AMM_CONFIG_INDEX,
+        &token_mint_0,
+        &token_mint_1,
+    )?;
+    let pool_state = app.clmm_query_pool_state(
+        &app.pda.clmm_amm_config(AMM_CONFIG_INDEX),
+        &token_mint_0,
+        &token_mint_1,
+    )?;
+
+    println!("{:#?}", pool_state);
 
     // let token_info_list = sort_token_info_list(
     //     &app,

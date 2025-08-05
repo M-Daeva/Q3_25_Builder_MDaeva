@@ -1,115 +1,173 @@
 use {
-    crate::state::{PoolConfig, SEED_POOL_CONFIG},
-    anchor_lang::prelude::*,
-    anchor_spl::{
-        associated_token::AssociatedToken,
-        token_interface::{Mint, TokenAccount, TokenInterface},
+    crate::{
+        state::{ObservationState, PoolState, TickArrayBitmapExtension},
+        util::create_token_vault_account,
     },
-    base::helpers::{get_space, transfer_token_from_user},
+    anchor_lang::{prelude::*, solana_program},
+    anchor_spl::token_interface::{Mint, TokenInterface},
+    raydium_clmm_cpi::states::{
+        AmmConfig, OBSERVATION_SEED, POOL_SEED, POOL_TICK_ARRAY_BITMAP_SEED, POOL_VAULT_SEED,
+    },
 };
-
-pub fn sort_token_mints(mint_a: &Pubkey, mint_b: &Pubkey) -> (Pubkey, Pubkey) {
-    if mint_a < mint_b {
-        (*mint_a, *mint_b)
-    } else {
-        (*mint_b, *mint_a)
-    }
-}
-
 #[derive(Accounts)]
 pub struct CreatePool<'info> {
-    pub system_program: Program<'info, System>,
-    pub token_program: Interface<'info, TokenInterface>,
-    pub associated_token_program: Program<'info, AssociatedToken>,
-
+    /// Address paying to create the pool. Can be anyone
     #[account(mut)]
-    pub sender: Signer<'info>,
+    pub pool_creator: Signer<'info>,
 
-    // data storage
-    //
+    /// Which config the pool belongs to.
+    pub amm_config: Box<Account<'info, AmmConfig>>,
+
+    /// Initialize an account to store the pool state
     #[account(
         init,
-        payer = sender,
-        space = get_space(PoolConfig::INIT_SPACE),
-        // mints must be sorted
-        seeds = [SEED_POOL_CONFIG.as_bytes(), mint_a.key().to_bytes().as_ref(), mint_b.key().to_bytes().as_ref()],
-        bump
+        seeds = [
+            POOL_SEED.as_bytes(),
+            amm_config.key().as_ref(),
+            token_mint_0.key().as_ref(),
+            token_mint_1.key().as_ref(),
+        ],
+        bump,
+        payer = pool_creator,
+        space = PoolState::LEN
     )]
-    pub pool_config: Account<'info, PoolConfig>,
+    pub pool_state: AccountLoader<'info, PoolState>,
 
-    // mint
-    //
-    pub mint_a: InterfaceAccount<'info, Mint>,
-    pub mint_b: InterfaceAccount<'info, Mint>,
+    /// Token_0 mint, the key must be smaller then token_1 mint.
+    #[account(
+        constraint = token_mint_0.key() < token_mint_1.key(),
+        mint::token_program = token_program_0
+    )]
+    pub token_mint_0: Box<InterfaceAccount<'info, Mint>>,
 
-    // ata
-    //
+    /// Token_1 mint
+    #[account(
+        mint::token_program = token_program_1
+    )]
+    pub token_mint_1: Box<InterfaceAccount<'info, Mint>>,
+
+    /// CHECK: Token_0 vault for the pool, initialized in contract
     #[account(
         mut,
-        associated_token::mint = mint_a,
-        associated_token::authority = sender,
+        seeds =[
+            POOL_VAULT_SEED.as_bytes(),
+            pool_state.key().as_ref(),
+            token_mint_0.key().as_ref(),
+        ],
+        bump,
     )]
-    pub sender_a_ata: InterfaceAccount<'info, TokenAccount>,
+    pub token_vault_0: UncheckedAccount<'info>,
 
+    /// CHECK: Token_1 vault for the pool, initialized in contract
     #[account(
         mut,
-        associated_token::mint = mint_b,
-        associated_token::authority = sender,
+        seeds =[
+            POOL_VAULT_SEED.as_bytes(),
+            pool_state.key().as_ref(),
+            token_mint_1.key().as_ref(),
+        ],
+        bump,
     )]
-    pub sender_b_ata: InterfaceAccount<'info, TokenAccount>,
+    pub token_vault_1: UncheckedAccount<'info>,
 
+    /// Initialize an account to store oracle observations
     #[account(
-        init_if_needed,
-        payer = sender,
-        associated_token::mint = mint_a,
-        associated_token::authority = pool_config,
+        init,
+        seeds = [
+            OBSERVATION_SEED.as_bytes(),
+            pool_state.key().as_ref(),
+        ],
+        bump,
+        payer = pool_creator,
+        space = ObservationState::LEN
     )]
-    pub app_a_ata: InterfaceAccount<'info, TokenAccount>,
+    pub observation_state: AccountLoader<'info, ObservationState>,
 
+    /// Initialize an account to store if a tick array is initialized.
     #[account(
-        init_if_needed,
-        payer = sender,
-        associated_token::mint = mint_b,
-        associated_token::authority = pool_config,
+        init,
+        seeds = [
+            POOL_TICK_ARRAY_BITMAP_SEED.as_bytes(),
+            pool_state.key().as_ref(),
+        ],
+        bump,
+        payer = pool_creator,
+        space = TickArrayBitmapExtension::LEN
     )]
-    pub app_b_ata: InterfaceAccount<'info, TokenAccount>,
+    pub tick_array_bitmap: AccountLoader<'info, TickArrayBitmapExtension>,
+
+    /// Spl token program or token program 2022
+    pub token_program_0: Interface<'info, TokenInterface>,
+    /// Spl token program or token program 2022
+    pub token_program_1: Interface<'info, TokenInterface>,
+    /// To create a new program account
+    pub system_program: Program<'info, System>,
+    /// Sysvar for program account
+    pub rent: Sysvar<'info, Rent>,
 }
 
-impl<'info> CreatePool<'info> {
-    pub fn create_pool(
-        &mut self,
-        bumps: CreatePoolBumps,
-        amount_a: u64,
-        amount_b: u64,
-    ) -> Result<()> {
-        let CreatePool {
-            token_program,
-            sender,
-            pool_config,
-            mint_a,
-            mint_b,
-            sender_a_ata,
-            sender_b_ata,
-            app_a_ata,
-            app_b_ata,
-            ..
-        } = self;
+pub fn create_pool(ctx: Context<CreatePool>, sqrt_price_x64: u128, open_time: u64) -> Result<()> {
+    let block_timestamp = solana_program::clock::Clock::get()?.unix_timestamp as u64;
+    require_gt!(block_timestamp, open_time);
+    let pool_id = ctx.accounts.pool_state.key();
+    let mut pool_state = ctx.accounts.pool_state.load_init()?;
 
-        pool_config.set_inner(PoolConfig {
-            bump: bumps.pool_config,
-            mint_a: mint_a.key(),
-            mint_b: mint_b.key(),
-            amount_a,
-            amount_b,
-        });
+    // init token vault accounts
+    create_token_vault_account(
+        &ctx.accounts.pool_creator,
+        &ctx.accounts.pool_state.to_account_info(),
+        &ctx.accounts.token_vault_0,
+        &ctx.accounts.token_mint_0,
+        &ctx.accounts.system_program,
+        &ctx.accounts.token_program_0,
+        &[
+            POOL_VAULT_SEED.as_bytes(),
+            ctx.accounts.pool_state.key().as_ref(),
+            ctx.accounts.token_mint_0.key().as_ref(),
+            &[ctx.bumps.token_vault_0][..],
+        ],
+    )?;
 
-        for (amount, mint, from, to) in [
-            (amount_a, mint_a, sender_a_ata, app_a_ata),
-            (amount_b, mint_b, sender_b_ata, app_b_ata),
-        ] {
-            transfer_token_from_user(amount, mint, from, to, sender, token_program)?;
-        }
+    create_token_vault_account(
+        &ctx.accounts.pool_creator,
+        &ctx.accounts.pool_state.to_account_info(),
+        &ctx.accounts.token_vault_1,
+        &ctx.accounts.token_mint_1,
+        &ctx.accounts.system_program,
+        &ctx.accounts.token_program_1,
+        &[
+            POOL_VAULT_SEED.as_bytes(),
+            ctx.accounts.pool_state.key().as_ref(),
+            ctx.accounts.token_mint_1.key().as_ref(),
+            &[ctx.bumps.token_vault_1][..],
+        ],
+    )?;
 
-        Ok(())
-    }
+    // init observation
+    ctx.accounts
+        .observation_state
+        .load_init()?
+        .initialize(pool_id)?;
+
+    let bump = ctx.bumps.pool_state;
+    pool_state.initialize(
+        bump,
+        sqrt_price_x64,
+        0,
+        0,
+        ctx.accounts.pool_creator.key(),
+        ctx.accounts.token_vault_0.key(),
+        ctx.accounts.token_vault_1.key(),
+        ctx.accounts.amm_config.as_ref(),
+        ctx.accounts.token_mint_0.as_ref(),
+        ctx.accounts.token_mint_1.as_ref(),
+        ctx.accounts.observation_state.key(),
+    )?;
+
+    ctx.accounts
+        .tick_array_bitmap
+        .load_init()?
+        .initialize(pool_id);
+
+    Ok(())
 }
