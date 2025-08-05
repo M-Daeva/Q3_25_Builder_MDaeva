@@ -59,12 +59,6 @@ pub struct SwapSingleV2<'info> {
         address = output_vault.mint
     )]
     pub output_vault_mint: Box<InterfaceAccount<'info, Mint>>,
-    //
-    // remaining accounts
-    // tickarray_bitmap_extension: must add account if need
-    // tick_array_account_1
-    // tick_array_account_2
-    // tick_array_account_...
 }
 
 impl<'info> SwapSingleV2<'info> {
@@ -75,22 +69,37 @@ impl<'info> SwapSingleV2<'info> {
         sqrt_price_limit_x64: u128,
         is_base_input: bool,
     ) -> Result<()> {
-        // let SwapSingleV2 {
-        //     payer,
-        //     amm_config,
-        //     pool_state,
-        //     input_token_account,
-        //     output_token_account,
-        //     input_vault,
-        //     output_vault,
-        //     observation_state,
-        //     token_program,
-        //     token_program_2022,
-        //     memo_program,
-        //     input_vault_mint,
-        //     output_vault_mint,
-        // } = self;
+        let SwapSingleV2 {
+            payer,
+            amm_config,
+            pool_state,
+            input_token_account,
+            output_token_account,
+            input_vault,
+            output_vault,
+            observation_state,
+            token_program,
+            token_program_2022,
+            memo_program,
+            input_vault_mint,
+            output_vault_mint,
+            ..
+        } = self;
 
-        unimplemented!()
+        msg!("payer {:#?}", payer);
+        msg!("amm_config {:#?}", amm_config);
+        msg!("pool_state {:#?}", pool_state);
+        msg!("input_token_account {:#?}", input_token_account);
+        msg!("output_token_account {:#?}", output_token_account);
+        msg!("input_vault {:#?}", input_vault);
+        msg!("output_vault {:#?}", output_vault);
+        msg!("observation_state {:#?}", observation_state);
+        msg!("token_program {:#?}", token_program.key());
+        msg!("token_program_2022 {:#?}", token_program_2022.key());
+        msg!("memo_program {:#?}", memo_program.key());
+        msg!("input_vault_mint {:#?}", input_vault_mint);
+        msg!("output_vault_mint {:#?}", output_vault_mint);
+
+        Ok(())
     }
 }

@@ -7,7 +7,9 @@ use {
         prelude::{AccountInfo, AccountLoader, Clock},
         AnchorDeserialize, Id, InstructionData, Result, ToAccountMetas,
     },
-    anchor_spl::{associated_token::AssociatedToken, token::Mint, token_2022::spl_token_2022},
+    anchor_spl::{
+        associated_token::AssociatedToken, memo, token::Mint, token_2022::spl_token_2022,
+    },
     clmm_mock, dex_adapter,
     litesvm::{types::TransactionMetadata, LiteSVM},
     registry,
@@ -71,6 +73,7 @@ pub struct ProgramId {
     pub token_program: Pubkey,
     pub associated_token_program: Pubkey,
     pub rent: Pubkey,
+    pub memo: Pubkey,
 
     // 3rd party
     pub clmm: Pubkey,
@@ -458,6 +461,7 @@ impl App {
             token_program: spl_token::ID,
             associated_token_program: AssociatedToken::id(),
             rent: rent::sysvar::ID,
+            memo: memo::ID,
 
             // 3rd party
             clmm: raydium_amm_v3::ID,
@@ -658,7 +662,7 @@ impl App {
 
         match asset.into() {
             AppAsset::Coin(_) => self.get_coin_balance(address),
-            AppAsset::Token(mint) => self.get_token_balance(address, &mint.pubkey(self)),
+            AppAsset::Token(mint) => self.get_ata_token_balance(address, &mint.pubkey(self)),
         }
     }
 
@@ -666,8 +670,12 @@ impl App {
         self.litesvm.get_balance(address).unwrap_or_default()
     }
 
-    pub fn get_token_balance(&self, address: &Pubkey, mint: &Pubkey) -> u64 {
+    pub fn get_ata_token_balance(&self, address: &Pubkey, mint: &Pubkey) -> u64 {
         get_token_account_balance(&self.litesvm, &Self::get_ata(address, mint)).unwrap_or_default()
+    }
+
+    pub fn get_pda_token_balance(&self, token_account: &Pubkey) -> u64 {
+        get_token_account_balance(&self.litesvm, token_account).unwrap_or_default()
     }
 
     pub fn get_or_create_ata(

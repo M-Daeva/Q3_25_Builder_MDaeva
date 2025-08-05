@@ -7,7 +7,7 @@ use {
         },
     },
     anchor_lang::Result,
-    // pretty_assertions::assert_eq,
+    pretty_assertions::assert_eq,
 };
 
 #[test]
@@ -49,6 +49,15 @@ fn swap_default() -> Result<()> {
         &token_mint_1,
     )?;
 
+    let _pool_state = app.clmm_query_pool_state(
+        &app.pda.clmm_amm_config(AMM_CONFIG_INDEX),
+        &token_mint_0,
+        &token_mint_1,
+    )?;
+
+    let alice_token_0_before = app.get_ata_token_balance(&AppUser::Alice.pubkey(), &token_mint_0);
+    let alice_token_1_before = app.get_ata_token_balance(&AppUser::Alice.pubkey(), &token_mint_1);
+
     app.clmm_mock_try_open_position(
         AppUser::Alice,
         -1000,         // Lower price boundary
@@ -65,13 +74,27 @@ fn swap_default() -> Result<()> {
         &token_mint_1,
     )?;
 
-    let pool_state = app.clmm_query_pool_state(
-        &app.pda.clmm_amm_config(AMM_CONFIG_INDEX),
-        &token_mint_0,
-        &token_mint_1,
-    )?;
+    let alice_token_0_after = app.get_ata_token_balance(&AppUser::Alice.pubkey(), &token_mint_0);
+    let alice_token_1_after = app.get_ata_token_balance(&AppUser::Alice.pubkey(), &token_mint_1);
 
-    println!("{:#?}", pool_state);
+    let amm_config = app.pda.clmm_mock_amm_config(AMM_CONFIG_INDEX);
+    let pool_state = app
+        .pda
+        .clmm_mock_pool_state(amm_config, token_mint_0, token_mint_1);
+    let token_vault_0 = app.pda.clmm_mock_token_vault_0(pool_state, token_mint_0);
+    let token_vault_1 = app.pda.clmm_mock_token_vault_1(pool_state, token_mint_1);
+
+    let token_vault_0_balance = app.get_pda_token_balance(&token_vault_0);
+    let token_vault_1_balance = app.get_pda_token_balance(&token_vault_1);
+
+    assert_eq!(
+        alice_token_0_before - alice_token_0_after,
+        token_vault_0_balance
+    );
+    assert_eq!(
+        alice_token_1_before - alice_token_1_after,
+        token_vault_1_balance
+    );
 
     // let token_info_list = sort_token_info_list(
     //     &app,

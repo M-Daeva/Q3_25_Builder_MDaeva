@@ -67,6 +67,18 @@ pub trait ClmmMockExtension {
         token_mint_1: &Pubkey,
     ) -> Result<TransactionMetadata>;
 
+    fn clmm_mock_try_swap(
+        &mut self,
+        sender: AppUser,
+        amount: u64,
+        other_amount_threshold: u64,
+        sqrt_price_limit_x64: u128,
+        is_base_input: bool,
+        amm_config_index: u16,
+        input_vault_mint: &Pubkey,
+        output_vault_mint: &Pubkey,
+    ) -> Result<TransactionMetadata>;
+
     fn clmm_mock_query_operation_account(&self) -> Result<state::OperationState>;
 
     fn clmm_mock_query_amm_config(&self, index: u16)
@@ -399,6 +411,85 @@ impl ClmmMockExtension for App {
             amount_1_max,
             with_metadata,
             base_flag,
+        };
+
+        send_tx_with_ix(
+            self,
+            &program_id,
+            &accounts,
+            &instruction_data,
+            &payer,
+            &signers,
+        )
+    }
+
+    fn clmm_mock_try_swap(
+        &mut self,
+        sender: AppUser,
+        amount: u64,
+        other_amount_threshold: u64,
+        sqrt_price_limit_x64: u128,
+        is_base_input: bool,
+        amm_config_index: u16,
+        input_vault_mint: &Pubkey,
+        output_vault_mint: &Pubkey,
+    ) -> Result<TransactionMetadata> {
+        // programs
+        let ProgramId {
+            token_program_2022,
+            token_program,
+            memo,
+            clmm_mock: program_id,
+            ..
+        } = self.program_id;
+
+        // signers
+        let payer = sender.pubkey();
+
+        // include position_nft_mint in signers
+        let signers = [sender.keypair()];
+
+        // mint addresses
+        let (input_vault_mint, output_vault_mint) = (*input_vault_mint, *output_vault_mint);
+
+        // pda
+        let amm_config = self.pda.clmm_mock_amm_config(amm_config_index);
+        let pool_state =
+            self.pda
+                .clmm_mock_pool_state(amm_config, input_vault_mint, output_vault_mint);
+        let input_vault = self
+            .pda
+            .clmm_mock_token_vault_0(pool_state, input_vault_mint);
+        let output_vault = self
+            .pda
+            .clmm_mock_token_vault_1(pool_state, output_vault_mint);
+        let observation_state = self.pda.clmm_mock_observation_state(pool_state);
+
+        // ata
+        let input_token_account = self.get_or_create_ata(sender, &payer, &input_vault_mint)?;
+        let output_token_account = self.get_or_create_ata(sender, &payer, &output_vault_mint)?;
+
+        let accounts = accounts::SwapSingleV2 {
+            payer,
+            amm_config,
+            pool_state,
+            input_token_account,
+            output_token_account,
+            input_vault,
+            output_vault,
+            observation_state,
+            token_program,
+            token_program_2022,
+            memo_program: memo,
+            input_vault_mint,
+            output_vault_mint,
+        };
+
+        let instruction_data = instruction::SwapV2 {
+            amount,
+            other_amount_threshold,
+            sqrt_price_limit_x64,
+            is_base_input,
         };
 
         send_tx_with_ix(
