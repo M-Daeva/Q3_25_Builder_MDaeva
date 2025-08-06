@@ -109,11 +109,11 @@ impl<'info> SwapSingleV2<'info> {
                 calculate_amount_out(amount_in, reserve_1, reserve_0)?
             };
 
-            // // Check slippage
-            // require!(
-            //     amount_out >= other_amount_threshold,
-            //     ErrorCode::TooLittleOutputReceived
-            // );
+            // Check slippage
+            require!(
+                amount_out >= other_amount_threshold,
+                ErrorCode::TooLittleOutputReceived
+            );
 
             (amount_in, amount_out)
         } else {
@@ -125,11 +125,11 @@ impl<'info> SwapSingleV2<'info> {
                 calculate_amount_in(amount_out, reserve_1, reserve_0)?
             };
 
-            // // Check slippage
-            // require!(
-            //     amount_in <= other_amount_threshold,
-            //     ErrorCode::TooMuchInputPaid
-            // );
+            // Check slippage
+            require!(
+                amount_in <= other_amount_threshold,
+                ErrorCode::TooMuchInputPaid
+            );
 
             (amount_in, amount_out)
         };

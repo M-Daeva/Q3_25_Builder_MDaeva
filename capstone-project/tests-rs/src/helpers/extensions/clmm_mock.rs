@@ -5,7 +5,7 @@ use {
             App, ProgramId,
         },
         decimal::Decimal,
-        types::AppUser,
+        types::{AppToken, AppUser, GetDecimals, GetPrice},
     },
     anchor_lang::Result,
     clmm_mock::{accounts, instruction, state},
@@ -39,8 +39,8 @@ pub trait ClmmMockExtension {
         sqrt_price_x64: u128,
         open_time: u64,
         amm_config_index: u16,
-        token_mint_0: &Pubkey,
-        token_mint_1: &Pubkey,
+        token_mint_0: AppToken,
+        token_mint_1: AppToken,
     ) -> Result<TransactionMetadata>;
 
     fn clmm_mock_try_open_position(
@@ -56,8 +56,8 @@ pub trait ClmmMockExtension {
         with_metadata: bool,
         base_flag: Option<bool>,
         amm_config_index: u16,
-        token_mint_0: &Pubkey,
-        token_mint_1: &Pubkey,
+        token_mint_0: AppToken,
+        token_mint_1: AppToken,
     ) -> Result<TransactionMetadata>;
 
     fn clmm_mock_try_swap(
@@ -68,8 +68,8 @@ pub trait ClmmMockExtension {
         sqrt_price_limit_x64: u128,
         is_base_input: bool,
         amm_config_index: u16,
-        input_vault_mint: &Pubkey,
-        output_vault_mint: &Pubkey,
+        input_vault_mint: AppToken,
+        output_vault_mint: AppToken,
     ) -> Result<TransactionMetadata>;
 
     fn clmm_mock_query_operation_account(&self) -> Result<state::OperationState>;
@@ -175,8 +175,8 @@ impl ClmmMockExtension for App {
         sqrt_price_x64: u128,
         open_time: u64,
         amm_config_index: u16,
-        token_mint_0: &Pubkey,
-        token_mint_1: &Pubkey,
+        token_mint_0: AppToken,
+        token_mint_1: AppToken,
     ) -> Result<TransactionMetadata> {
         // programs
         let ProgramId {
@@ -192,7 +192,7 @@ impl ClmmMockExtension for App {
         let signers = [sender.keypair()];
 
         // mint
-        let (token_mint_0, token_mint_1) = (*token_mint_0, *token_mint_1);
+        let (token_mint_0, token_mint_1) = (token_mint_0.pubkey(), token_mint_1.pubkey());
 
         // pda
         let amm_config = self.pda.clmm_mock_amm_config(amm_config_index);
@@ -248,8 +248,8 @@ impl ClmmMockExtension for App {
         with_metadata: bool,
         base_flag: Option<bool>,
         amm_config_index: u16,
-        token_mint_0: &Pubkey,
-        token_mint_1: &Pubkey,
+        token_mint_0: AppToken,
+        token_mint_1: AppToken,
     ) -> Result<TransactionMetadata> {
         // programs
         let ProgramId {
@@ -273,7 +273,7 @@ impl ClmmMockExtension for App {
         let signers = [sender.keypair(), position_nft_mint_keypair];
 
         // mint addresses
-        let (token_mint_0, token_mint_1) = (*token_mint_0, *token_mint_1);
+        let (token_mint_0, token_mint_1) = (token_mint_0.pubkey(), token_mint_1.pubkey());
 
         // pda
         let amm_config = self.pda.clmm_mock_amm_config(amm_config_index);
@@ -351,8 +351,8 @@ impl ClmmMockExtension for App {
         sqrt_price_limit_x64: u128,
         is_base_input: bool,
         amm_config_index: u16,
-        input_vault_mint: &Pubkey,
-        output_vault_mint: &Pubkey,
+        input_vault_mint: AppToken,
+        output_vault_mint: AppToken,
     ) -> Result<TransactionMetadata> {
         // programs
         let ProgramId {
@@ -370,7 +370,8 @@ impl ClmmMockExtension for App {
         let signers = [sender.keypair()];
 
         // mint addresses
-        let (input_vault_mint, output_vault_mint) = (*input_vault_mint, *output_vault_mint);
+        let (input_vault_mint, output_vault_mint) =
+            (input_vault_mint.pubkey(), output_vault_mint.pubkey());
 
         // pda
         let amm_config = self.pda.clmm_mock_amm_config(amm_config_index);
@@ -473,8 +474,11 @@ pub fn sort_token_mints(mint_a: &Pubkey, mint_b: &Pubkey) -> (Pubkey, Pubkey) {
     }
 }
 
-pub fn calc_token_amount_for_pool(token_decimals: u8, token_price: Decimal) -> u64 {
+pub fn calc_token_amount_for_pool(token: AppToken) -> u64 {
     const BASE_AMOUNT: u128 = 1_000_000; // $
+
+    let token_decimals = token.get_decimals();
+    let token_price = token.get_price();
 
     let price_atomics = token_price.atomics();
     let dec_multiplier = 10_u128.pow(token_decimals as u32);
