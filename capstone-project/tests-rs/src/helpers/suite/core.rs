@@ -1,7 +1,10 @@
 use {
-    crate::helpers::suite::{
-        core::token::WithTokenKeys,
-        types::{AppAsset, AppToken, AppUser, GetDecimals},
+    crate::helpers::{
+        extensions::clmm_mock::sort_token_mints,
+        suite::{
+            core::token::WithTokenKeys,
+            types::{AppAsset, AppCoin, AppToken, AppUser, GetDecimals},
+        },
     },
     anchor_lang::{
         prelude::{AccountInfo, AccountLoader, Clock},
@@ -120,6 +123,8 @@ impl Pda {
         token_mint_0: Pubkey,
         token_mint_1: Pubkey,
     ) -> Pubkey {
+        let (token_mint_0, token_mint_1) = sort_token_mints(&token_mint_0, &token_mint_1);
+
         get_pda_and_bump(
             &seeds![
                 raydium_amm_v3::states::POOL_SEED,
@@ -505,7 +510,7 @@ impl App {
             litesvm
                 .airdrop(
                     &user.pubkey(),
-                    user.get_initial_asset_amount() * LAMPORTS_PER_SOL,
+                    user.get_initial_asset_amount(AppCoin::SOL) * LAMPORTS_PER_SOL,
                 )
                 .unwrap();
         }
@@ -547,7 +552,7 @@ impl App {
                     &mut litesvm,
                     &mint.pubkey(),
                     &ata,
-                    user.get_initial_asset_amount() * 10u64.pow(token.get_decimals() as u32),
+                    user.get_initial_asset_amount(*token) * 10u64.pow(token.get_decimals() as u32),
                     &AppUser::Admin.keypair(),
                 )
                 .unwrap();

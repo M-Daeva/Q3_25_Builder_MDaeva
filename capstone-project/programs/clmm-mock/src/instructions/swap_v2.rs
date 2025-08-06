@@ -13,6 +13,9 @@ use {
     raydium_clmm_cpi::states::AmmConfig,
 };
 
+pub const FEE_BPS: u64 = 20;
+pub const BPS_DIVIDER: u64 = 10_000;
+
 #[derive(Accounts)]
 pub struct SwapSingleV2<'info> {
     /// The user performing the swap
@@ -106,11 +109,11 @@ impl<'info> SwapSingleV2<'info> {
                 calculate_amount_out(amount_in, reserve_1, reserve_0)?
             };
 
-            // Check slippage
-            require!(
-                amount_out >= other_amount_threshold,
-                ErrorCode::TooLittleOutputReceived
-            );
+            // // Check slippage
+            // require!(
+            //     amount_out >= other_amount_threshold,
+            //     ErrorCode::TooLittleOutputReceived
+            // );
 
             (amount_in, amount_out)
         } else {
@@ -122,11 +125,11 @@ impl<'info> SwapSingleV2<'info> {
                 calculate_amount_in(amount_out, reserve_1, reserve_0)?
             };
 
-            // Check slippage
-            require!(
-                amount_in <= other_amount_threshold,
-                ErrorCode::TooMuchInputPaid
-            );
+            // // Check slippage
+            // require!(
+            //     amount_in <= other_amount_threshold,
+            //     ErrorCode::TooMuchInputPaid
+            // );
 
             (amount_in, amount_out)
         };
@@ -165,10 +168,10 @@ fn calculate_amount_out(amount_in: u64, reserve_in: u64, reserve_out: u64) -> Re
         ErrorCode::InsufficientLiquidityForDirection
     );
 
-    // Apply 0.3% fee (997/1000)
-    let amount_in_with_fee = (amount_in as u128) * 997;
+    // Apply fee
+    let amount_in_with_fee = (amount_in as u128) * (BPS_DIVIDER - FEE_BPS) as u128;
     let numerator = amount_in_with_fee * (reserve_out as u128);
-    let denominator = (reserve_in as u128) * 1000 + amount_in_with_fee;
+    let denominator = (reserve_in as u128) * BPS_DIVIDER as u128 + amount_in_with_fee;
 
     Ok((numerator / denominator) as u64)
 }
@@ -185,8 +188,8 @@ fn calculate_amount_in(amount_out: u64, reserve_in: u64, reserve_out: u64) -> Re
         ErrorCode::InsufficientLiquidityForDirection
     );
 
-    let numerator = (reserve_in as u128) * (amount_out as u128) * 1000;
-    let denominator = (reserve_out as u128 - amount_out as u128) * 997;
+    let numerator = (reserve_in as u128) * (amount_out as u128) * BPS_DIVIDER as u128;
+    let denominator = (reserve_out as u128 - amount_out as u128) * (BPS_DIVIDER - FEE_BPS) as u128;
 
     Ok((numerator / denominator + 1) as u64) // Add 1 to round up
 }

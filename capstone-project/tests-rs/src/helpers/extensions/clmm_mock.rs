@@ -77,7 +77,7 @@ pub trait ClmmMockExtension {
     fn clmm_mock_query_amm_config(&self, index: u16)
         -> Result<raydium_clmm_cpi::states::AmmConfig>;
 
-    fn clmm_query_pool_state(
+    fn clmm_mock_query_pool_state(
         &self,
         amm_config: &Pubkey,
         token_mint_0: &Pubkey,
@@ -433,7 +433,7 @@ impl ClmmMockExtension for App {
         get_data(&self.litesvm, &self.pda.clmm_mock_amm_config(index))
     }
 
-    fn clmm_query_pool_state(
+    fn clmm_mock_query_pool_state(
         &self,
         amm_config: &Pubkey,
         token_mint_0: &Pubkey,
@@ -448,21 +448,36 @@ impl ClmmMockExtension for App {
     }
 }
 
-// TODO: return sorted token_info_list
-/// returns (token_mint_0, token_mint_1)
+/// returns src data sorted by mint
 pub fn get_token_info_for_pool_creation(
     token_info_list: &[(Pubkey, u8, Decimal)], // (mint, decimals, price)
-) -> (Pubkey, Pubkey) {
-    let (token_mint_0, token_mint_1) =
-        &sort_token_mints(&token_info_list[0].0, &token_info_list[1].0);
+) -> Vec<(Pubkey, u8, Decimal)> {
+    let mut mint_list: Vec<_> = token_info_list.iter().map(|(x, _, _)| *x).collect();
+    mint_list.sort_unstable();
 
-    (*token_mint_0, *token_mint_1)
+    mint_list
+        .iter()
+        .map(|mint| {
+            let (_, decimals, price) = token_info_list.iter().find(|(x, _, _)| x == mint).unwrap();
+
+            (*mint, *decimals, *price)
+        })
+        .collect()
 }
 
-fn sort_token_mints(mint_a: &Pubkey, mint_b: &Pubkey) -> (Pubkey, Pubkey) {
+pub fn sort_token_mints(mint_a: &Pubkey, mint_b: &Pubkey) -> (Pubkey, Pubkey) {
     if mint_a < mint_b {
         (*mint_a, *mint_b)
     } else {
         (*mint_b, *mint_a)
     }
+}
+
+pub fn calc_token_amount_for_pool(token_decimals: u8, token_price: Decimal) -> u64 {
+    const BASE_AMOUNT: u128 = 1_000_000; // $
+
+    let price_atomics = token_price.atomics();
+    let dec_multiplier = 10_u128.pow(token_decimals as u32);
+
+    (dec_multiplier * (BASE_AMOUNT * Decimal::DECIMAL_FRACTIONAL / price_atomics)) as u64
 }

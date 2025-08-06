@@ -5,8 +5,11 @@ use {
     strum_macros::{Display, EnumIter, IntoStaticStr},
 };
 
-const ASSET_AMOUNT_DEFAULT: u64 = 1_000;
-const ASSET_AMOUNT_INCREASED: u64 = 100_000;
+const SOL_AMOUNT_DEFAULT: u64 = 1_000;
+const SOL_AMOUNT_INCREASED: u64 = 100_000;
+
+const TOKEN_AMOUNT_DEFAULT: u64 = 1_000_000_000;
+const TOKEN_AMOUNT_INCREASED: u64 = 100_000_000_000;
 
 const DECIMALS_COIN_SOL: u8 = 9;
 const DECIMALS_TOKEN_DEFAULT: u8 = 6;
@@ -57,10 +60,16 @@ impl AppUser {
         Keypair::from_base58_string(base58_string)
     }
 
-    pub fn get_initial_asset_amount(&self) -> u64 {
+    pub fn get_initial_asset_amount(&self, asset: impl Into<AppAsset>) -> u64 {
         match self {
-            Self::Admin => ASSET_AMOUNT_INCREASED,
-            _ => ASSET_AMOUNT_DEFAULT,
+            Self::Admin => match asset.into() {
+                AppAsset::Coin(_) => SOL_AMOUNT_INCREASED,
+                AppAsset::Token(_) => TOKEN_AMOUNT_INCREASED,
+            },
+            _ => match asset.into() {
+                AppAsset::Coin(_) => SOL_AMOUNT_DEFAULT,
+                AppAsset::Token(_) => TOKEN_AMOUNT_DEFAULT,
+            },
         }
     }
 }
