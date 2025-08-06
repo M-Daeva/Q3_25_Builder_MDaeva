@@ -97,17 +97,10 @@ impl<'info> SwapSingleV2<'info> {
         let reserve_0 = input_vault.amount;
         let reserve_1 = output_vault.amount;
 
-        // Determine if we're swapping token0 for token1 or vice versa
-        let zero_for_one = input_vault.mint == pool_state.load()?.token_mint_0;
-
         let (amount_in, amount_out) = if is_base_input {
             // Exact input swap - calculate output using constant product formula
             let amount_in = amount;
-            let amount_out = if zero_for_one {
-                calculate_amount_out(amount_in, reserve_0, reserve_1)?
-            } else {
-                calculate_amount_out(amount_in, reserve_1, reserve_0)?
-            };
+            let amount_out = calculate_amount_out(amount_in, reserve_0, reserve_1)?;
 
             // Check slippage
             require!(
@@ -119,11 +112,7 @@ impl<'info> SwapSingleV2<'info> {
         } else {
             // Exact output swap - calculate input using constant product formula
             let amount_out = amount;
-            let amount_in = if zero_for_one {
-                calculate_amount_in(amount_out, reserve_0, reserve_1)?
-            } else {
-                calculate_amount_in(amount_out, reserve_1, reserve_0)?
-            };
+            let amount_in = calculate_amount_in(amount_out, reserve_0, reserve_1)?;
 
             // Check slippage
             require!(

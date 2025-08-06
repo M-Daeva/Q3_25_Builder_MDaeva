@@ -107,7 +107,7 @@ fn swap_default() -> Result<()> {
     let bob_pyth_after = app.get_balance(AppUser::Bob, AppToken::PYTH);
 
     assert_eq!(bob_pyth_before - bob_pyth_after, 1_000_000);
-    assert_eq!(bob_usdc_after - bob_usdc_before, 9_979_988); // expected 99_799
+    assert_eq!(bob_usdc_after - bob_usdc_before, 99_800);
 
     Ok(())
 }
