@@ -111,3 +111,83 @@ fn swap_default() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn swap_with_decimals() -> Result<()> {
+    const AMM_CONFIG_INDEX: u16 = 0;
+
+    let mut app = App::new();
+    app.wait(1_000);
+
+    app.clmm_mock_try_create_operation_account(AppUser::Admin)?;
+    app.clmm_mock_try_create_amm_config(AppUser::Admin, AMM_CONFIG_INDEX, 1, 1, 1, 1)?;
+    app.clmm_mock_try_create_pool(
+        AppUser::Alice,
+        1,
+        app.get_clock_time() - 1,
+        AMM_CONFIG_INDEX,
+        AppToken::USDC,
+        AppToken::WBTC,
+    )?;
+
+    app.clmm_mock_try_open_position(
+        AppUser::Alice,
+        0,
+        0,
+        0,
+        0,
+        1,
+        calc_token_amount_for_pool(AppToken::USDC),
+        calc_token_amount_for_pool(AppToken::WBTC),
+        false,
+        None,
+        AMM_CONFIG_INDEX,
+        AppToken::USDC,
+        AppToken::WBTC,
+    )?;
+
+    // swap USDC -> WBTC
+    let bob_usdc_before = app.get_balance(AppUser::Bob, AppToken::USDC);
+    let bob_wbtc_before = app.get_balance(AppUser::Bob, AppToken::WBTC);
+
+    app.clmm_mock_try_swap(
+        AppUser::Bob,
+        1_000_000, // amount (USDC amount)
+        995,       // min output threshold
+        0,         // no price limit
+        true,      // exact input (we know exactly how much USDC we want to swap)
+        AMM_CONFIG_INDEX,
+        AppToken::USDC, // USDC mint (input)
+        AppToken::WBTC, // WBTC mint (output)
+    )?;
+
+    let bob_usdc_after = app.get_balance(AppUser::Bob, AppToken::USDC);
+    let bob_wbtc_after = app.get_balance(AppUser::Bob, AppToken::WBTC);
+
+    assert_eq!(bob_usdc_before - bob_usdc_after, 1_000_000);
+    // 1_000_000 usdc = 1 $ = 0.00001 WBTC = 1_000 wbtc
+    assert_eq!(bob_wbtc_after - bob_wbtc_before, 997);
+
+    // swap WBTC -> USDC
+    let bob_usdc_before = app.get_balance(AppUser::Bob, AppToken::USDC);
+    let bob_wbtc_before = app.get_balance(AppUser::Bob, AppToken::WBTC);
+
+    app.clmm_mock_try_swap(
+        AppUser::Bob,
+        1_000,
+        995_000, // min output threshold
+        0,       // no price limit
+        true,    // exact input (we know exactly how much USDC we want to swap)
+        AMM_CONFIG_INDEX,
+        AppToken::WBTC, // USDC mint (input)
+        AppToken::USDC, // PYTH mint (output)
+    )?;
+
+    let bob_usdc_after = app.get_balance(AppUser::Bob, AppToken::USDC);
+    let bob_wbtc_after = app.get_balance(AppUser::Bob, AppToken::WBTC);
+
+    assert_eq!(bob_wbtc_before - bob_wbtc_after, 1_000);
+    assert_eq!(bob_usdc_after - bob_usdc_before, 998_000);
+
+    Ok(())
+}

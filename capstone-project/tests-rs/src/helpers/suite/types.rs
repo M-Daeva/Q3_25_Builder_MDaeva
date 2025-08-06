@@ -15,10 +15,10 @@ const DECIMALS_COIN_SOL: u8 = 9;
 const DECIMALS_TOKEN_DEFAULT: u8 = 6;
 const DECIMALS_TOKEN_WBTC: u8 = 8;
 
-const PRICE_COIN_SOL: &str = "160";
+const PRICE_COIN_SOL: &str = "100";
 const PRICE_TOKEN_USDC: &str = "1";
 const PRICE_TOKEN_PYTH: &str = "0.1";
-const PRICE_TOKEN_WBTC: &str = "120000";
+const PRICE_TOKEN_WBTC: &str = "100000";
 
 const KEYPAIR_ADMIN: &str =
     "3SKiuW2cbAJH8KDAuhB5cdJnAGU8Y9a95gRWMFB6zPy8XH45HTNebRALhL1EqPv2QkBytb8iTu577TcmLutkzC9g";
