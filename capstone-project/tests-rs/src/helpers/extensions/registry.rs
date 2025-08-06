@@ -161,6 +161,7 @@ impl RegistryExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 
@@ -210,6 +211,7 @@ impl RegistryExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 
@@ -248,6 +250,7 @@ impl RegistryExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 
@@ -309,6 +312,7 @@ impl RegistryExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 
@@ -361,6 +365,7 @@ impl RegistryExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 
@@ -399,6 +404,7 @@ impl RegistryExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 
@@ -446,6 +452,7 @@ impl RegistryExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 
@@ -508,6 +515,7 @@ impl RegistryExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 
@@ -550,6 +558,7 @@ impl RegistryExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 
@@ -595,6 +604,7 @@ impl RegistryExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 
@@ -637,6 +647,7 @@ impl RegistryExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 

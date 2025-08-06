@@ -71,82 +71,105 @@ pub struct SwapSingleV2<'info> {
     pub output_vault_mint: Box<InterfaceAccount<'info, Mint>>,
 }
 
-impl<'info> SwapSingleV2<'info> {
-    pub fn swap_v2(
-        &mut self,
-        amount: u64,
-        other_amount_threshold: u64,
-        _sqrt_price_limit_x64: u128,
-        is_base_input: bool,
-    ) -> Result<()> {
-        let Self {
-            payer,
-            pool_state,
-            input_token_account,
-            output_token_account,
-            input_vault,
-            output_vault,
-            token_program,
-            token_program_2022,
-            input_vault_mint,
-            output_vault_mint,
-            ..
-        } = self;
+pub fn swap_v2<'a, 'b, 'c: 'info, 'info>(
+    ctx: Context<'a, 'b, 'c, 'info, SwapSingleV2<'info>>,
+    amount: u64,
+    other_amount_threshold: u64,
+    sqrt_price_limit_x64: u128,
+    is_base_input: bool,
+) -> Result<()> {
+    let amount_result = exact_internal_v2(
+        ctx.accounts,
+        ctx.remaining_accounts,
+        amount,
+        sqrt_price_limit_x64,
+        is_base_input,
+    )?;
 
-        // Get current reserves from vaults
-        let reserve_0 = input_vault.amount;
-        let reserve_1 = output_vault.amount;
-
-        let (amount_in, amount_out) = if is_base_input {
-            // Exact input swap - calculate output using constant product formula
-            let amount_in = amount;
-            let amount_out = calculate_amount_out(amount_in, reserve_0, reserve_1)?;
-
-            // Check slippage
-            require!(
-                amount_out >= other_amount_threshold,
-                ErrorCode::TooLittleOutputReceived
-            );
-
-            (amount_in, amount_out)
-        } else {
-            // Exact output swap - calculate input using constant product formula
-            let amount_out = amount;
-            let amount_in = calculate_amount_in(amount_out, reserve_0, reserve_1)?;
-
-            // Check slippage
-            require!(
-                amount_in <= other_amount_threshold,
-                ErrorCode::TooMuchInputPaid
-            );
-
-            (amount_in, amount_out)
-        };
-
-        // Transfer input tokens from user to vault
-        transfer_from_user_to_pool_vault(
-            &payer,
-            &input_token_account.to_account_info(),
-            &input_vault.to_account_info(),
-            Some(input_vault_mint.clone()),
-            &token_program,
-            Some(token_program_2022.to_account_info()),
-            amount_in,
-        )?;
-
-        // Transfer output tokens from vault to user
-        transfer_from_pool_vault_to_user(
-            &pool_state,
-            &output_vault.to_account_info(),
-            &output_token_account.to_account_info(),
-            Some(output_vault_mint.clone()),
-            &token_program,
-            Some(token_program_2022.to_account_info()),
-            amount_out,
-        )?;
-
-        Ok(())
+    if is_base_input {
+        require_gte!(
+            amount_result,
+            other_amount_threshold,
+            ErrorCode::TooLittleOutputReceived
+        );
+    } else {
+        require_gte!(
+            other_amount_threshold,
+            amount_result,
+            ErrorCode::TooMuchInputPaid
+        );
     }
+
+    Ok(())
+}
+
+/// Performs a single exact input/output swap
+/// if is_base_input = true, return value is the max_amount_out, otherwise is min_amount_in
+pub fn exact_internal_v2<'c: 'info, 'info>(
+    ctx: &mut SwapSingleV2<'info>,
+    _remaining_accounts: &'c [AccountInfo<'info>],
+    amount_specified: u64,
+    _sqrt_price_limit_x64: u128,
+    is_base_input: bool,
+) -> Result<u64> {
+    let SwapSingleV2 {
+        payer,
+        pool_state,
+        input_token_account,
+        output_token_account,
+        input_vault,
+        output_vault,
+        token_program,
+        token_program_2022,
+        input_vault_mint,
+        output_vault_mint,
+        ..
+    } = ctx;
+
+    // Get current reserves from vaults
+    let reserve_0 = input_vault.amount;
+    let reserve_1 = output_vault.amount;
+
+    let amount_to_return;
+    let (amount_in, amount_out) = if is_base_input {
+        // Exact input swap - calculate output using constant product formula
+        let amount_in = amount_specified;
+        let amount_out = calculate_amount_out(amount_in, reserve_0, reserve_1)?;
+        amount_to_return = amount_out;
+
+        (amount_in, amount_out)
+    } else {
+        // Exact output swap - calculate input using constant product formula
+        let amount_out = amount_specified;
+        let amount_in = calculate_amount_in(amount_out, reserve_0, reserve_1)?;
+        amount_to_return = amount_in;
+
+        (amount_in, amount_out)
+    };
+
+    // Transfer input tokens from user to vault
+    transfer_from_user_to_pool_vault(
+        &payer,
+        &input_token_account.to_account_info(),
+        &input_vault.to_account_info(),
+        Some(input_vault_mint.clone()),
+        &token_program,
+        Some(token_program_2022.to_account_info()),
+        amount_in,
+    )?;
+
+    // Transfer output tokens from vault to user
+    transfer_from_pool_vault_to_user(
+        &pool_state,
+        &output_vault.to_account_info(),
+        &output_token_account.to_account_info(),
+        Some(output_vault_mint.clone()),
+        &token_program,
+        Some(token_program_2022.to_account_info()),
+        amount_out,
+    )?;
+
+    Ok(amount_to_return)
 }
 
 // Helper function to calculate output amount using constant product formula

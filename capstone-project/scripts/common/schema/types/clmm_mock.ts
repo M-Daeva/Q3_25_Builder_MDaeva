@@ -654,6 +654,73 @@ export type ClmmMock = {
       ]
     },
     {
+      "name": "swapRouterBaseIn",
+      "discriminator": [
+        69,
+        125,
+        115,
+        218,
+        245,
+        186,
+        242,
+        196
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "The user performing the swap"
+          ],
+          "signer": true
+        },
+        {
+          "name": "inputTokenAccount",
+          "docs": [
+            "The token account that pays input tokens for the swap"
+          ],
+          "writable": true
+        },
+        {
+          "name": "inputTokenMint",
+          "docs": [
+            "The mint of input token"
+          ],
+          "writable": true
+        },
+        {
+          "name": "tokenProgram",
+          "docs": [
+            "SPL program for token transfers"
+          ],
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "tokenProgram2022",
+          "docs": [
+            "SPL program 2022 for token transfers"
+          ],
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "memoProgram",
+          "docs": [
+            "Memo program"
+          ],
+          "address": "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"
+        }
+      ],
+      "args": [
+        {
+          "name": "amountIn",
+          "type": "u64"
+        },
+        {
+          "name": "amountOutMinimum",
+          "type": "u64"
+        }
+      ]
+    },
+    {
       "name": "swapV2",
       "discriminator": [
         43,

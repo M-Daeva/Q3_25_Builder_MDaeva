@@ -10,7 +10,7 @@ use {
     anchor_lang::prelude::*,
     instructions::{
         create_amm_config::*, create_operation_account::*, create_pool::*,
-        open_position_with_token22_nft::*, swap_v2::*,
+        open_position_with_token22_nft::*, swap_router_base_in::*, swap_v2::*,
     },
     raydium_clmm_cpi::states::FEE_RATE_DENOMINATOR_VALUE,
 };
@@ -82,18 +82,27 @@ pub mod clmm_mock {
         )
     }
 
-    pub fn swap_v2(
-        ctx: Context<SwapSingleV2>,
+    pub fn swap_v2<'a, 'b, 'c: 'info, 'info>(
+        ctx: Context<'a, 'b, 'c, 'info, SwapSingleV2<'info>>,
         amount: u64,
         other_amount_threshold: u64,
         sqrt_price_limit_x64: u128,
         is_base_input: bool,
     ) -> Result<()> {
-        ctx.accounts.swap_v2(
+        instructions::swap_v2(
+            ctx,
             amount,
             other_amount_threshold,
             sqrt_price_limit_x64,
             is_base_input,
         )
+    }
+
+    pub fn swap_router_base_in<'a, 'b, 'c: 'info, 'info>(
+        ctx: Context<'a, 'b, 'c, 'info, SwapRouterBaseIn<'info>>,
+        amount_in: u64,
+        amount_out_minimum: u64,
+    ) -> Result<()> {
+        instructions::swap_router_base_in(ctx, amount_in, amount_out_minimum)
     }
 }

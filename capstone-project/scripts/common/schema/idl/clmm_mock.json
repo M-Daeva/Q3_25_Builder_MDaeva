@@ -648,6 +648,73 @@
       ]
     },
     {
+      "name": "swap_router_base_in",
+      "discriminator": [
+        69,
+        125,
+        115,
+        218,
+        245,
+        186,
+        242,
+        196
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "The user performing the swap"
+          ],
+          "signer": true
+        },
+        {
+          "name": "input_token_account",
+          "docs": [
+            "The token account that pays input tokens for the swap"
+          ],
+          "writable": true
+        },
+        {
+          "name": "input_token_mint",
+          "docs": [
+            "The mint of input token"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "SPL program for token transfers"
+          ],
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "token_program_2022",
+          "docs": [
+            "SPL program 2022 for token transfers"
+          ],
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "memo_program",
+          "docs": [
+            "Memo program"
+          ],
+          "address": "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount_in",
+          "type": "u64"
+        },
+        {
+          "name": "amount_out_minimum",
+          "type": "u64"
+        }
+      ]
+    },
+    {
       "name": "swap_v2",
       "discriminator": [
         43,

@@ -71,6 +71,7 @@ impl DexAdapterExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 

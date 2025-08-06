@@ -103,6 +103,7 @@ impl ClmmExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 
@@ -150,6 +151,7 @@ impl ClmmExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 
@@ -216,6 +218,7 @@ impl ClmmExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 
@@ -324,6 +327,7 @@ impl ClmmExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 

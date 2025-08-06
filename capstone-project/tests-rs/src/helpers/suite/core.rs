@@ -2,13 +2,13 @@ use {
     crate::helpers::{
         extensions::clmm_mock::sort_token_mints,
         suite::{
-            core::sol_kite::create_token_mint_deterministic,
+            core::sol_kite::create_token_mint,
             types::{AppAsset, AppCoin, AppToken, AppUser, GetDecimals},
         },
     },
     anchor_lang::{
         prelude::{AccountInfo, AccountLoader, Clock},
-        AnchorDeserialize, Id, InstructionData, Result, ToAccountMetas,
+        AnchorDeserialize, Discriminator, Id, InstructionData, Result, ToAccountMetas,
     },
     anchor_spl::{
         associated_token::AssociatedToken, memo, token::Mint, token_2022::spl_token_2022,
@@ -16,7 +16,7 @@ use {
     clmm_mock, dex_adapter,
     litesvm::{types::TransactionMetadata, LiteSVM},
     registry,
-    solana_instruction::Instruction,
+    solana_instruction::{AccountMeta, Instruction},
     solana_keypair::Keypair,
     solana_kite::{
         deploy_program, get_pda_and_bump, get_token_account_balance, mint_tokens_to_account, seeds,
@@ -67,12 +67,13 @@ pub mod sol_kite {
         Ok(associated_token_account)
     }
 
-    pub fn create_token_mint_deterministic(
+    pub fn create_token_mint(
         litesvm: &mut LiteSVM,
         mint_authority: &Keypair,
         decimals: u8,
-        mint: Keypair,
+        mint: Option<Keypair>,
     ) -> Result<Keypair, SolanaKiteError> {
+        let mint = mint.unwrap_or(Keypair::new());
         let rent = litesvm.minimum_balance_for_rent_exemption(82);
 
         litesvm
@@ -574,11 +575,11 @@ impl App {
                 continue;
             }
 
-            let mint = create_token_mint_deterministic(
+            let mint = create_token_mint(
                 &mut litesvm,
                 &AppUser::Admin.keypair(),
                 token.get_decimals(),
-                token.keypair(),
+                Some(token.keypair()),
             )
             .unwrap();
 
@@ -870,15 +871,19 @@ pub mod extension {
         instruction_data: &D,
         payer: &Pubkey,
         signers: &S,
+        remaining_accounts: &[AccountMeta],
     ) -> Result<TransactionMetadata>
     where
         A: ToAccountMetas,
-        D: InstructionData,
+        D: InstructionData + Discriminator,
         S: Signers + ?Sized,
     {
+        let mut account_metas = accounts.to_account_metas(None);
+        account_metas.extend_from_slice(remaining_accounts);
+
         let ix = Instruction {
             program_id: *program_id,
-            accounts: accounts.to_account_metas(None),
+            accounts: account_metas,
             data: instruction_data.data(),
         };
 

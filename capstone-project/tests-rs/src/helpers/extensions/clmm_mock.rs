@@ -11,6 +11,7 @@ use {
     clmm_mock::{accounts, instruction, state},
     litesvm::types::TransactionMetadata,
     raydium_clmm_cpi,
+    solana_instruction::AccountMeta,
     solana_keypair::Keypair,
     solana_pubkey::Pubkey,
     solana_signer::Signer,
@@ -72,6 +73,16 @@ pub trait ClmmMockExtension {
         output_vault_mint: AppToken,
     ) -> Result<TransactionMetadata>;
 
+    fn clmm_mock_try_swap_router_base_in(
+        &mut self,
+        sender: AppUser,
+        amount_in: u64,
+        amount_out_minimum: u64,
+        amm_config_index: u16,
+        input_vault_mint: AppToken,
+        output_vault_mint: AppToken,
+    ) -> Result<TransactionMetadata>;
+
     fn clmm_mock_query_operation_account(&self) -> Result<state::OperationState>;
 
     fn clmm_mock_query_amm_config(&self, index: u16)
@@ -119,6 +130,7 @@ impl ClmmMockExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 
@@ -166,6 +178,7 @@ impl ClmmMockExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 
@@ -232,6 +245,7 @@ impl ClmmMockExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 
@@ -272,7 +286,7 @@ impl ClmmMockExtension for App {
         // include position_nft_mint in signers
         let signers = [sender.keypair(), position_nft_mint_keypair];
 
-        // mint addresses
+        // mint
         let (token_mint_0, token_mint_1) = (token_mint_0.pubkey(), token_mint_1.pubkey());
 
         // pda
@@ -340,6 +354,7 @@ impl ClmmMockExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 
@@ -365,11 +380,9 @@ impl ClmmMockExtension for App {
 
         // signers
         let payer = sender.pubkey();
-
-        // include position_nft_mint in signers
         let signers = [sender.keypair()];
 
-        // mint addresses
+        // mint
         let (input_vault_mint, output_vault_mint) =
             (input_vault_mint.pubkey(), output_vault_mint.pubkey());
 
@@ -420,6 +433,87 @@ impl ClmmMockExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
+        )
+    }
+
+    fn clmm_mock_try_swap_router_base_in(
+        &mut self,
+        sender: AppUser,
+        amount_in: u64,
+        amount_out_minimum: u64,
+        amm_config_index: u16,
+        input_vault_mint: AppToken,
+        output_vault_mint: AppToken,
+    ) -> Result<TransactionMetadata> {
+        // programs
+        let ProgramId {
+            token_program_2022,
+            token_program,
+            memo,
+            clmm_mock: program_id,
+            ..
+        } = self.program_id;
+
+        // signers
+        let payer = sender.pubkey();
+        let signers = [sender.keypair()];
+
+        // mint
+        let input_vault_mint = input_vault_mint.pubkey();
+        let output_vault_mint = output_vault_mint.pubkey();
+
+        // pda
+        let amm_config = self.pda.clmm_mock_amm_config(amm_config_index);
+        let pool_state =
+            self.pda
+                .clmm_mock_pool_state(amm_config, input_vault_mint, output_vault_mint);
+        let input_vault = self
+            .pda
+            .clmm_mock_token_vault_0(pool_state, input_vault_mint);
+        let output_vault = self
+            .pda
+            .clmm_mock_token_vault_1(pool_state, output_vault_mint);
+        let observation_state = self.pda.clmm_mock_observation_state(pool_state);
+
+        // ata
+        let input_token_account = self.get_or_create_ata(sender, &payer, &input_vault_mint)?;
+        let output_token_account = self.get_or_create_ata(sender, &payer, &output_vault_mint)?;
+
+        // default accounts
+        let accounts = accounts::SwapRouterBaseIn {
+            payer,
+            input_token_account,
+            input_token_mint: input_vault_mint,
+            token_program,
+            token_program_2022,
+            memo_program: memo,
+        };
+
+        // accounts required by router to execute the swap
+        let remaining_accounts = vec![
+            AccountMeta::new_readonly(amm_config, false),
+            AccountMeta::new(pool_state, false),
+            AccountMeta::new(output_token_account, false),
+            AccountMeta::new(input_vault, false),
+            AccountMeta::new(output_vault, false),
+            AccountMeta::new_readonly(output_vault_mint, false),
+            AccountMeta::new(observation_state, false),
+        ];
+
+        let instruction_data = instruction::SwapRouterBaseIn {
+            amount_in,
+            amount_out_minimum,
+        };
+
+        send_tx_with_ix(
+            self,
+            &program_id,
+            &accounts,
+            &instruction_data,
+            &payer,
+            &signers,
+            &remaining_accounts,
         )
     }
 
@@ -449,23 +543,6 @@ impl ClmmMockExtension for App {
     }
 }
 
-/// returns src data sorted by mint
-pub fn get_token_info_for_pool_creation(
-    token_info_list: &[(Pubkey, u8, Decimal)], // (mint, decimals, price)
-) -> Vec<(Pubkey, u8, Decimal)> {
-    let mut mint_list: Vec<_> = token_info_list.iter().map(|(x, _, _)| *x).collect();
-    mint_list.sort_unstable();
-
-    mint_list
-        .iter()
-        .map(|mint| {
-            let (_, decimals, price) = token_info_list.iter().find(|(x, _, _)| x == mint).unwrap();
-
-            (*mint, *decimals, *price)
-        })
-        .collect()
-}
-
 pub fn sort_token_mints(mint_a: &Pubkey, mint_b: &Pubkey) -> (Pubkey, Pubkey) {
     if mint_a < mint_b {
         (*mint_a, *mint_b)
@@ -485,3 +562,20 @@ pub fn calc_token_amount_for_pool(token: AppToken) -> u64 {
 
     (dec_multiplier * (BASE_AMOUNT * Decimal::DECIMAL_FRACTIONAL / price_atomics)) as u64
 }
+
+// /// returns src data sorted by mint
+// pub fn get_token_info_for_pool_creation(
+//     token_info_list: &[(Pubkey, u8, Decimal)], // (mint, decimals, price)
+// ) -> Vec<(Pubkey, u8, Decimal)> {
+//     let mut mint_list: Vec<_> = token_info_list.iter().map(|(x, _, _)| *x).collect();
+//     mint_list.sort_unstable();
+
+//     mint_list
+//         .iter()
+//         .map(|mint| {
+//             let (_, decimals, price) = token_info_list.iter().find(|(x, _, _)| x == mint).unwrap();
+
+//             (*mint, *decimals, *price)
+//         })
+//         .collect()
+// }
