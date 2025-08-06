@@ -2,7 +2,6 @@ use {
     crate::helpers::suite::{
         core::{
             extension::{get_data, send_tx_with_ix},
-            token::WithTokenKeys,
             App, ProgramId,
         },
         types::{AppToken, AppUser},
@@ -62,8 +61,7 @@ impl DexAdapterExtension for App {
         let instruction_data = instruction::Init {
             registry,
             rotation_timeout,
-            token_in_whitelist: token_in_whitelist
-                .map(|x| x.iter().map(|y| y.pubkey(&self)).collect()),
+            token_in_whitelist: token_in_whitelist.map(|x| x.iter().map(|y| y.pubkey()).collect()),
         };
 
         send_tx_with_ix(

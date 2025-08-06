@@ -1,6 +1,6 @@
 use {
     crate::helpers::suite::{
-        core::{extension::send_tx, token::WithTokenKeys, App, ProgramId},
+        core::{extension::send_tx, App, ProgramId},
         types::{AppToken, AppUser},
     },
     anchor_lang::Result,
@@ -26,7 +26,7 @@ impl WsolExtension for App {
         let signers = [user.keypair()];
 
         // ata
-        let wsol_ata = self.get_or_create_ata(user, &payer, &AppToken::WSOL.pubkey(self))?;
+        let wsol_ata = self.get_or_create_ata(user, &payer, &AppToken::WSOL.pubkey())?;
 
         // transfer SOL
         let transfer_ix = system_instruction::transfer(&payer, &wsol_ata, amount);
@@ -49,7 +49,7 @@ impl WsolExtension for App {
         let signers = [user.keypair()];
 
         // ata
-        let wsol_ata = self.get_or_create_ata(user, &payer, &AppToken::WSOL.pubkey(self))?;
+        let wsol_ata = self.get_or_create_ata(user, &payer, &AppToken::WSOL.pubkey())?;
 
         // close the account instruction - this unwraps the SOL
         let close_account_ix =

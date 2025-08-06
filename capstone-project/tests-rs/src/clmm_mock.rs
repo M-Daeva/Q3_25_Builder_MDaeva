@@ -4,7 +4,7 @@ use {
             calc_token_amount_for_pool, get_token_info_for_pool_creation, ClmmMockExtension,
         },
         suite::{
-            core::{token::WithTokenKeys, App},
+            core::App,
             types::{AppToken, AppUser, GetDecimals, GetPrice},
         },
     },
@@ -21,12 +21,12 @@ fn swap_default() -> Result<()> {
 
     let token_info_for_pool_creation = get_token_info_for_pool_creation(&[
         (
-            AppToken::USDC.pubkey(&app),
+            AppToken::USDC.pubkey(),
             AppToken::USDC.get_decimals(),
             AppToken::USDC.get_price(),
         ),
         (
-            AppToken::PYTH.pubkey(&app),
+            AppToken::PYTH.pubkey(),
             AppToken::PYTH.get_decimals(),
             AppToken::PYTH.get_price(),
         ),
@@ -37,7 +37,7 @@ fn swap_default() -> Result<()> {
     let token_amount_0 = calc_token_amount_for_pool(token_decimals_0, token_price_0);
     let token_amount_1 = calc_token_amount_for_pool(token_decimals_1, token_price_1);
 
-    println!("usdc {:#?}", AppToken::USDC.pubkey(&app));
+    println!("usdc {:#?}", AppToken::USDC.pubkey());
     println!("token_amount_0 {:#?}", (token_amount_0, token_mint_0));
     println!("token_amount_1 {:#?}", (token_amount_1, token_mint_1));
 

@@ -2,7 +2,7 @@ use {
     crate::helpers::{
         extensions::clmm_mock::sort_token_mints,
         suite::{
-            core::token::WithTokenKeys,
+            core::sol_kite::create_token_mint_deterministic,
             types::{AppAsset, AppCoin, AppToken, AppUser, GetDecimals},
         },
     },
@@ -19,8 +19,7 @@ use {
     solana_instruction::Instruction,
     solana_keypair::Keypair,
     solana_kite::{
-        create_token_mint, deploy_program, get_pda_and_bump, get_token_account_balance,
-        mint_tokens_to_account, seeds,
+        deploy_program, get_pda_and_bump, get_token_account_balance, mint_tokens_to_account, seeds,
     },
     solana_program::{
         native_token::LAMPORTS_PER_SOL, program_option::COption, program_pack::Pack, rent,
@@ -66,6 +65,61 @@ pub mod sol_kite {
         })?;
 
         Ok(associated_token_account)
+    }
+
+    pub fn create_token_mint_deterministic(
+        litesvm: &mut LiteSVM,
+        mint_authority: &Keypair,
+        decimals: u8,
+        mint: Keypair,
+    ) -> Result<Keypair, SolanaKiteError> {
+        let rent = litesvm.minimum_balance_for_rent_exemption(82);
+
+        litesvm
+            .set_account(
+                mint.pubkey(),
+                solana_account::Account {
+                    lamports: rent,
+                    data: vec![0u8; 82],
+                    owner: spl_token::ID,
+                    executable: false,
+                    rent_epoch: 0,
+                },
+            )
+            .map_err(|e| {
+                SolanaKiteError::TokenOperationFailed(format!(
+                    "Failed to create mint account: {:?}",
+                    e
+                ))
+            })?;
+
+        let initialize_mint_instruction = spl_token::instruction::initialize_mint(
+            &spl_token::ID,
+            &mint.pubkey(),
+            &mint_authority.pubkey(),
+            None,
+            decimals,
+        )
+        .map_err(|e| {
+            SolanaKiteError::TokenOperationFailed(format!(
+                "Failed to create initialize mint instruction: {:?}",
+                e
+            ))
+        })?;
+
+        let message = Message::new(
+            &[initialize_mint_instruction],
+            Some(&mint_authority.pubkey()),
+        );
+        let mut transaction = Transaction::new_unsigned(message);
+        let blockhash = litesvm.latest_blockhash();
+        transaction.sign(&[mint_authority], blockhash);
+
+        litesvm.send_transaction(transaction).map_err(|e| {
+            SolanaKiteError::TokenOperationFailed(format!("Failed to initialize mint: {:?}", e))
+        })?;
+
+        Ok(mint)
     }
 }
 
@@ -435,7 +489,6 @@ impl Pda {
 
 pub struct App {
     pub litesvm: LiteSVM,
-    token_registry: Vec<(AppToken, Keypair)>,
 
     pub program_id: ProgramId,
     pub pda: Pda,
@@ -444,7 +497,7 @@ pub struct App {
 impl App {
     pub fn create_app_with_programs() -> Self {
         // prepare environment with balances
-        let (mut litesvm, token_registry) = Self::init_env_with_balances();
+        let mut litesvm = Self::init_env_with_balances();
 
         // specify programs
         let program_id = ProgramId {
@@ -484,7 +537,6 @@ impl App {
 
         Self {
             litesvm,
-            token_registry,
 
             program_id,
             pda,
@@ -501,7 +553,7 @@ impl App {
         app
     }
 
-    fn init_env_with_balances() -> (LiteSVM, Vec<(AppToken, Keypair)>) {
+    fn init_env_with_balances() -> LiteSVM {
         let mut litesvm = LiteSVM::new();
         let mut token_registry: Vec<(AppToken, Keypair)> = vec![];
 
@@ -522,10 +574,11 @@ impl App {
                 continue;
             }
 
-            let mint = create_token_mint(
+            let mint = create_token_mint_deterministic(
                 &mut litesvm,
                 &AppUser::Admin.keypair(),
                 token.get_decimals(),
+                token.keypair(),
             )
             .unwrap();
 
@@ -559,7 +612,7 @@ impl App {
             }
         }
 
-        (litesvm, token_registry)
+        litesvm
     }
 
     fn create_wsol(&mut self) {
@@ -580,7 +633,7 @@ impl App {
         mint_data.pack_into_slice(&mut mint_account.data);
 
         self.litesvm
-            .set_account(AppToken::WSOL.pubkey(&self), mint_account)
+            .set_account(AppToken::WSOL.pubkey(), mint_account)
             .unwrap();
     }
 
@@ -634,7 +687,7 @@ impl App {
         let payer = sender.pubkey();
         let signers = [sender.keypair()];
 
-        let mint = token.pubkey(&self);
+        let mint = token.pubkey();
         let sender_ata = self.get_or_create_ata(sender, &sender.pubkey(), &mint)?;
         let recipient_ata = self.get_or_create_ata(sender, recipient, &mint)?;
 
@@ -655,7 +708,7 @@ impl App {
 
         match asset.into() {
             AppAsset::Coin(_) => self.get_coin_balance(address),
-            AppAsset::Token(mint) => self.get_ata_token_balance(address, &mint.pubkey(self)),
+            AppAsset::Token(mint) => self.get_ata_token_balance(address, &mint.pubkey()),
         }
     }
 
@@ -728,44 +781,6 @@ fn upload_program(litesvm: &mut LiteSVM, program_name: &str, program_id: &Pubkey
     // try to deploy custom programs first, if it doesn't work then deploy dumps
     if let Err(_) = deploy_program(litesvm, program_id, path_a) {
         deploy_program(litesvm, program_id, path_b).unwrap()
-    }
-}
-
-pub mod token {
-    use super::*;
-
-    pub trait WithTokenKeys {
-        fn keypair(&self, app: &App) -> Keypair;
-        fn pubkey(&self, app: &App) -> Pubkey;
-    }
-
-    impl WithTokenKeys for AppToken {
-        fn keypair(&self, app: &App) -> Keypair {
-            if self == &Self::WSOL {
-                panic!("WSOL doesn't have keypair!")
-            } else {
-                let base58_string = app
-                    .token_registry
-                    .iter()
-                    .find(|(token, _)| token == self)
-                    .map(|(_, keypair)| keypair.to_base58_string())
-                    .unwrap();
-
-                Keypair::from_base58_string(&base58_string)
-            }
-        }
-
-        fn pubkey(&self, app: &App) -> Pubkey {
-            if self == &Self::WSOL {
-                spl_token::native_mint::id()
-            } else {
-                app.token_registry
-                    .iter()
-                    .find(|(token, _)| token == self)
-                    .map(|(_, keypair)| keypair.pubkey())
-                    .unwrap()
-            }
-        }
     }
 }
 

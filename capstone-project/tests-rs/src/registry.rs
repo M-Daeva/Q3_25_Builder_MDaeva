@@ -2,7 +2,7 @@ use {
     crate::helpers::{
         extensions::registry::RegistryExtension,
         suite::{
-            core::{assert_error, token::WithTokenKeys, App},
+            core::{assert_error, App},
             types::{AppToken, AppUser},
         },
     },
@@ -26,7 +26,7 @@ fn init_app() -> Result<App> {
         None,
         Some(AssetItem {
             amount: ACCOUNT_REGISTRATION_FEE_AMOUNT,
-            asset: AppToken::USDC.pubkey(&app),
+            asset: AppToken::USDC.pubkey(),
         }),
         None,
     )?;
@@ -46,7 +46,7 @@ fn init_default() -> Result<()> {
             rotation_timeout: ROTATION_TIMEOUT,
             registration_fee: AssetItem {
                 amount: ACCOUNT_REGISTRATION_FEE_AMOUNT,
-                asset: AppToken::USDC.pubkey(&app),
+                asset: AppToken::USDC.pubkey(),
             },
             data_size_range: Range {
                 min: ACCOUNT_DATA_SIZE_MIN,

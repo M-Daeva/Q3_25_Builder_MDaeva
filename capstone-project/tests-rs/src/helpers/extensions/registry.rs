@@ -2,7 +2,6 @@ use {
     crate::helpers::suite::{
         core::{
             extension::{get_data, send_tx_with_ix},
-            token::WithTokenKeys,
             App, ProgramId,
         },
         types::{AppToken, AppUser},
@@ -276,7 +275,7 @@ impl RegistryExtension for App {
 
         // mint
         let revenue_mint = match revenue_asset {
-            Some(x) => x.pubkey(&self),
+            Some(x) => x.pubkey(),
             _ => self.registry_query_config()?.registration_fee.asset,
         };
 
@@ -473,7 +472,7 @@ impl RegistryExtension for App {
 
         // mint
         let revenue_mint = match revenue_asset {
-            Some(x) => x.pubkey(&self),
+            Some(x) => x.pubkey(),
             _ => self.registry_query_config()?.registration_fee.asset,
         };
 

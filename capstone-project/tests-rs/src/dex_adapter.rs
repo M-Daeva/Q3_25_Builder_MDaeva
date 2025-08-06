@@ -2,7 +2,7 @@ use {
     crate::helpers::{
         extensions::dex_adapter::DexAdapterExtension,
         suite::{
-            core::{token::WithTokenKeys, App},
+            core::App,
             types::{AppToken, AppUser},
         },
     },
@@ -31,7 +31,7 @@ fn init_default() -> Result<()> {
             rotation_timeout: ROTATION_TIMEOUT,
             token_in_whitelist: [AppToken::USDC, AppToken::WBTC]
                 .iter()
-                .map(|y| y.pubkey(&app))
+                .map(|y| y.pubkey())
                 .collect()
         }
     );

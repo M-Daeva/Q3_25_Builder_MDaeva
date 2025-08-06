@@ -32,6 +32,18 @@ const KEYPAIR_BOB: &str =
     "zsbe2oRXt1K3gRNCurjZFTVzQtYqJjhyPAQMk4VsLWe3QoU3pMGZDVVRvmgZXgLtXvAsC9kGi4ShpYpjrQbtaf5";
 const PUBKEY_BOB: &str = "FPS369ZvUkQTdsU8pzmypafNnNghiDHi8G6gDCvux5SB";
 
+const KEYPAIR_USDC: &str =
+    "5gi185z4U57MEkJJTzweNrJQJQftaQH2onL8ZGRyXKWA3zspJWyQfF1J8ZRV7zd3D8aZyZxtaw8MsPZpMLMGh6L2";
+const PUBKEY_USDC: &str = "8XdLEJXrM3yYfFg5EpMqcCKmXXSQeBKfTjvNP619LbE2";
+
+const KEYPAIR_PYTH: &str =
+    "5fbcPBxRADG5oxsK3K7PtM5A2CXFSErQ7bWoTXA1qeZsngyFYzWKUm4R7pBtD9fazVA9FgFC4h4WschCTQ7xjeJG";
+const PUBKEY_PYTH: &str = "HBtzyBH14hR6t5UfYT3ptL6d1pMnVCep2RY8vUgHmaRA";
+
+const KEYPAIR_WBTC: &str =
+    "2RyN2wrHo8fDrvqULn61ThcSeMyBE3eQ35ADxk5bvjkMrtZRKZwYNRQgxS33UkTrw3udySYMeoJxapbLbyz3aDiZ";
+const PUBKEY_WBTC: &str = "An6eCPnnsspFAy5bUrgnNkU4hkedv9ZDRUJazUTG1ewb";
+
 #[derive(Debug, Clone, Copy, Display, IntoStaticStr, EnumIter, PartialEq)]
 pub enum AppUser {
     Admin,
@@ -85,6 +97,30 @@ pub enum AppToken {
     PYTH,
     WBTC,
     WSOL,
+}
+
+impl AppToken {
+    pub fn pubkey(&self) -> Pubkey {
+        let str_const = match self {
+            Self::USDC => PUBKEY_USDC,
+            Self::PYTH => PUBKEY_PYTH,
+            Self::WBTC => PUBKEY_WBTC,
+            Self::WSOL => &spl_token::native_mint::ID.to_string(),
+        };
+
+        Pubkey::from_str_const(str_const)
+    }
+
+    pub fn keypair(&self) -> Keypair {
+        let base58_string = match self {
+            Self::USDC => KEYPAIR_USDC,
+            Self::PYTH => KEYPAIR_PYTH,
+            Self::WBTC => KEYPAIR_WBTC,
+            Self::WSOL => panic!("WSOL doesn't have keypair!"),
+        };
+
+        Keypair::from_base58_string(base58_string)
+    }
 }
 
 pub trait GetPrice {
