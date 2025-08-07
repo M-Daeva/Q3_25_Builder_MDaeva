@@ -320,3 +320,67 @@ fn swap_multihop_single_pool() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn swap_multihop_same_config() -> Result<()> {
+    const AMM_CONFIG_INDEX_0: u16 = 0;
+
+    let mut app = App::new();
+    app.wait(1_000);
+    app.clmm_mock_try_create_operation_account(AppUser::Admin)?;
+    app.clmm_mock_try_create_amm_config(AppUser::Admin, AMM_CONFIG_INDEX_0, 1, 1, 1, 1)?;
+
+    for (amm_index, token_0, token_1) in [
+        (AMM_CONFIG_INDEX_0, AppToken::USDC, AppToken::PYTH),
+        (AMM_CONFIG_INDEX_0, AppToken::WBTC, AppToken::USDC),
+    ] {
+        let (token_0, token_1) = sort_tokens(token_0, token_1);
+
+        app.clmm_mock_try_create_pool(
+            AppUser::Admin,
+            1,
+            app.get_clock_time() - 1,
+            amm_index,
+            token_0,
+            token_1,
+        )?;
+        app.clmm_mock_try_open_position(
+            AppUser::Admin,
+            0,
+            0,
+            0,
+            0,
+            1,
+            calc_token_amount_for_pool(token_0),
+            calc_token_amount_for_pool(token_1),
+            false,
+            None,
+            amm_index,
+            token_0,
+            token_1,
+        )?;
+    }
+
+    // swap WBTC -> USDC -> PYTH
+    let bob_wbtc_before = app.get_balance(AppUser::Bob, AppToken::WBTC);
+    let bob_pyth_before = app.get_balance(AppUser::Bob, AppToken::PYTH);
+
+    app.clmm_mock_try_swap_multihop(
+        AppUser::Bob,
+        1_000,
+        9_950_000,
+        &[
+            (AppToken::WBTC, 42),                 // unused
+            (AppToken::USDC, AMM_CONFIG_INDEX_0), // WBTC -> USDC uses config_1
+            (AppToken::PYTH, AMM_CONFIG_INDEX_0), // USDC -> PYTH uses config_0
+        ],
+    )?;
+
+    let bob_wbtc_after = app.get_balance(AppUser::Bob, AppToken::WBTC);
+    let bob_pyth_after = app.get_balance(AppUser::Bob, AppToken::PYTH);
+
+    assert_eq!(bob_wbtc_before - bob_wbtc_after, 1_000);
+    assert_eq!(bob_pyth_after - bob_pyth_before, 9_960_020);
+
+    Ok(())
+}

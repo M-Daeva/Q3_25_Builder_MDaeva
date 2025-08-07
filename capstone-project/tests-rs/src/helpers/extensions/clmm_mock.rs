@@ -214,6 +214,12 @@ impl ClmmMockExtension for App {
         // mint
         let (token_mint_0, token_mint_1) = (token_mint_0.pubkey(), token_mint_1.pubkey());
 
+        // check if tokens are sorted
+        let (token_mint_0_sorted, _) = sort_token_mints(&token_mint_0, &token_mint_1);
+        if token_mint_0_sorted != token_mint_0 {
+            panic!("Token mints should be sorted!");
+        }
+
         // pda
         let amm_config = self.pda.clmm_mock_amm_config(amm_config_index);
         let pool_state = self
@@ -295,6 +301,12 @@ impl ClmmMockExtension for App {
 
         // mint
         let (token_mint_0, token_mint_1) = (token_mint_0.pubkey(), token_mint_1.pubkey());
+
+        // check if tokens are sorted
+        let (token_mint_0_sorted, _) = sort_token_mints(&token_mint_0, &token_mint_1);
+        if token_mint_0_sorted != token_mint_0 {
+            panic!("Token mints should be sorted!");
+        }
 
         // pda
         let amm_config = self.pda.clmm_mock_amm_config(amm_config_index);
@@ -533,7 +545,7 @@ impl ClmmMockExtension for App {
     ) -> Result<TransactionMetadata> {
         // validate route
         if route_with_configs.len() < 2 {
-            panic!("Route must contain at least 2 tokens");
+            panic!("Route must contain at least 2 tokens!");
         }
 
         // programs
@@ -568,31 +580,18 @@ impl ClmmMockExtension for App {
         for i in 0..route_with_configs.len() - 1 {
             let (token_a, _) = route_with_configs[i];
             let (token_b, amm_config_index) = route_with_configs[i + 1];
-            let (token_a_mint, token_b_mint) = (token_a.pubkey(), token_b.pubkey());
+            let (token_0_mint, token_1_mint) = (token_a.pubkey(), token_b.pubkey());
 
             // use the config index from the destination token
             let amm_config = self.pda.clmm_mock_amm_config(amm_config_index);
             let pool_state = self
                 .pda
-                .clmm_mock_pool_state(amm_config, token_a_mint, token_b_mint);
-
-            // order tokens consistently for PDA derivation
-            let (sorted_token_0, sorted_token_1) = sort_token_mints(&token_a_mint, &token_b_mint);
-            // determine which vault is input and which is output based on swap direction
-            let (input_vault, output_vault) = if token_a_mint == sorted_token_0 {
-                (
-                    self.pda.clmm_mock_token_vault_0(pool_state, sorted_token_0),
-                    self.pda.clmm_mock_token_vault_1(pool_state, sorted_token_1),
-                )
-            } else {
-                (
-                    self.pda.clmm_mock_token_vault_1(pool_state, sorted_token_1),
-                    self.pda.clmm_mock_token_vault_0(pool_state, sorted_token_0),
-                )
-            };
+                .clmm_mock_pool_state(amm_config, token_0_mint, token_1_mint);
+            let input_vault = self.pda.clmm_mock_token_vault_0(pool_state, token_0_mint);
+            let output_vault = self.pda.clmm_mock_token_vault_1(pool_state, token_1_mint);
 
             let observation_state = self.pda.clmm_mock_observation_state(pool_state);
-            let output_token_account = self.get_or_create_ata(sender, &payer, &token_b_mint)?;
+            let output_token_account = self.get_or_create_ata(sender, &payer, &token_1_mint)?;
 
             remaining_accounts.extend(vec![
                 AccountMeta::new_readonly(amm_config, false),
@@ -600,7 +599,7 @@ impl ClmmMockExtension for App {
                 AccountMeta::new(output_token_account, false),
                 AccountMeta::new(input_vault, false),
                 AccountMeta::new(output_vault, false),
-                AccountMeta::new_readonly(token_b_mint, false),
+                AccountMeta::new_readonly(token_1_mint, false),
                 AccountMeta::new(observation_state, false),
             ]);
         }
