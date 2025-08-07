@@ -28,6 +28,7 @@ pub struct Bump {
 pub struct Config {
     /// can update the config and execute priveled instructions
     pub admin: Pubkey,
+    pub dex: Pubkey,
     pub registry: Option<Pubkey>,
     pub is_paused: bool,
     pub rotation_timeout: u32,

@@ -108,6 +108,10 @@ export type DexAdapter = {
       ],
       "args": [
         {
+          "name": "dex",
+          "type": "pubkey"
+        },
+        {
           "name": "registry",
           "type": {
             "option": "pubkey"
@@ -125,6 +129,459 @@ export type DexAdapter = {
             "option": {
               "vec": "pubkey"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "swapMultihop",
+      "discriminator": [
+        138,
+        70,
+        253,
+        6,
+        221,
+        75,
+        252,
+        147
+      ],
+      "accounts": [
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "tokenProgram"
+        },
+        {
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "tokenProgram2022"
+        },
+        {
+          "name": "memoProgram"
+        },
+        {
+          "name": "sender",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "bump",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  117,
+                  109,
+                  112
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "inputTokenMint"
+        },
+        {
+          "name": "outputTokenMint"
+        },
+        {
+          "name": "inputTokenSenderAta",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "sender"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "inputTokenMint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "outputTokenSenderAta",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "sender"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "outputTokenMint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "inputTokenAppAta",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "inputTokenMint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "outputTokenAppAta",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "config"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "outputTokenMint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "amountIn",
+          "type": "u64"
+        },
+        {
+          "name": "amountOutMinimum",
+          "type": "u64"
+        },
+        {
+          "name": "routeConfigIndices",
+          "type": {
+            "vec": "u16"
           }
         }
       ]
@@ -191,6 +648,36 @@ export type DexAdapter = {
       "code": 6003,
       "name": "forwardingFailed",
       "msg": "Token forwarding failed"
+    },
+    {
+      "code": 6004,
+      "name": "contractPaused",
+      "msg": "Contract is paused"
+    },
+    {
+      "code": 6005,
+      "name": "invalidRouteLength",
+      "msg": "Route must contain at least 2 tokens"
+    },
+    {
+      "code": 6006,
+      "name": "invalidAmount",
+      "msg": "Amount must be greater than 0"
+    },
+    {
+      "code": 6007,
+      "name": "invalidTokenAccount",
+      "msg": "Invalid token account"
+    },
+    {
+      "code": 6008,
+      "name": "invalidRemainingAccounts",
+      "msg": "Invalid number of remaining accounts"
+    },
+    {
+      "code": 6009,
+      "name": "noOutputTokens",
+      "msg": "No output tokens received from swap"
     }
   ],
   "types": [
@@ -223,6 +710,10 @@ export type DexAdapter = {
             "docs": [
               "can update the config and execute priveled instructions"
             ],
+            "type": "pubkey"
+          },
+          {
+            "name": "dex",
             "type": "pubkey"
           },
           {

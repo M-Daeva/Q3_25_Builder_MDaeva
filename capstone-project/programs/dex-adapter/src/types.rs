@@ -13,3 +13,10 @@ pub struct SwapSpec {
     /// optional program to forward to
     pub forward_to_program: Option<Pubkey>,
 }
+
+#[derive(AnchorSerialize)]
+pub struct SwapRouterBaseInData {
+    pub discriminator: [u8; 8],
+    pub amount_in: u64,
+    pub amount_out_minimum: u64,
+}

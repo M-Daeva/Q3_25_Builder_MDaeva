@@ -16,6 +16,7 @@ pub trait DexAdapterExtension {
     fn dex_adapter_try_init(
         &mut self,
         sender: AppUser,
+        dex: Pubkey,
         registry: Option<Pubkey>,
         rotation_timeout: Option<u32>,
         token_in_whitelist: Option<Vec<AppToken>>,
@@ -30,6 +31,7 @@ impl DexAdapterExtension for App {
     fn dex_adapter_try_init(
         &mut self,
         sender: AppUser,
+        dex: Pubkey,
         registry: Option<Pubkey>,
         rotation_timeout: Option<u32>,
         token_in_whitelist: Option<Vec<AppToken>>,
@@ -59,6 +61,7 @@ impl DexAdapterExtension for App {
         };
 
         let instruction_data = instruction::Init {
+            dex,
             registry,
             rotation_timeout,
             token_in_whitelist: token_in_whitelist.map(|x| x.iter().map(|y| y.pubkey()).collect()),

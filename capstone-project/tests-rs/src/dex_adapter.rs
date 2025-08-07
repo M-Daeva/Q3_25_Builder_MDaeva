@@ -9,6 +9,7 @@ use {
     anchor_lang::Result,
     dex_adapter::state::{Config, ROTATION_TIMEOUT},
     pretty_assertions::assert_eq,
+    solana_pubkey::Pubkey,
 };
 
 #[test]
@@ -17,6 +18,7 @@ fn init_default() -> Result<()> {
 
     app.dex_adapter_try_init(
         AppUser::Admin,
+        Pubkey::default(),
         None,
         None,
         Some(vec![AppToken::USDC, AppToken::WBTC]),
@@ -26,6 +28,7 @@ fn init_default() -> Result<()> {
         app.dex_adapter_query_config()?,
         Config {
             admin: AppUser::Admin.pubkey(),
+            dex: Pubkey::default(),
             registry: None,
             is_paused: false,
             rotation_timeout: ROTATION_TIMEOUT,

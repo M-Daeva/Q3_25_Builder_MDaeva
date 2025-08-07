@@ -8,7 +8,7 @@ pub mod instructions;
 pub mod state;
 pub mod types;
 
-use instructions::init::*;
+use instructions::{init::*, swap_multihop::*};
 
 declare_id!("FMsjKKPk7FQb1B9H8UQTLrdCUZ9MaoAeTnNK9kdVJmtt");
 
@@ -18,16 +18,23 @@ pub mod dex_adapter {
 
     pub fn init(
         ctx: Context<Init>,
+        dex: Pubkey,
         registry: Option<Pubkey>,
         rotation_timeout: Option<u32>,
         token_in_whitelist: Option<Vec<Pubkey>>,
     ) -> Result<()> {
-        ctx.accounts
-            .init(ctx.bumps, registry, rotation_timeout, token_in_whitelist)
+        ctx.accounts.init(
+            ctx.bumps,
+            dex,
+            registry,
+            rotation_timeout,
+            token_in_whitelist,
+        )
     }
 
     // pub fn update_config(
     //     admin: Option<Pubkey>,
+    //     dex: Option<Pubkey>,
     //     registry: Option<Pubkey>,
     //     is_paused: Option<bool>,
     //     rotation_timeout: Option<u32>,
@@ -57,4 +64,18 @@ pub mod dex_adapter {
     // pub fn unwrap_and_send_sol(amount_in: u64, recipient: Option<Pubkey>) -> Result<()> {
     //     unimplemented!()
     // }
+
+    pub fn swap_multihop<'a, 'b, 'c: 'info, 'info>(
+        ctx: Context<'a, 'b, 'c, 'info, SwapMultihop<'info>>,
+        amount_in: u64,
+        amount_out_minimum: u64,
+        route_config_indices: Vec<u16>,
+    ) -> Result<()> {
+        ctx.accounts.swap_multihop(
+            ctx.remaining_accounts,
+            amount_in,
+            amount_out_minimum,
+            route_config_indices,
+        )
+    }
 }

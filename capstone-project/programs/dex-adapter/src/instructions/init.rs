@@ -48,6 +48,7 @@ impl<'info> Init<'info> {
     pub fn init(
         &mut self,
         bumps: InitBumps,
+        dex: Pubkey,
         registry: Option<Pubkey>,
         rotation_timeout: Option<u32>,
         token_in_whitelist: Option<Vec<Pubkey>>,
@@ -67,6 +68,7 @@ impl<'info> Init<'info> {
 
         config.set_inner(Config {
             admin: sender.key(),
+            dex,
             registry,
             is_paused: false,
             rotation_timeout: rotation_timeout.unwrap_or(ROTATION_TIMEOUT),
