@@ -360,6 +360,16 @@ impl Pda {
         )
         .0
     }
+
+    pub fn dex_adapter_route(&self, mint_first: Pubkey, mint_last: Pubkey) -> Pubkey {
+        let (mint_first, mint_last) = sort_mints(&mint_first, &mint_last);
+
+        get_pda_and_bump(
+            &seeds![dex_adapter::state::SEED_ROUTE, mint_first, mint_last],
+            &self.dex_adapter_program_id,
+        )
+        .0
+    }
 }
 
 pub struct App {

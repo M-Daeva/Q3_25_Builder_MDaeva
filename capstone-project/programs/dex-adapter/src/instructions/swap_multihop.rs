@@ -85,13 +85,13 @@ impl<'info> SwapMultihop<'info> {
         remaining_accounts: &'info [AccountInfo<'info>],
         amount_in: u64,
         amount_out_minimum: u64,
-        route_config_indices: Vec<u16>,
+        route_config_indexes: Vec<u16>,
     ) -> Result<()> {
         if amount_in == 0 {
             Err(CustomError::InvalidAmount)?;
         }
 
-        if route_config_indices.len() < 2 {
+        if route_config_indexes.len() < 2 {
             Err(CustomError::InvalidRouteLength)?;
         }
 
@@ -110,7 +110,7 @@ impl<'info> SwapMultihop<'info> {
             remaining_accounts,
             amount_in,
             amount_out_minimum,
-            route_config_indices.clone(),
+            route_config_indexes.clone(),
         )?;
 
         // transfer output tokens from app ATA to sender
@@ -138,10 +138,10 @@ impl<'info> SwapMultihop<'info> {
         remaining_accounts: &'info [AccountInfo<'info>],
         amount_in: u64,
         amount_out_minimum: u64,
-        route_config_indices: Vec<u16>,
+        route_config_indexes: Vec<u16>,
     ) -> Result<()> {
         let accounts_per_hop = 7;
-        let expected_remaining_accounts = (route_config_indices.len() - 1) * accounts_per_hop;
+        let expected_remaining_accounts = (route_config_indexes.len() - 1) * accounts_per_hop;
 
         if remaining_accounts.len() != expected_remaining_accounts {
             Err(CustomError::InvalidRemainingAccounts)?;

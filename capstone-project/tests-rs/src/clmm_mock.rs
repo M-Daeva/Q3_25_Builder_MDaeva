@@ -10,6 +10,48 @@ use {
     pretty_assertions::assert_eq,
 };
 
+const AMM_CONFIG_INDEX_0: u16 = 0;
+const AMM_CONFIG_INDEX_1: u16 = 1;
+
+fn prepare_dex(app: &mut App) -> Result<()> {
+    app.wait(1_000);
+    app.clmm_mock_try_create_operation_account(AppUser::Admin)?;
+
+    for (amm_index, token_0, token_1) in [
+        (AMM_CONFIG_INDEX_0, AppToken::USDC, AppToken::PYTH),
+        (AMM_CONFIG_INDEX_1, AppToken::WBTC, AppToken::USDC),
+    ] {
+        let (token_0, token_1) = sort_tokens(token_0, token_1);
+
+        app.clmm_mock_try_create_amm_config(AppUser::Admin, amm_index, 1, 1, 1, 1)?;
+        app.clmm_mock_try_create_pool(
+            AppUser::Admin,
+            1,
+            app.get_clock_time() - 1,
+            amm_index,
+            token_0,
+            token_1,
+        )?;
+        app.clmm_mock_try_open_position(
+            AppUser::Admin,
+            0,
+            0,
+            0,
+            0,
+            1,
+            calc_token_amount_for_pool(token_0),
+            calc_token_amount_for_pool(token_1),
+            false,
+            None,
+            amm_index,
+            token_0,
+            token_1,
+        )?;
+    }
+
+    Ok(())
+}
+
 #[test]
 fn swap_default() -> Result<()> {
     const AMM_CONFIG_INDEX: u16 = 0;
@@ -114,37 +156,8 @@ fn swap_default() -> Result<()> {
 
 #[test]
 fn swap_with_decimals() -> Result<()> {
-    const AMM_CONFIG_INDEX: u16 = 0;
-
     let mut app = App::new();
-    app.wait(1_000);
-
-    app.clmm_mock_try_create_operation_account(AppUser::Admin)?;
-    app.clmm_mock_try_create_amm_config(AppUser::Admin, AMM_CONFIG_INDEX, 1, 1, 1, 1)?;
-    app.clmm_mock_try_create_pool(
-        AppUser::Alice,
-        1,
-        app.get_clock_time() - 1,
-        AMM_CONFIG_INDEX,
-        AppToken::USDC,
-        AppToken::WBTC,
-    )?;
-
-    app.clmm_mock_try_open_position(
-        AppUser::Alice,
-        0,
-        0,
-        0,
-        0,
-        1,
-        calc_token_amount_for_pool(AppToken::USDC),
-        calc_token_amount_for_pool(AppToken::WBTC),
-        false,
-        None,
-        AMM_CONFIG_INDEX,
-        AppToken::USDC,
-        AppToken::WBTC,
-    )?;
+    prepare_dex(&mut app)?;
 
     // swap USDC -> WBTC
     let bob_usdc_before = app.get_balance(AppUser::Bob, AppToken::USDC);
@@ -156,7 +169,7 @@ fn swap_with_decimals() -> Result<()> {
         995,
         0,
         true,
-        AMM_CONFIG_INDEX,
+        AMM_CONFIG_INDEX_1,
         AppToken::USDC,
         AppToken::WBTC,
     )?;
@@ -178,7 +191,7 @@ fn swap_with_decimals() -> Result<()> {
         995_000,
         0,
         true,
-        AMM_CONFIG_INDEX,
+        AMM_CONFIG_INDEX_1,
         AppToken::WBTC,
         AppToken::USDC,
     )?;
@@ -194,44 +207,8 @@ fn swap_with_decimals() -> Result<()> {
 
 #[test]
 fn swap_multihop_default() -> Result<()> {
-    const AMM_CONFIG_INDEX_0: u16 = 0;
-    const AMM_CONFIG_INDEX_1: u16 = 1;
-
     let mut app = App::new();
-    app.wait(1_000);
-    app.clmm_mock_try_create_operation_account(AppUser::Admin)?;
-
-    for (amm_index, token_0, token_1) in [
-        (AMM_CONFIG_INDEX_0, AppToken::USDC, AppToken::PYTH),
-        (AMM_CONFIG_INDEX_1, AppToken::WBTC, AppToken::USDC),
-    ] {
-        let (token_0, token_1) = sort_tokens(token_0, token_1);
-
-        app.clmm_mock_try_create_amm_config(AppUser::Admin, amm_index, 1, 1, 1, 1)?;
-        app.clmm_mock_try_create_pool(
-            AppUser::Admin,
-            1,
-            app.get_clock_time() - 1,
-            amm_index,
-            token_0,
-            token_1,
-        )?;
-        app.clmm_mock_try_open_position(
-            AppUser::Admin,
-            0,
-            0,
-            0,
-            0,
-            1,
-            calc_token_amount_for_pool(token_0),
-            calc_token_amount_for_pool(token_1),
-            false,
-            None,
-            amm_index,
-            token_0,
-            token_1,
-        )?;
-    }
+    prepare_dex(&mut app)?;
 
     // swap WBTC -> USDC -> PYTH
     let bob_wbtc_before = app.get_balance(AppUser::Bob, AppToken::WBTC);
@@ -259,44 +236,8 @@ fn swap_multihop_default() -> Result<()> {
 
 #[test]
 fn swap_multihop_reversed() -> Result<()> {
-    const AMM_CONFIG_INDEX_0: u16 = 0;
-    const AMM_CONFIG_INDEX_1: u16 = 1;
-
     let mut app = App::new();
-    app.wait(1_000);
-    app.clmm_mock_try_create_operation_account(AppUser::Admin)?;
-
-    for (amm_index, token_0, token_1) in [
-        (AMM_CONFIG_INDEX_0, AppToken::USDC, AppToken::PYTH),
-        (AMM_CONFIG_INDEX_1, AppToken::WBTC, AppToken::USDC),
-    ] {
-        let (token_0, token_1) = sort_tokens(token_0, token_1);
-
-        app.clmm_mock_try_create_amm_config(AppUser::Admin, amm_index, 1, 1, 1, 1)?;
-        app.clmm_mock_try_create_pool(
-            AppUser::Admin,
-            1,
-            app.get_clock_time() - 1,
-            amm_index,
-            token_0,
-            token_1,
-        )?;
-        app.clmm_mock_try_open_position(
-            AppUser::Admin,
-            0,
-            0,
-            0,
-            0,
-            1,
-            calc_token_amount_for_pool(token_0),
-            calc_token_amount_for_pool(token_1),
-            false,
-            None,
-            amm_index,
-            token_0,
-            token_1,
-        )?;
-    }
+    prepare_dex(&mut app)?;
 
     // swap PYTH -> USDC -> WBTC
     let bob_pyth_before = app.get_balance(AppUser::Bob, AppToken::PYTH);
@@ -324,44 +265,8 @@ fn swap_multihop_reversed() -> Result<()> {
 
 #[test]
 fn swap_multihop_single_pool() -> Result<()> {
-    const AMM_CONFIG_INDEX_0: u16 = 0;
-    const AMM_CONFIG_INDEX_1: u16 = 1;
-
     let mut app = App::new();
-    app.wait(1_000);
-    app.clmm_mock_try_create_operation_account(AppUser::Admin)?;
-
-    for (amm_index, token_0, token_1) in [
-        (AMM_CONFIG_INDEX_0, AppToken::USDC, AppToken::PYTH),
-        (AMM_CONFIG_INDEX_1, AppToken::USDC, AppToken::WBTC),
-    ] {
-        let (token_0, token_1) = sort_tokens(token_0, token_1);
-
-        app.clmm_mock_try_create_amm_config(AppUser::Admin, amm_index, 1, 1, 1, 1)?;
-        app.clmm_mock_try_create_pool(
-            AppUser::Admin,
-            1,
-            app.get_clock_time() - 1,
-            amm_index,
-            token_0,
-            token_1,
-        )?;
-        app.clmm_mock_try_open_position(
-            AppUser::Admin,
-            0,
-            0,
-            0,
-            0,
-            1,
-            calc_token_amount_for_pool(token_0),
-            calc_token_amount_for_pool(token_1),
-            false,
-            None,
-            amm_index,
-            token_0,
-            token_1,
-        )?;
-    }
+    prepare_dex(&mut app)?;
 
     // swap WBTC -> USDC
     let bob_wbtc_before = app.get_balance(AppUser::Bob, AppToken::WBTC);
