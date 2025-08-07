@@ -1,5 +1,3 @@
-// #[cfg(test)]
-// pub mod clmm;
 #[cfg(test)]
 pub mod clmm_mock;
 #[cfg(test)]
@@ -11,7 +9,6 @@ pub mod wsol;
 
 pub mod helpers {
     pub mod extensions {
-        pub mod clmm;
         pub mod clmm_mock;
         pub mod dex_adapter;
         pub mod registry;

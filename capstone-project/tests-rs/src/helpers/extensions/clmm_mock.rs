@@ -15,7 +15,6 @@ use {
     solana_keypair::Keypair,
     solana_pubkey::Pubkey,
     solana_signer::Signer,
-    spl_associated_token_account::get_associated_token_address,
 };
 
 pub trait ClmmMockExtension {
@@ -81,6 +80,14 @@ pub trait ClmmMockExtension {
         amm_config_index: u16,
         input_vault_mint: AppToken,
         output_vault_mint: AppToken,
+    ) -> Result<TransactionMetadata>;
+
+    fn clmm_mock_try_swap_multihop(
+        &mut self,
+        sender: AppUser,
+        amount_in: u64,
+        amount_out_minimum: u64,
+        route_with_configs: &[(AppToken, u16)],
     ) -> Result<TransactionMetadata>;
 
     fn clmm_mock_query_operation_account(&self) -> Result<state::OperationState>;
@@ -308,7 +315,7 @@ impl ClmmMockExtension for App {
 
         // ata
         // position_nft_account will be created during instruction execution
-        let position_nft_account = get_associated_token_address(&payer, &position_nft_mint);
+        let position_nft_account = Self::get_ata(&payer, &position_nft_mint);
         let token_account_0 = self.get_or_create_ata(sender, &payer, &token_mint_0)?;
         let token_account_1 = self.get_or_create_ata(sender, &payer, &token_mint_1)?;
 
@@ -517,6 +524,103 @@ impl ClmmMockExtension for App {
         )
     }
 
+    fn clmm_mock_try_swap_multihop(
+        &mut self,
+        sender: AppUser,
+        amount_in: u64,
+        amount_out_minimum: u64,
+        route_with_configs: &[(AppToken, u16)], // (token, config_for_pool_ending_at_this_token)
+    ) -> Result<TransactionMetadata> {
+        // validate route
+        if route_with_configs.len() < 2 {
+            panic!("Route must contain at least 2 tokens");
+        }
+
+        // programs
+        let ProgramId {
+            token_program_2022,
+            token_program,
+            memo,
+            clmm_mock: program_id,
+            ..
+        } = self.program_id;
+
+        // signers
+        let payer = sender.pubkey();
+        let signers = [sender.keypair()];
+
+        // mint
+        let input_vault_mint = route_with_configs[0].0.pubkey();
+        let input_token_account = self.get_or_create_ata(sender, &payer, &input_vault_mint)?;
+
+        let accounts = accounts::SwapRouterBaseIn {
+            payer,
+            input_token_account,
+            input_token_mint: input_vault_mint,
+            token_program,
+            token_program_2022,
+            memo_program: memo,
+        };
+
+        // build accounts for each pool in the route
+        let mut remaining_accounts = vec![];
+
+        for i in 0..route_with_configs.len() - 1 {
+            let (token_a, _) = route_with_configs[i];
+            let (token_b, amm_config_index) = route_with_configs[i + 1];
+            let (token_a_mint, token_b_mint) = (token_a.pubkey(), token_b.pubkey());
+
+            // use the config index from the destination token
+            let amm_config = self.pda.clmm_mock_amm_config(amm_config_index);
+            let pool_state = self
+                .pda
+                .clmm_mock_pool_state(amm_config, token_a_mint, token_b_mint);
+
+            // order tokens consistently for PDA derivation
+            let (sorted_token_0, sorted_token_1) = sort_token_mints(&token_a_mint, &token_b_mint);
+            // determine which vault is input and which is output based on swap direction
+            let (input_vault, output_vault) = if token_a_mint == sorted_token_0 {
+                (
+                    self.pda.clmm_mock_token_vault_0(pool_state, sorted_token_0),
+                    self.pda.clmm_mock_token_vault_1(pool_state, sorted_token_1),
+                )
+            } else {
+                (
+                    self.pda.clmm_mock_token_vault_1(pool_state, sorted_token_1),
+                    self.pda.clmm_mock_token_vault_0(pool_state, sorted_token_0),
+                )
+            };
+
+            let observation_state = self.pda.clmm_mock_observation_state(pool_state);
+            let output_token_account = self.get_or_create_ata(sender, &payer, &token_b_mint)?;
+
+            remaining_accounts.extend(vec![
+                AccountMeta::new_readonly(amm_config, false),
+                AccountMeta::new(pool_state, false),
+                AccountMeta::new(output_token_account, false),
+                AccountMeta::new(input_vault, false),
+                AccountMeta::new(output_vault, false),
+                AccountMeta::new_readonly(token_b_mint, false),
+                AccountMeta::new(observation_state, false),
+            ]);
+        }
+
+        let instruction_data = instruction::SwapRouterBaseIn {
+            amount_in,
+            amount_out_minimum,
+        };
+
+        send_tx_with_ix(
+            self,
+            &program_id,
+            &accounts,
+            &instruction_data,
+            &payer,
+            &signers,
+            &remaining_accounts,
+        )
+    }
+
     fn clmm_mock_query_operation_account(&self) -> Result<state::OperationState> {
         get_data_zero_copy(&self.litesvm, &self.pda.clmm_mock_operation_account())
     }
@@ -540,6 +644,14 @@ impl ClmmMockExtension for App {
                 .pda
                 .clmm_mock_pool_state(*amm_config, *token_mint_0, *token_mint_1),
         )
+    }
+}
+
+pub fn sort_tokens(token_a: AppToken, token_b: AppToken) -> (AppToken, AppToken) {
+    if token_a.pubkey() < token_b.pubkey() {
+        (token_a, token_b)
+    } else {
+        (token_b, token_a)
     }
 }
 
@@ -578,4 +690,59 @@ pub fn calc_token_amount_for_pool(token: AppToken) -> u64 {
 //             (*mint, *decimals, *price)
 //         })
 //         .collect()
+// }
+
+// /// Calculate sqrt_price_x64 for AMM pools using Decimal for precision
+// ///
+// /// Formula: sqrt_price_x64 = sqrt(price_ratio) * 2^64
+// /// where price_ratio = (price_token1 / price_token0) * (10^decimals0 / 10^decimals1)
+// fn calculate_sqrt_price_x64(
+//     price_token0_usd: Decimal,
+//     decimals_token0: u8,
+//     price_token1_usd: Decimal,
+//     decimals_token1: u8,
+// ) -> u128 {
+//     // Step 1: Calculate the price ratio (token1/token0)
+//     let price_ratio = price_token1_usd / price_token0_usd;
+
+//     // Step 2: Adjust for decimal differences
+//     let decimal_diff = decimals_token0 as i8 - decimals_token1 as i8;
+//     let decimal_adjustment = if decimal_diff >= 0 {
+//         u128_to_dec(10u128.pow(decimal_diff as u32))
+//     } else {
+//         Decimal::from_ratio(1, 10u128.pow((-decimal_diff) as u32))
+//     };
+
+//     let adjusted_price_ratio = price_ratio * decimal_adjustment;
+
+//     // Step 3: Take square root using integer square root
+//     // Since we don't have a built-in sqrt for Decimal, we'll use integer square root
+//     let sqrt_price = integer_sqrt(adjusted_price_ratio.atomics());
+
+//     // Step 4: Convert to Q64.64 format
+//     // We need to adjust because we took sqrt of the raw atomics
+//     // sqrt(atomics) = sqrt(actual_value * 10^18) = sqrt(actual_value) * sqrt(10^18)
+//     // So we need to divide by sqrt(10^18) = 10^9, then multiply by 2^64
+
+//     let sqrt_decimal_fractional = 1_000_000_000u128; // sqrt(10^18) = 10^9
+//     let q64_64_factor = 1u128 << 64; // 2^64
+
+//     (sqrt_price * q64_64_factor) / sqrt_decimal_fractional
+// }
+
+// /// Integer square root using Newton's method
+// fn integer_sqrt(value: u128) -> u128 {
+//     if value == 0 {
+//         return 0;
+//     }
+
+//     let mut x = value;
+//     let mut y = (x + 1) / 2;
+
+//     while y < x {
+//         x = y;
+//         y = (x + value / x) / 2;
+//     }
+
+//     x
 // }

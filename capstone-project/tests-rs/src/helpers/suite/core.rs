@@ -134,20 +134,18 @@ pub struct ProgramId {
     pub memo: Pubkey,
 
     // 3rd party
-    pub clmm: Pubkey,
+    pub clmm_mock: Pubkey,
 
     // custom
     pub registry: Pubkey,
     pub dex_adapter: Pubkey,
-    pub clmm_mock: Pubkey,
 }
 
 pub struct Pda {
-    clmm_program_id: Pubkey,
+    clmm_mock_program_id: Pubkey,
 
     registry_program_id: Pubkey,
     dex_adapter_program_id: Pubkey,
-    clmm_mock_program_id: Pubkey,
 }
 
 impl Pda {
@@ -275,128 +273,6 @@ impl Pda {
         .0
     }
 
-    // clmm
-    //
-    pub fn clmm_amm_config(&self, index: u16) -> Pubkey {
-        get_pda_and_bump(
-            &seeds![
-                raydium_amm_v3::states::AMM_CONFIG_SEED,
-                index.to_be_bytes().as_ref()
-            ],
-            &self.clmm_program_id,
-        )
-        .0
-    }
-
-    pub fn clmm_operation_account(&self) -> Pubkey {
-        get_pda_and_bump(
-            &seeds![raydium_amm_v3::states::OPERATION_SEED],
-            &self.clmm_program_id,
-        )
-        .0
-    }
-
-    pub fn clmm_pool_state(
-        &self,
-        amm_config: Pubkey,
-        token_mint_0: Pubkey,
-        token_mint_1: Pubkey,
-    ) -> Pubkey {
-        get_pda_and_bump(
-            &seeds![
-                raydium_amm_v3::states::POOL_SEED,
-                amm_config,
-                token_mint_0,
-                token_mint_1
-            ],
-            &self.clmm_program_id,
-        )
-        .0
-    }
-
-    pub fn clmm_token_vault_0(&self, pool_state: Pubkey, token_mint_0: Pubkey) -> Pubkey {
-        get_pda_and_bump(
-            &seeds![
-                raydium_amm_v3::states::POOL_VAULT_SEED,
-                pool_state,
-                token_mint_0
-            ],
-            &self.clmm_program_id,
-        )
-        .0
-    }
-
-    pub fn clmm_token_vault_1(&self, pool_state: Pubkey, token_mint_1: Pubkey) -> Pubkey {
-        get_pda_and_bump(
-            &seeds![
-                raydium_amm_v3::states::POOL_VAULT_SEED,
-                pool_state,
-                token_mint_1
-            ],
-            &self.clmm_program_id,
-        )
-        .0
-    }
-
-    pub fn clmm_observation_state(&self, pool_state: Pubkey) -> Pubkey {
-        get_pda_and_bump(
-            &seeds![raydium_amm_v3::states::OBSERVATION_SEED, pool_state,],
-            &self.clmm_program_id,
-        )
-        .0
-    }
-
-    pub fn clmm_tick_array_bitmap(&self, pool_state: Pubkey) -> Pubkey {
-        get_pda_and_bump(
-            &seeds![
-                raydium_amm_v3::states::POOL_TICK_ARRAY_BITMAP_SEED,
-                pool_state,
-            ],
-            &self.clmm_program_id,
-        )
-        .0
-    }
-
-    pub fn clmm_tick_array_lower(
-        &self,
-        pool_state: Pubkey,
-        tick_array_lower_start_index: i32,
-    ) -> Pubkey {
-        get_pda_and_bump(
-            &seeds![
-                raydium_amm_v3::states::TICK_ARRAY_SEED,
-                pool_state,
-                tick_array_lower_start_index.to_be_bytes().as_ref()
-            ],
-            &self.clmm_program_id,
-        )
-        .0
-    }
-
-    pub fn clmm_tick_array_upper(
-        &self,
-        pool_state: Pubkey,
-        tick_array_upper_start_index: i32,
-    ) -> Pubkey {
-        get_pda_and_bump(
-            &seeds![
-                raydium_amm_v3::states::TICK_ARRAY_SEED,
-                pool_state,
-                tick_array_upper_start_index.to_be_bytes().as_ref()
-            ],
-            &self.clmm_program_id,
-        )
-        .0
-    }
-
-    pub fn clmm_personal_position(&self, position_nft_mint: Pubkey) -> Pubkey {
-        get_pda_and_bump(
-            &seeds![raydium_amm_v3::states::POSITION_SEED, position_nft_mint],
-            &self.clmm_program_id,
-        )
-        .0
-    }
-
     // registry
     //
     pub fn registry_bump(&self) -> Pubkey {
@@ -511,26 +387,23 @@ impl App {
             memo: memo::ID,
 
             // 3rd party
-            clmm: raydium_amm_v3::ID,
+            clmm_mock: clmm_mock::ID,
 
             // custom
             registry: registry::ID,
             dex_adapter: dex_adapter::ID,
-            clmm_mock: clmm_mock::ID,
         };
 
         // specify PDA
         let pda = Pda {
-            clmm_program_id: program_id.clmm,
+            clmm_mock_program_id: program_id.clmm_mock,
 
             registry_program_id: program_id.registry,
             dex_adapter_program_id: program_id.dex_adapter,
-            clmm_mock_program_id: program_id.clmm_mock,
         };
 
         // upload 3rd party programs
         upload_program(&mut litesvm, "clmm_mock", &program_id.clmm_mock);
-        // upload_program(&mut litesvm, "raydium_amm_v3", &program_id.clmm);
 
         // upload custom programs
         upload_program(&mut litesvm, "registry", &program_id.registry);
@@ -618,7 +491,7 @@ impl App {
 
     fn create_wsol(&mut self) {
         let mut mint_account = solana_account::Account {
-            lamports: 0,
+            lamports: self.litesvm.minimum_balance_for_rent_exemption(Mint::LEN),
             data: vec![0; Mint::LEN],
             owner: spl_token::ID,
             executable: false,
