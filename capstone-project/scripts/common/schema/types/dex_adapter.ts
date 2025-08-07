@@ -134,6 +134,110 @@ export type DexAdapter = {
       ]
     },
     {
+      "name": "saveRoute",
+      "discriminator": [
+        159,
+        32,
+        189,
+        85,
+        230,
+        5,
+        208,
+        143
+      ],
+      "accounts": [
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "sender",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "bump",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  117,
+                  109,
+                  112
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "route",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  111,
+                  117,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "mint0"
+              },
+              {
+                "kind": "arg",
+                "path": "mint1"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "mint0",
+          "type": "pubkey"
+        },
+        {
+          "name": "mint1",
+          "type": "pubkey"
+        },
+        {
+          "name": "route",
+          "type": {
+            "vec": {
+              "defined": {
+                "name": "routeItem"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "swapMultihop",
       "discriminator": [
         138,
@@ -626,56 +730,74 @@ export type DexAdapter = {
         93,
         114
       ]
+    },
+    {
+      "name": "route",
+      "discriminator": [
+        80,
+        179,
+        58,
+        115,
+        52,
+        19,
+        146,
+        134
+      ]
     }
   ],
   "errors": [
     {
       "code": 6000,
+      "name": "unsortedMints",
+      "msg": "Mints are unsorted!"
+    },
+    {
+      "code": 6001,
       "name": "slippageExceeded",
       "msg": "Swap slippage exceeded maximum allowed"
     },
     {
-      "code": 6001,
+      "code": 6002,
       "name": "invalidSwapRatio",
       "msg": "Invalid swap ratio configuration"
     },
     {
-      "code": 6002,
+      "code": 6003,
       "name": "dexCallFailed",
       "msg": "DEX program call failed"
     },
     {
-      "code": 6003,
+      "code": 6004,
       "name": "forwardingFailed",
       "msg": "Token forwarding failed"
     },
     {
-      "code": 6004,
+      "code": 6005,
       "name": "contractPaused",
       "msg": "Contract is paused"
     },
     {
-      "code": 6005,
+      "code": 6006,
       "name": "invalidRouteLength",
       "msg": "Route must contain at least 2 tokens"
     },
     {
-      "code": 6006,
+      "code": 6007,
       "name": "invalidAmount",
       "msg": "Amount must be greater than 0"
     },
     {
-      "code": 6007,
+      "code": 6008,
       "name": "invalidTokenAccount",
       "msg": "Invalid token account"
     },
     {
-      "code": 6008,
+      "code": 6009,
       "name": "invalidRemainingAccounts",
       "msg": "Invalid number of remaining accounts"
     },
     {
-      "code": 6009,
+      "code": 6010,
       "name": "noOutputTokens",
       "msg": "No output tokens received from swap"
     }
@@ -759,6 +881,40 @@ export type DexAdapter = {
           {
             "name": "expirationDate",
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "route",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "value",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "routeItem"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "routeItem",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "ammIndex",
+            "type": "u16"
+          },
+          {
+            "name": "tokenOut",
+            "type": "pubkey"
           }
         ]
       }

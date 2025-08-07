@@ -1,10 +1,7 @@
 use {
-    crate::helpers::{
-        extensions::clmm_mock::sort_token_mints,
-        suite::{
-            core::sol_kite::create_token_mint,
-            types::{AppAsset, AppCoin, AppToken, AppUser, GetDecimals},
-        },
+    crate::helpers::suite::{
+        core::sol_kite::create_token_mint,
+        types::{AppAsset, AppCoin, AppToken, AppUser, GetDecimals},
     },
     anchor_lang::{
         prelude::{AccountInfo, AccountLoader, Clock},
@@ -13,6 +10,7 @@ use {
     anchor_spl::{
         associated_token::AssociatedToken, memo, token::Mint, token_2022::spl_token_2022,
     },
+    base::helpers::sort_mints,
     clmm_mock, dex_adapter,
     litesvm::{types::TransactionMetadata, LiteSVM},
     registry,
@@ -176,7 +174,7 @@ impl Pda {
         token_mint_0: Pubkey,
         token_mint_1: Pubkey,
     ) -> Pubkey {
-        let (token_mint_0, token_mint_1) = sort_token_mints(&token_mint_0, &token_mint_1);
+        let (token_mint_0, token_mint_1) = sort_mints(&token_mint_0, &token_mint_1);
 
         get_pda_and_bump(
             &seeds![

@@ -8,6 +8,7 @@ use {
         types::{AppToken, AppUser, GetDecimals, GetPrice},
     },
     anchor_lang::Result,
+    base::helpers::sort_mints,
     clmm_mock::{accounts, instruction, state},
     litesvm::types::TransactionMetadata,
     raydium_clmm_cpi,
@@ -215,7 +216,7 @@ impl ClmmMockExtension for App {
         let (token_mint_0, token_mint_1) = (token_mint_0.pubkey(), token_mint_1.pubkey());
 
         // check if tokens are sorted
-        let (token_mint_0_sorted, _) = sort_token_mints(&token_mint_0, &token_mint_1);
+        let (token_mint_0_sorted, _) = sort_mints(&token_mint_0, &token_mint_1);
         if token_mint_0_sorted != token_mint_0 {
             panic!("Token mints should be sorted!");
         }
@@ -303,7 +304,7 @@ impl ClmmMockExtension for App {
         let (token_mint_0, token_mint_1) = (token_mint_0.pubkey(), token_mint_1.pubkey());
 
         // check if tokens are sorted
-        let (token_mint_0_sorted, _) = sort_token_mints(&token_mint_0, &token_mint_1);
+        let (token_mint_0_sorted, _) = sort_mints(&token_mint_0, &token_mint_1);
         if token_mint_0_sorted != token_mint_0 {
             panic!("Token mints should be sorted!");
         }
@@ -647,18 +648,10 @@ impl ClmmMockExtension for App {
 }
 
 pub fn sort_tokens(token_a: AppToken, token_b: AppToken) -> (AppToken, AppToken) {
-    if token_a.pubkey() < token_b.pubkey() {
+    if token_a.pubkey() <= token_b.pubkey() {
         (token_a, token_b)
     } else {
         (token_b, token_a)
-    }
-}
-
-pub fn sort_token_mints(mint_a: &Pubkey, mint_b: &Pubkey) -> (Pubkey, Pubkey) {
-    if mint_a < mint_b {
-        (*mint_a, *mint_b)
-    } else {
-        (*mint_b, *mint_a)
     }
 }
 

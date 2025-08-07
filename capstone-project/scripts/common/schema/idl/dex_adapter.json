@@ -128,6 +128,110 @@
       ]
     },
     {
+      "name": "save_route",
+      "discriminator": [
+        159,
+        32,
+        189,
+        85,
+        230,
+        5,
+        208,
+        143
+      ],
+      "accounts": [
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "sender",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "bump",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  117,
+                  109,
+                  112
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "route",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  111,
+                  117,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "mint_0"
+              },
+              {
+                "kind": "arg",
+                "path": "mint_1"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "mint_0",
+          "type": "pubkey"
+        },
+        {
+          "name": "mint_1",
+          "type": "pubkey"
+        },
+        {
+          "name": "route",
+          "type": {
+            "vec": {
+              "defined": {
+                "name": "RouteItem"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "swap_multihop",
       "discriminator": [
         138,
@@ -620,56 +724,74 @@
         93,
         114
       ]
+    },
+    {
+      "name": "Route",
+      "discriminator": [
+        80,
+        179,
+        58,
+        115,
+        52,
+        19,
+        146,
+        134
+      ]
     }
   ],
   "errors": [
     {
       "code": 6000,
+      "name": "UnsortedMints",
+      "msg": "Mints are unsorted!"
+    },
+    {
+      "code": 6001,
       "name": "SlippageExceeded",
       "msg": "Swap slippage exceeded maximum allowed"
     },
     {
-      "code": 6001,
+      "code": 6002,
       "name": "InvalidSwapRatio",
       "msg": "Invalid swap ratio configuration"
     },
     {
-      "code": 6002,
+      "code": 6003,
       "name": "DexCallFailed",
       "msg": "DEX program call failed"
     },
     {
-      "code": 6003,
+      "code": 6004,
       "name": "ForwardingFailed",
       "msg": "Token forwarding failed"
     },
     {
-      "code": 6004,
+      "code": 6005,
       "name": "ContractPaused",
       "msg": "Contract is paused"
     },
     {
-      "code": 6005,
+      "code": 6006,
       "name": "InvalidRouteLength",
       "msg": "Route must contain at least 2 tokens"
     },
     {
-      "code": 6006,
+      "code": 6007,
       "name": "InvalidAmount",
       "msg": "Amount must be greater than 0"
     },
     {
-      "code": 6007,
+      "code": 6008,
       "name": "InvalidTokenAccount",
       "msg": "Invalid token account"
     },
     {
-      "code": 6008,
+      "code": 6009,
       "name": "InvalidRemainingAccounts",
       "msg": "Invalid number of remaining accounts"
     },
     {
-      "code": 6009,
+      "code": 6010,
       "name": "NoOutputTokens",
       "msg": "No output tokens received from swap"
     }
@@ -753,6 +875,40 @@
           {
             "name": "expiration_date",
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Route",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "value",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "RouteItem"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "RouteItem",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amm_index",
+            "type": "u16"
+          },
+          {
+            "name": "token_out",
+            "type": "pubkey"
           }
         ]
       }

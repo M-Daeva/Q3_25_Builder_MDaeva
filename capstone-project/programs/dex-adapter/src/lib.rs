@@ -8,7 +8,10 @@ pub mod instructions;
 pub mod state;
 pub mod types;
 
-use instructions::{init::*, swap_multihop::*};
+use {
+    crate::types::RouteItem,
+    instructions::{init::*, save_route::*, swap_multihop::*},
+};
 
 declare_id!("FMsjKKPk7FQb1B9H8UQTLrdCUZ9MaoAeTnNK9kdVJmtt");
 
@@ -77,5 +80,14 @@ pub mod dex_adapter {
             amount_out_minimum,
             route_config_indices,
         )
+    }
+
+    pub fn save_route(
+        ctx: Context<SaveRoute>,
+        mint_0: Pubkey,
+        mint_1: Pubkey,
+        route: Vec<RouteItem>,
+    ) -> Result<()> {
+        ctx.accounts.save_route(mint_0, mint_1, route)
     }
 }

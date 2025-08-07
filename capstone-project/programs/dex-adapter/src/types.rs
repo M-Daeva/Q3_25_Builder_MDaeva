@@ -20,3 +20,9 @@ pub struct SwapRouterBaseInData {
     pub amount_in: u64,
     pub amount_out_minimum: u64,
 }
+
+#[derive(InitSpace, AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Debug)]
+pub struct RouteItem {
+    pub amm_index: u16,
+    pub token_out: Pubkey,
+}

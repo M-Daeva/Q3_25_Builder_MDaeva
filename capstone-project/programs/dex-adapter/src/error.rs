@@ -1,7 +1,10 @@
 use anchor_lang::prelude::*;
 
 #[error_code]
-pub enum ProgError {
+pub enum CustomError {
+    #[msg("Mints are unsorted!")]
+    UnsortedMints,
+
     #[msg("Swap slippage exceeded maximum allowed")]
     SlippageExceeded,
 

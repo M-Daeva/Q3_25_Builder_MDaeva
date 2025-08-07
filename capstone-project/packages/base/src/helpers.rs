@@ -46,6 +46,19 @@ pub fn get_space(struct_space: usize) -> usize {
     DISCRIMINATOR_SPACE + struct_space
 }
 
+/// pass args in the order to expect mint_a <= mint_b
+pub fn are_mints_sorted(mint_a: &Pubkey, mint_b: &Pubkey) -> bool {
+    mint_a <= mint_b
+}
+
+pub fn sort_mints(mint_a: &Pubkey, mint_b: &Pubkey) -> (Pubkey, Pubkey) {
+    if are_mints_sorted(mint_a, mint_b) {
+        (*mint_a, *mint_b)
+    } else {
+        (*mint_b, *mint_a)
+    }
+}
+
 pub fn get_clock_time() -> Result<u64> {
     Ok(Clock::get()?.unix_timestamp as u64)
 }

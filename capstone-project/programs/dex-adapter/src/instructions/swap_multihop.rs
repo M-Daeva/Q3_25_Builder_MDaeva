@@ -1,6 +1,6 @@
 use {
     crate::{
-        error::ProgError,
+        error::CustomError,
         state::{Bump, Config, SEED_BUMP, SEED_CONFIG},
         types::SwapRouterBaseInData,
     },
@@ -88,11 +88,11 @@ impl<'info> SwapMultihop<'info> {
         route_config_indices: Vec<u16>,
     ) -> Result<()> {
         if amount_in == 0 {
-            Err(ProgError::InvalidAmount)?;
+            Err(CustomError::InvalidAmount)?;
         }
 
         if route_config_indices.len() < 2 {
-            Err(ProgError::InvalidRouteLength)?;
+            Err(CustomError::InvalidRouteLength)?;
         }
 
         // transfer input tokens from sender to app ATA
@@ -116,7 +116,7 @@ impl<'info> SwapMultihop<'info> {
         // transfer output tokens from app ATA to sender
         let output_balance = self.output_token_app_ata.amount; // TODO: is it safe?
         if output_balance == 0 {
-            Err(ProgError::NoOutputTokens)?;
+            Err(CustomError::NoOutputTokens)?;
         }
 
         transfer_token_from_program(
@@ -144,7 +144,7 @@ impl<'info> SwapMultihop<'info> {
         let expected_remaining_accounts = (route_config_indices.len() - 1) * accounts_per_hop;
 
         if remaining_accounts.len() != expected_remaining_accounts {
-            Err(ProgError::InvalidRemainingAccounts)?;
+            Err(CustomError::InvalidRemainingAccounts)?;
         }
 
         // build accounts for CPI call to clmm_mock

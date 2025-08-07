@@ -53,7 +53,7 @@ impl<'info> Init<'info> {
         rotation_timeout: Option<u32>,
         token_in_whitelist: Option<Vec<Pubkey>>,
     ) -> Result<()> {
-        let Init {
+        let Self {
             sender,
             bump,
             config,

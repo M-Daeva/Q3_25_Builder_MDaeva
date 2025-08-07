@@ -1,8 +1,11 @@
 use anchor_lang::prelude::*;
 
+use crate::types::RouteItem;
+
 pub const SECONDS_PER_DAY: u32 = 24 * 3_600;
 pub const ROTATION_TIMEOUT: u32 = SECONDS_PER_DAY;
 pub const TOKEN_IN_WHITELIST_MAX_LEN: usize = 16;
+pub const ROUTE_MAX_LEN: usize = 3;
 
 pub const MAINNET_USDC: Pubkey =
     Pubkey::from_str_const("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
@@ -14,6 +17,7 @@ pub const MAINNET_WBTC: Pubkey =
 pub const SEED_BUMP: &str = "bump";
 pub const SEED_CONFIG: &str = "config";
 pub const SEED_ADMIN_ROTATION_STATE: &str = "admin_rotation_state";
+pub const SEED_ROUTE: &str = "route";
 
 /// to store bumps for all app accounts
 #[account]
@@ -43,4 +47,11 @@ pub struct Config {
 pub struct RotationState {
     pub new_owner: Option<Pubkey>,
     pub expiration_date: u64,
+}
+
+#[account]
+#[derive(InitSpace, PartialEq, Debug)]
+pub struct Route {
+    #[max_len(ROUTE_MAX_LEN + 1)] // 1 for 1st symbol
+    pub value: Vec<RouteItem>,
 }
