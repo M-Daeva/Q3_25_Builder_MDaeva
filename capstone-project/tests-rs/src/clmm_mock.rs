@@ -258,6 +258,71 @@ fn swap_multihop_default() -> Result<()> {
 }
 
 #[test]
+fn swap_multihop_reversed() -> Result<()> {
+    const AMM_CONFIG_INDEX_0: u16 = 0;
+    const AMM_CONFIG_INDEX_1: u16 = 1;
+
+    let mut app = App::new();
+    app.wait(1_000);
+    app.clmm_mock_try_create_operation_account(AppUser::Admin)?;
+
+    for (amm_index, token_0, token_1) in [
+        (AMM_CONFIG_INDEX_0, AppToken::USDC, AppToken::PYTH),
+        (AMM_CONFIG_INDEX_1, AppToken::WBTC, AppToken::USDC),
+    ] {
+        let (token_0, token_1) = sort_tokens(token_0, token_1);
+
+        app.clmm_mock_try_create_amm_config(AppUser::Admin, amm_index, 1, 1, 1, 1)?;
+        app.clmm_mock_try_create_pool(
+            AppUser::Admin,
+            1,
+            app.get_clock_time() - 1,
+            amm_index,
+            token_0,
+            token_1,
+        )?;
+        app.clmm_mock_try_open_position(
+            AppUser::Admin,
+            0,
+            0,
+            0,
+            0,
+            1,
+            calc_token_amount_for_pool(token_0),
+            calc_token_amount_for_pool(token_1),
+            false,
+            None,
+            amm_index,
+            token_0,
+            token_1,
+        )?;
+    }
+
+    // swap PYTH -> USDC -> WBTC
+    let bob_pyth_before = app.get_balance(AppUser::Bob, AppToken::PYTH);
+    let bob_wbtc_before = app.get_balance(AppUser::Bob, AppToken::WBTC);
+
+    app.clmm_mock_try_swap_multihop(
+        AppUser::Bob,
+        10_000_000,
+        1,
+        &[
+            (AppToken::PYTH, AMM_CONFIG_INDEX_0),
+            (AppToken::USDC, AMM_CONFIG_INDEX_0),
+            (AppToken::WBTC, AMM_CONFIG_INDEX_1),
+        ],
+    )?;
+
+    let bob_pyth_after = app.get_balance(AppUser::Bob, AppToken::PYTH);
+    let bob_wbtc_after = app.get_balance(AppUser::Bob, AppToken::WBTC);
+
+    assert_eq!(bob_pyth_before - bob_pyth_after, 10_000_000);
+    assert_eq!(bob_wbtc_after - bob_wbtc_before, 996);
+
+    Ok(())
+}
+
+#[test]
 fn swap_multihop_single_pool() -> Result<()> {
     const AMM_CONFIG_INDEX_0: u16 = 0;
     const AMM_CONFIG_INDEX_1: u16 = 1;
