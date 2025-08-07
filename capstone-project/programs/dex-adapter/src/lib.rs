@@ -72,14 +72,9 @@ pub mod dex_adapter {
         ctx: Context<'a, 'b, 'c, 'info, SwapMultihop<'info>>,
         amount_in: u64,
         amount_out_minimum: u64,
-        route_config_indexes: Vec<u16>,
     ) -> Result<()> {
-        ctx.accounts.swap_multihop(
-            ctx.remaining_accounts,
-            amount_in,
-            amount_out_minimum,
-            route_config_indexes,
-        )
+        ctx.accounts
+            .swap_multihop(ctx.remaining_accounts, amount_in, amount_out_minimum)
     }
 
     pub fn save_route(

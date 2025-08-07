@@ -1,13 +1,19 @@
 use {
-    crate::helpers::{
-        extensions::dex_adapter::DexAdapterExtension,
-        suite::{
-            core::App,
-            types::{AppToken, AppUser},
+    crate::{
+        clmm_mock::{prepare_dex, AMM_CONFIG_INDEX_0, AMM_CONFIG_INDEX_1},
+        helpers::{
+            extensions::dex_adapter::DexAdapterExtension,
+            suite::{
+                core::App,
+                types::{AppToken, AppUser},
+            },
         },
     },
     anchor_lang::Result,
-    dex_adapter::state::{Config, ROTATION_TIMEOUT},
+    dex_adapter::{
+        state::{Config, ROTATION_TIMEOUT},
+        types::RouteItem,
+    },
     pretty_assertions::assert_eq,
     solana_pubkey::Pubkey,
 };
@@ -38,6 +44,59 @@ fn init_default() -> Result<()> {
                 .collect()
         }
     );
+
+    Ok(())
+}
+
+#[test]
+fn swap_multihop() -> Result<()> {
+    let mut app = App::new();
+    prepare_dex(&mut app)?;
+
+    app.dex_adapter_try_init(
+        AppUser::Admin,
+        app.program_id.clmm_mock,
+        None,
+        None,
+        Some(vec![AppToken::USDC, AppToken::WBTC]),
+    )?;
+
+    app.dex_adapter_try_save_route(
+        AppUser::Admin,
+        &[
+            RouteItem {
+                amm_index: AMM_CONFIG_INDEX_1,
+                token_out: AppToken::WBTC.pubkey(),
+            },
+            RouteItem {
+                amm_index: AMM_CONFIG_INDEX_1,
+                token_out: AppToken::USDC.pubkey(),
+            },
+            RouteItem {
+                amm_index: AMM_CONFIG_INDEX_0,
+                token_out: AppToken::PYTH.pubkey(),
+            },
+        ],
+    )?;
+
+    // swap WBTC -> USDC -> PYTH
+    let bob_wbtc_before = app.get_balance(AppUser::Bob, AppToken::WBTC);
+    let bob_pyth_before = app.get_balance(AppUser::Bob, AppToken::PYTH);
+
+    let res = app.dex_adapter_try_swap_multihop(
+        AppUser::Bob,
+        AppToken::WBTC,
+        AppToken::PYTH,
+        1_000,
+        9_950_000,
+    )?;
+    println!("logs: {:#?}\n", res.logs);
+
+    let bob_wbtc_after = app.get_balance(AppUser::Bob, AppToken::WBTC);
+    let bob_pyth_after = app.get_balance(AppUser::Bob, AppToken::PYTH);
+
+    assert_eq!(bob_wbtc_before - bob_wbtc_after, 1_000);
+    assert_eq!(bob_pyth_after - bob_pyth_before, 9_960_020);
 
     Ok(())
 }

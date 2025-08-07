@@ -1,7 +1,7 @@
 use {
     crate::{
         error::CustomError,
-        state::{Bump, Config, SEED_BUMP, SEED_CONFIG},
+        state::{Bump, Config, Route, SEED_BUMP, SEED_CONFIG, SEED_ROUTE},
         types::SwapRouterBaseInData,
     },
     anchor_lang::{prelude::*, solana_program},
@@ -35,10 +35,17 @@ pub struct SwapMultihop<'info> {
     pub bump: Account<'info, Bump>,
 
     #[account(
+        mut,
         seeds = [SEED_CONFIG.as_bytes()],
         bump = bump.config,
     )]
     pub config: Account<'info, Config>,
+
+    #[account(
+        seeds = [SEED_ROUTE.as_bytes(), &input_token_mint.key().to_bytes(), &output_token_mint.key().to_bytes()],
+        bump
+    )]
+    pub route: Account<'info, Route>,
 
     // mint
     //
@@ -85,14 +92,21 @@ impl<'info> SwapMultihop<'info> {
         remaining_accounts: &'info [AccountInfo<'info>],
         amount_in: u64,
         amount_out_minimum: u64,
-        route_config_indexes: Vec<u16>,
     ) -> Result<()> {
         if amount_in == 0 {
             Err(CustomError::InvalidAmount)?;
         }
 
-        if route_config_indexes.len() < 2 {
+        // Load route from PDA
+        let route_items = &self.route.value;
+        if route_items.len() < 2 {
             Err(CustomError::InvalidRouteLength)?;
+        }
+
+        // Build route config indexes
+        let mut route_config_indexes: Vec<u16> = vec![route_items[0].amm_index]; // First token's config
+        for item in route_items.iter().skip(1) {
+            route_config_indexes.push(item.amm_index);
         }
 
         // transfer input tokens from sender to app ATA
@@ -110,11 +124,11 @@ impl<'info> SwapMultihop<'info> {
             remaining_accounts,
             amount_in,
             amount_out_minimum,
-            route_config_indexes.clone(),
+            route_config_indexes,
         )?;
 
         // transfer output tokens from app ATA to sender
-        let output_balance = self.output_token_app_ata.amount; // TODO: is it safe?
+        let output_balance = self.output_token_app_ata.amount;
         if output_balance == 0 {
             Err(CustomError::NoOutputTokens)?;
         }
@@ -146,6 +160,14 @@ impl<'info> SwapMultihop<'info> {
         if remaining_accounts.len() != expected_remaining_accounts {
             Err(CustomError::InvalidRemainingAccounts)?;
         }
+
+        // TODO
+        msg!("Route config indexes: {:?}", route_config_indexes);
+        msg!(
+            "Expected remaining accounts: {}, actual: {}",
+            expected_remaining_accounts,
+            remaining_accounts.len()
+        );
 
         // build accounts for CPI call to clmm_mock
         let mut accounts = vec![
@@ -194,6 +216,17 @@ impl<'info> SwapMultihop<'info> {
             remaining_accounts,
         ]
         .concat();
+
+        // TODO
+        for (i, account) in account_infos.iter().enumerate() {
+            msg!(
+                "Account {}: {}, writable: {}, signer: {}",
+                i,
+                account.key(),
+                account.is_writable,
+                account.is_signer
+            );
+        }
 
         // execute CPI call with config as signer
         anchor_lang::solana_program::program::invoke_signed(

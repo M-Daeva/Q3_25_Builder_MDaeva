@@ -206,11 +206,11 @@ export type DexAdapter = {
               },
               {
                 "kind": "arg",
-                "path": "mint0"
+                "path": "mintFirst"
               },
               {
                 "kind": "arg",
-                "path": "mint1"
+                "path": "mintLast"
               }
             ]
           }
@@ -218,11 +218,11 @@ export type DexAdapter = {
       ],
       "args": [
         {
-          "name": "mint0",
+          "name": "mintFirst",
           "type": "pubkey"
         },
         {
-          "name": "mint1",
+          "name": "mintLast",
           "type": "pubkey"
         },
         {
@@ -290,6 +290,7 @@ export type DexAdapter = {
         },
         {
           "name": "config",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -302,6 +303,31 @@ export type DexAdapter = {
                   105,
                   103
                 ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "route",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  111,
+                  117,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "inputTokenMint"
+              },
+              {
+                "kind": "account",
+                "path": "outputTokenMint"
               }
             ]
           }
@@ -681,12 +707,6 @@ export type DexAdapter = {
         {
           "name": "amountOutMinimum",
           "type": "u64"
-        },
-        {
-          "name": "routeConfigIndices",
-          "type": {
-            "vec": "u16"
-          }
         }
       ]
     }

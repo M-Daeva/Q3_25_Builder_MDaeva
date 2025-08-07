@@ -200,11 +200,11 @@
               },
               {
                 "kind": "arg",
-                "path": "mint_0"
+                "path": "mint_first"
               },
               {
                 "kind": "arg",
-                "path": "mint_1"
+                "path": "mint_last"
               }
             ]
           }
@@ -212,11 +212,11 @@
       ],
       "args": [
         {
-          "name": "mint_0",
+          "name": "mint_first",
           "type": "pubkey"
         },
         {
-          "name": "mint_1",
+          "name": "mint_last",
           "type": "pubkey"
         },
         {
@@ -284,6 +284,7 @@
         },
         {
           "name": "config",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -296,6 +297,31 @@
                   105,
                   103
                 ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "route",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  111,
+                  117,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "input_token_mint"
+              },
+              {
+                "kind": "account",
+                "path": "output_token_mint"
               }
             ]
           }
@@ -675,12 +701,6 @@
         {
           "name": "amount_out_minimum",
           "type": "u64"
-        },
-        {
-          "name": "route_config_indices",
-          "type": {
-            "vec": "u16"
-          }
         }
       ]
     }
