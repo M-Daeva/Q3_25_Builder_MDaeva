@@ -268,6 +268,9 @@ export type DexAdapter = {
           "name": "memoProgram"
         },
         {
+          "name": "clmmMockProgram"
+        },
+        {
           "name": "sender",
           "writable": true,
           "signer": true

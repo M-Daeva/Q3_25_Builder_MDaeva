@@ -742,6 +742,7 @@ pub mod extension {
         litesvm.send_transaction(transaction).map_err(|e| {
             let logs = e.meta.logs;
             let logs_str = format!("{:#?}", &logs);
+            println!("logs: {:#?}\n", logs);
 
             to_anchor_err(logs_str)
         })

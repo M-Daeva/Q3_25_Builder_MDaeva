@@ -119,6 +119,7 @@ impl DexAdapterExtension for App {
             associated_token_program,
             memo,
             dex_adapter: program_id,
+            clmm_mock,
             ..
         } = self.program_id;
 
@@ -148,6 +149,7 @@ impl DexAdapterExtension for App {
             associated_token_program,
             token_program_2022,
             memo_program: memo,
+            clmm_mock_program: clmm_mock,
             sender: payer,
             bump,
             config,
@@ -310,15 +312,26 @@ fn build_remaining_accounts_for_route(
         let observation_state = app.pda.clmm_mock_observation_state(pool_state);
         let output_token_account = app.get_or_create_ata(sender, payer, &token_b)?;
 
-        // Match the exact account order from clmm_mock_try_swap_multihop
+        // // Match the exact account order from clmm_mock_try_swap_multihop
+        // remaining_accounts.extend(vec![
+        //     AccountMeta::new_readonly(amm_config, false),
+        //     AccountMeta::new(pool_state, false),
+        //     AccountMeta::new(output_token_account, false),
+        //     AccountMeta::new(input_vault, false),
+        //     AccountMeta::new(output_vault, false),
+        //     AccountMeta::new_readonly(output_mint_for_accounts, false),
+        //     AccountMeta::new(observation_state, false),
+        // ]);
+
+        // Match the exact account order and writability from clmm_mock_try_swap_multihop
         remaining_accounts.extend(vec![
-            AccountMeta::new_readonly(amm_config, false),
-            AccountMeta::new(pool_state, false),
-            AccountMeta::new(output_token_account, false),
-            AccountMeta::new(input_vault, false),
-            AccountMeta::new(output_vault, false),
-            AccountMeta::new_readonly(output_mint_for_accounts, false),
-            AccountMeta::new(observation_state, false),
+            AccountMeta::new_readonly(amm_config, false), // amm_config (readonly)
+            AccountMeta::new(pool_state, false),          // pool_state (writable)
+            AccountMeta::new(output_token_account, false), // output_token_account (writable)
+            AccountMeta::new(input_vault, false),         // input_vault (writable)
+            AccountMeta::new(output_vault, false),        // output_vault (writable)
+            AccountMeta::new_readonly(output_mint_for_accounts, false), // output_mint (readonly)
+            AccountMeta::new(observation_state, false),   // observation_state (writable)
         ]);
     }
 

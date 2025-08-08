@@ -262,6 +262,9 @@
           "name": "memo_program"
         },
         {
+          "name": "clmm_mock_program"
+        },
+        {
           "name": "sender",
           "writable": true,
           "signer": true
