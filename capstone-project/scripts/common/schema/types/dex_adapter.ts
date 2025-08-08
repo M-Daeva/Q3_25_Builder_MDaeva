@@ -336,10 +336,12 @@ export type DexAdapter = {
           }
         },
         {
-          "name": "inputTokenMint"
+          "name": "inputTokenMint",
+          "writable": true
         },
         {
-          "name": "outputTokenMint"
+          "name": "outputTokenMint",
+          "writable": true
         },
         {
           "name": "inputTokenSenderAta",

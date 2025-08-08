@@ -330,10 +330,12 @@
           }
         },
         {
-          "name": "input_token_mint"
+          "name": "input_token_mint",
+          "writable": true
         },
         {
-          "name": "output_token_mint"
+          "name": "output_token_mint",
+          "writable": true
         },
         {
           "name": "input_token_sender_ata",

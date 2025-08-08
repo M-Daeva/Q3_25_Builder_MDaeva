@@ -51,7 +51,9 @@ pub struct SwapMultihop<'info> {
 
     // mint
     //
+    #[account(mut)]
     pub input_token_mint: InterfaceAccount<'info, Mint>,
+    #[account(mut)]
     pub output_token_mint: InterfaceAccount<'info, Mint>,
 
     // ata
@@ -141,24 +143,6 @@ impl<'info> SwapMultihop<'info> {
         amount_in: u64,
         amount_out_minimum: u64,
     ) -> Result<()> {
-        // // build accounts for CPI call to clmm_mock
-        // let mut accounts = vec![
-        //     AccountMeta::new(self.config.key(), true),
-        //     AccountMeta::new(self.input_token_app_ata.key(), false),
-        //     AccountMeta::new(self.input_token_mint.key(), false),
-        //     AccountMeta::new_readonly(self.token_program.key(), false),
-        //     AccountMeta::new_readonly(self.token_program_2022.key(), false),
-        //     AccountMeta::new_readonly(self.memo_program.key(), false),
-        // ];
-
-        // accounts.extend(remaining_accounts.iter().map(|acc| {
-        //     if acc.is_writable {
-        //         AccountMeta::new(acc.key(), acc.is_signer)
-        //     } else {
-        //         AccountMeta::new_readonly(acc.key(), acc.is_signer)
-        //     }
-        // }));
-
         // Validate that remaining accounts length is correct (multiple of 7)
         if remaining_accounts.len() % 7 != 0 {
             Err(CustomError::InvalidRemainingAccounts)?;
@@ -168,14 +152,13 @@ impl<'info> SwapMultihop<'info> {
         let mut accounts = vec![
             AccountMeta::new(self.config.key(), true), // payer (signer)
             AccountMeta::new(self.input_token_app_ata.key(), false), // input_token_account (writable)
-            AccountMeta::new_readonly(self.input_token_mint.key(), false), // input_token_mint (readonly)
-            AccountMeta::new_readonly(self.token_program.key(), false),    // token_program
+            AccountMeta::new(self.input_token_mint.key(), false), // input_token_mint (writable) ← FIXED
+            AccountMeta::new_readonly(self.token_program.key(), false), // token_program
             AccountMeta::new_readonly(self.token_program_2022.key(), false), // token_program_2022
-            AccountMeta::new_readonly(self.memo_program.key(), false),     // memo_program
+            AccountMeta::new_readonly(self.memo_program.key(), false), // memo_program
         ];
 
-        // Process remaining accounts in groups of 7 (the pattern from clmm-mock)
-        // Each group represents one hop: [amm_config, pool_state, output_token_account, input_vault, output_vault, output_mint, observation_state]
+        // Process remaining accounts in groups of 7
         for chunk in remaining_accounts.chunks_exact(7) {
             accounts.extend(vec![
                 AccountMeta::new_readonly(chunk[0].key(), false), // amm_config (readonly)

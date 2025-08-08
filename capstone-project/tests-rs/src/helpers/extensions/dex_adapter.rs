@@ -277,6 +277,7 @@ fn build_remaining_accounts_for_route(
     }
 
     let mut remaining_accounts = vec![];
+    let config = app.pda.dex_adapter_config();
 
     // Build accounts for each hop in the route
     for i in 0..route_items.len() {
@@ -310,20 +311,19 @@ fn build_remaining_accounts_for_route(
         };
 
         let observation_state = app.pda.clmm_mock_observation_state(pool_state);
-        let output_token_account = app.get_or_create_ata(sender, payer, &token_b)?;
 
-        // // Match the exact account order from clmm_mock_try_swap_multihop
-        // remaining_accounts.extend(vec![
-        //     AccountMeta::new_readonly(amm_config, false),
-        //     AccountMeta::new(pool_state, false),
-        //     AccountMeta::new(output_token_account, false),
-        //     AccountMeta::new(input_vault, false),
-        //     AccountMeta::new(output_vault, false),
-        //     AccountMeta::new_readonly(output_mint_for_accounts, false),
-        //     AccountMeta::new(observation_state, false),
-        // ]);
+        // For output token account:
+        // - Last hop goes to user
+        // - Intermediate hops go to app (config)
+        let output_token_account = if i == route_items.len() - 1 {
+            // Final hop: output goes to user
+            app.get_or_create_ata(sender, payer, &token_b)?
+        } else {
+            // Intermediate hop: output goes to app for next hop input
+            app.get_or_create_ata(sender, &config, &token_b)?
+        };
 
-        // Match the exact account order and writability from clmm_mock_try_swap_multihop
+        // Match the exact account order and writability from clmm_mock
         remaining_accounts.extend(vec![
             AccountMeta::new_readonly(amm_config, false), // amm_config (readonly)
             AccountMeta::new(pool_state, false),          // pool_state (writable)
