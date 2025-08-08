@@ -18,13 +18,6 @@ use {
     solana_pubkey::Pubkey,
 };
 
-fn display_tokens() {
-    for token in [AppToken::WBTC, AppToken::USDC, AppToken::PYTH] {
-        println!("{:#?}: {:#?}", token, token.pubkey());
-    }
-    println!();
-}
-
 #[test]
 fn init_default() -> Result<()> {
     let mut app = App::new();
@@ -59,15 +52,8 @@ fn init_default() -> Result<()> {
 fn swap_multihop() -> Result<()> {
     let mut app = App::new();
     prepare_dex(&mut app)?;
-    display_tokens();
 
-    app.dex_adapter_try_init(
-        AppUser::Admin,
-        app.program_id.clmm_mock,
-        None,
-        None,
-        Some(vec![AppToken::USDC, AppToken::WBTC]),
-    )?;
+    app.dex_adapter_try_init(AppUser::Admin, app.program_id.clmm_mock, None, None, None)?;
 
     app.dex_adapter_try_save_route(
         AppUser::Admin,

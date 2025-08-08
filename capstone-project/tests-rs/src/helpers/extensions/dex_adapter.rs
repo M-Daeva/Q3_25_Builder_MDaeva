@@ -162,13 +162,7 @@ impl DexAdapterExtension for App {
             output_token_app_ata,
         };
 
-        let instruction_data = instruction::SwapMultihop {
-            amount_in,
-            amount_out_minimum,
-        };
-
-        // We still need remaining accounts for the multihop swap
-        // Build remaining accounts based on the route loaded from PDA
+        // build remaining accounts based on the route loaded from PDA
         let remaining_accounts = build_remaining_accounts_for_route(
             self,
             sender,
@@ -176,6 +170,11 @@ impl DexAdapterExtension for App {
             input_token_mint,
             output_token_mint,
         )?;
+
+        let instruction_data = instruction::SwapMultihop {
+            amount_in,
+            amount_out_minimum,
+        };
 
         send_tx_with_ix(
             self,
@@ -266,36 +265,35 @@ fn build_remaining_accounts_for_route(
     mint_in: Pubkey,
     mint_out: Pubkey,
 ) -> Result<Vec<AccountMeta>> {
-    // Load route data
-    let route_data = app.dex_adapter_query_route(&mint_in, &mint_out)?;
-    let route_items = &route_data.value;
+    let config = app.pda.dex_adapter_config();
+    let route_items = app.dex_adapter_query_route(&mint_in, &mint_out)?.value;
 
-    // Build token sequence correctly
-    let mut token_sequence: Vec<Pubkey> = vec![mint_in];
-    for item in route_items.iter() {
-        token_sequence.push(item.token_out);
-    }
+    // build token sequence correctly
+    let token_sequence = route_items.iter().fold(vec![mint_in], |mut acc, cur| {
+        acc.push(cur.token_out);
+        acc
+    });
 
     let mut remaining_accounts = vec![];
-    let config = app.pda.dex_adapter_config();
 
-    // Build accounts for each hop in the route
+    // build accounts for each hop in the route
     for i in 0..route_items.len() {
-        let token_a = token_sequence[i]; // Input token for this hop
-        let token_b = token_sequence[i + 1]; // Output token for this hop
+        let token_a = token_sequence[i]; // input token for this hop
+        let token_b = token_sequence[i + 1]; // output token for this hop
 
-        // Use the AMM config index from the current route item
+        // use the AMM config index from the current route item
         let amm_config_index = route_items[i].amm_index;
 
-        // The pool was created with sorted tokens in prepare_dex, so we need to use sorted tokens to find it
+        // the pool was created with sorted tokens in prepare_dex, so we need to use sorted tokens to find it
         let (token_0_mint, token_1_mint) = sort_mints(&token_a, &token_b);
 
         let amm_config = app.pda.clmm_mock_amm_config(amm_config_index);
         let pool_state = app
             .pda
             .clmm_mock_pool_state(amm_config, token_0_mint, token_1_mint);
+        let observation_state = app.pda.clmm_mock_observation_state(pool_state);
 
-        // Now determine which vault corresponds to our input/output based on the original token order
+        // determine which vault corresponds to our input/output based on the original token order
         let (input_vault, output_vault, output_mint_for_accounts) = if token_a == token_0_mint {
             (
                 app.pda.clmm_mock_token_vault_0(pool_state, token_0_mint),
@@ -310,21 +308,19 @@ fn build_remaining_accounts_for_route(
             )
         };
 
-        let observation_state = app.pda.clmm_mock_observation_state(pool_state);
-
-        // For output token account:
-        // - Last hop goes to user
-        // - Intermediate hops go to app (config)
+        // for output token account:
+        // - last hop goes to user
+        // - intermediate hops go to app (config)
         let output_token_account = if i == route_items.len() - 1 {
-            // Final hop: output goes to user
+            // final hop: output goes to user
             app.get_or_create_ata(sender, payer, &token_b)?
         } else {
-            // Intermediate hop: output goes to app for next hop input
+            // intermediate hop: output goes to app for next hop input
             app.get_or_create_ata(sender, &config, &token_b)?
         };
 
-        // Match the exact account order and writability from clmm_mock
-        remaining_accounts.extend(vec![
+        // match the exact account order and writability from clmm_mock
+        remaining_accounts.extend([
             AccountMeta::new_readonly(amm_config, false), // amm_config (readonly)
             AccountMeta::new(pool_state, false),          // pool_state (writable)
             AccountMeta::new(output_token_account, false), // output_token_account (writable)

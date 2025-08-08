@@ -101,6 +101,10 @@ impl<'info> SwapMultihop<'info> {
             Err(CustomError::InvalidAmount)?;
         }
 
+        // store initial balances to track the swap
+        let initial_output_user_balance = self.output_token_sender_ata.amount;
+        let initial_output_app_balance = self.output_token_app_ata.amount;
+
         // transfer input tokens from sender to app ATA
         transfer_token_from_user(
             amount_in,
@@ -110,20 +114,25 @@ impl<'info> SwapMultihop<'info> {
             &self.sender,
             &self.token_program,
         )?;
-        msg!("✅ completed transfer_token_from_user");
 
         // execute multihop swap on clmm_mock
         self.execute_clmm_swap(remaining_accounts, amount_in, amount_out_minimum)?;
-        msg!("✅ completed execute_clmm_swap");
 
-        // transfer output tokens from app ATA to sender
-        let output_balance = self.output_token_app_ata.amount;
-        if output_balance == 0 {
+        // reload accounts to get updated balances
+        self.output_token_sender_ata.reload()?;
+        self.output_token_app_ata.reload()?;
+
+        // check both app ATA and user ATA for output tokens
+        let app_balance_change = self.output_token_app_ata.amount - initial_output_app_balance;
+        let user_balance_change = self.output_token_sender_ata.amount - initial_output_user_balance;
+
+        // transfer any tokens from app ATA to user ATA
+        if user_balance_change == 0 {
             Err(CustomError::NoOutputTokens)?;
         }
 
         transfer_token_from_program(
-            output_balance,
+            app_balance_change,
             &self.output_token_mint,
             &self.output_token_app_ata,
             &self.output_token_sender_ata,
@@ -132,7 +141,6 @@ impl<'info> SwapMultihop<'info> {
             &self.config,
             &self.token_program,
         )?;
-        msg!("✅ completed transfer_token_from_program");
 
         Ok(())
     }
@@ -143,10 +151,23 @@ impl<'info> SwapMultihop<'info> {
         amount_in: u64,
         amount_out_minimum: u64,
     ) -> Result<()> {
-        // Validate that remaining accounts length is correct (multiple of 7)
+        // validate that remaining accounts length is correct (multiple of 7)
         if remaining_accounts.len() % 7 != 0 {
             Err(CustomError::InvalidRemainingAccounts)?;
         }
+
+        let account_infos = [
+            &[
+                self.config.to_account_info(),
+                self.input_token_app_ata.to_account_info(),
+                self.input_token_mint.to_account_info(),
+                self.token_program.to_account_info(),
+                self.token_program_2022.to_account_info(),
+                self.memo_program.to_account_info(),
+            ],
+            remaining_accounts,
+        ]
+        .concat();
 
         // build accounts for CPI call to clmm_mock - match exact structure from clmm-mock
         let mut accounts = vec![
@@ -158,7 +179,7 @@ impl<'info> SwapMultihop<'info> {
             AccountMeta::new_readonly(self.memo_program.key(), false), // memo_program
         ];
 
-        // Process remaining accounts in groups of 7
+        // process remaining accounts in groups of 7
         for chunk in remaining_accounts.chunks_exact(7) {
             accounts.extend(vec![
                 AccountMeta::new_readonly(chunk[0].key(), false), // amm_config (readonly)
@@ -183,26 +204,10 @@ impl<'info> SwapMultihop<'info> {
             accounts,
             data: instruction_data.try_to_vec()?,
         };
-        msg!("✅ completed instruction_data");
 
         // create signer seeds for config PDA
         let config_seeds = &[SEED_CONFIG.as_bytes(), &[self.bump.config]];
         let signer_seeds = &[&config_seeds[..]];
-
-        let account_infos = [
-            &[
-                self.config.to_account_info(),
-                self.input_token_app_ata.to_account_info(),
-                self.input_token_mint.to_account_info(),
-                self.token_program.to_account_info(),
-                self.token_program_2022.to_account_info(),
-                self.memo_program.to_account_info(),
-            ],
-            remaining_accounts,
-        ]
-        .concat();
-
-        msg!("✅ input_token_mint: {:#?}", &self.input_token_mint.key());
 
         // execute CPI call with config as signer
         anchor_lang::solana_program::program::invoke_signed(
