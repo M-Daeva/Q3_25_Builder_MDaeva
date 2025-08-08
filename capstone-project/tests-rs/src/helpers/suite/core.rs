@@ -14,6 +14,7 @@ use {
     clmm_mock, dex_adapter,
     litesvm::{types::TransactionMetadata, LiteSVM},
     registry,
+    solana_compute_budget::compute_budget::ComputeBudget,
     solana_instruction::{AccountMeta, Instruction},
     solana_keypair::Keypair,
     solana_kite::{
@@ -434,7 +435,10 @@ impl App {
     }
 
     fn init_env_with_balances() -> LiteSVM {
-        let mut litesvm = LiteSVM::new();
+        let mut litesvm = LiteSVM::new().with_compute_budget(ComputeBudget {
+            compute_unit_limit: 10_000_000,
+            ..ComputeBudget::default()
+        });
         let mut token_registry: Vec<(AppToken, Keypair)> = vec![];
 
         // airdrop SOL

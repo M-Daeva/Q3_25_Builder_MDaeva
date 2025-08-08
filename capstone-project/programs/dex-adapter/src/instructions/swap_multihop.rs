@@ -97,18 +97,6 @@ impl<'info> SwapMultihop<'info> {
             Err(CustomError::InvalidAmount)?;
         }
 
-        // Load route from PDA
-        let route_items = &self.route.value;
-        if route_items.len() < 2 {
-            Err(CustomError::InvalidRouteLength)?;
-        }
-
-        // Build route config indexes
-        let mut route_config_indexes: Vec<u16> = vec![route_items[0].amm_index]; // First token's config
-        for item in route_items.iter().skip(1) {
-            route_config_indexes.push(item.amm_index);
-        }
-
         // transfer input tokens from sender to app ATA
         transfer_token_from_user(
             amount_in,
@@ -120,12 +108,7 @@ impl<'info> SwapMultihop<'info> {
         )?;
 
         // execute multihop swap on clmm_mock
-        self.execute_clmm_swap(
-            remaining_accounts,
-            amount_in,
-            amount_out_minimum,
-            route_config_indexes,
-        )?;
+        self.execute_clmm_swap(remaining_accounts, amount_in, amount_out_minimum)?;
 
         // transfer output tokens from app ATA to sender
         let output_balance = self.output_token_app_ata.amount;
@@ -152,31 +135,15 @@ impl<'info> SwapMultihop<'info> {
         remaining_accounts: &'info [AccountInfo<'info>],
         amount_in: u64,
         amount_out_minimum: u64,
-        route_config_indexes: Vec<u16>,
     ) -> Result<()> {
-        let accounts_per_hop = 7;
-        let expected_remaining_accounts = (route_config_indexes.len() - 1) * accounts_per_hop;
-
-        if remaining_accounts.len() != expected_remaining_accounts {
-            Err(CustomError::InvalidRemainingAccounts)?;
-        }
-
-        // TODO
-        msg!("Route config indexes: {:?}", route_config_indexes);
-        msg!(
-            "Expected remaining accounts: {}, actual: {}",
-            expected_remaining_accounts,
-            remaining_accounts.len()
-        );
-
         // build accounts for CPI call to clmm_mock
         let mut accounts = vec![
-            AccountMeta::new(self.config.key(), false), // payer (config as authority)
-            AccountMeta::new(self.input_token_app_ata.key(), false), // input_token_account
-            AccountMeta::new_readonly(self.input_token_mint.key(), false), // input_token_mint
-            AccountMeta::new_readonly(self.token_program.key(), false), // token_program
-            AccountMeta::new_readonly(self.token_program_2022.key(), false), // token_program_2022
-            AccountMeta::new_readonly(self.memo_program.key(), false), // memo_program
+            AccountMeta::new(self.config.key(), true),
+            AccountMeta::new(self.input_token_app_ata.key(), false),
+            AccountMeta::new(self.input_token_mint.key(), false),
+            AccountMeta::new_readonly(self.token_program.key(), false),
+            AccountMeta::new_readonly(self.token_program_2022.key(), false),
+            AccountMeta::new_readonly(self.memo_program.key(), false),
         ];
 
         accounts.extend(remaining_accounts.iter().map(|acc| {
@@ -216,17 +183,6 @@ impl<'info> SwapMultihop<'info> {
             remaining_accounts,
         ]
         .concat();
-
-        // TODO
-        for (i, account) in account_infos.iter().enumerate() {
-            msg!(
-                "Account {}: {}, writable: {}, signer: {}",
-                i,
-                account.key(),
-                account.is_writable,
-                account.is_signer
-            );
-        }
 
         // execute CPI call with config as signer
         anchor_lang::solana_program::program::invoke_signed(

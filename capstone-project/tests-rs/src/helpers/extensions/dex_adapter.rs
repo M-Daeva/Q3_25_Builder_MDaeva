@@ -36,6 +36,8 @@ pub trait DexAdapterExtension {
     fn dex_adapter_try_save_route(
         &mut self,
         sender: AppUser,
+        token_first: AppToken,
+        token_last: AppToken,
         route: &[RouteItem],
     ) -> Result<TransactionMetadata>;
 
@@ -187,6 +189,8 @@ impl DexAdapterExtension for App {
     fn dex_adapter_try_save_route(
         &mut self,
         sender: AppUser,
+        token_first: AppToken,
+        token_last: AppToken,
         route: &[RouteItem],
     ) -> Result<TransactionMetadata> {
         // programs
@@ -201,8 +205,7 @@ impl DexAdapterExtension for App {
         let signers = [sender.keypair()];
 
         // mints
-        let mint_first = route.first().map(|x| x.token_out).unwrap_or_default();
-        let mint_last = route.last().map(|x| x.token_out).unwrap_or_default();
+        let (mint_first, mint_last) = (token_first.pubkey(), token_last.pubkey());
 
         // pda
         let bump = self.pda.dex_adapter_bump();
@@ -254,58 +257,6 @@ impl DexAdapterExtension for App {
     }
 }
 
-// fn build_remaining_accounts_for_route(
-//     app: &mut App,
-//     sender: AppUser,
-//     payer: &Pubkey,
-//     mint_in: Pubkey,
-//     mint_out: Pubkey,
-// ) -> Result<Vec<AccountMeta>> {
-//     // Load route data
-//     let route_data = app.dex_adapter_query_route(&mint_in, &mint_out)?;
-//     let route_items = &route_data.value;
-
-//     // build token sequence
-//     let mut token_sequence: Vec<Pubkey> = vec![mint_in];
-//     for item in route_items.iter().skip(1) {
-//         token_sequence.push(item.token_out);
-//     }
-
-//     let mut remaining_accounts = vec![];
-
-//     // Build accounts for each hop in the route
-//     for i in 0..token_sequence.len() - 1 {
-//         let token_a = token_sequence[i];
-//         let token_b = token_sequence[i + 1];
-
-//         // Get the appropriate config index for this hop
-//         let amm_config_index = route_items[i + 1].amm_index;
-
-//         let (token_0_mint, token_1_mint) = sort_mints(&token_a, &token_b);
-
-//         let amm_config = app.pda.clmm_mock_amm_config(amm_config_index);
-//         let pool_state = app
-//             .pda
-//             .clmm_mock_pool_state(amm_config, token_0_mint, token_1_mint);
-//         let input_vault = app.pda.clmm_mock_token_vault_0(pool_state, token_0_mint);
-//         let output_vault = app.pda.clmm_mock_token_vault_1(pool_state, token_1_mint);
-//         let observation_state = app.pda.clmm_mock_observation_state(pool_state);
-//         let output_token_account = app.get_or_create_ata(sender, payer, &token_b)?;
-
-//         remaining_accounts.extend(vec![
-//             AccountMeta::new_readonly(amm_config, false),
-//             AccountMeta::new(pool_state, false),
-//             AccountMeta::new(output_token_account, false),
-//             AccountMeta::new(input_vault, false),
-//             AccountMeta::new(output_vault, false),
-//             AccountMeta::new_readonly(token_b, false),
-//             AccountMeta::new(observation_state, false),
-//         ]);
-//     }
-
-//     Ok(remaining_accounts)
-// }
-
 fn build_remaining_accounts_for_route(
     app: &mut App,
     sender: AppUser,
@@ -317,7 +268,7 @@ fn build_remaining_accounts_for_route(
     let route_data = app.dex_adapter_query_route(&mint_in, &mint_out)?;
     let route_items = &route_data.value;
 
-    // Build token sequence correctly - start with mint_in, then add each token_out from route
+    // Build token sequence correctly
     let mut token_sequence: Vec<Pubkey> = vec![mint_in];
     for item in route_items.iter() {
         token_sequence.push(item.token_out);
@@ -326,13 +277,14 @@ fn build_remaining_accounts_for_route(
     let mut remaining_accounts = vec![];
 
     // Build accounts for each hop in the route
-    for i in 0..token_sequence.len() - 1 {
-        let token_a = token_sequence[i];
-        let token_b = token_sequence[i + 1];
+    for i in 0..route_items.len() {
+        let token_a = token_sequence[i]; // Input token for this hop
+        let token_b = token_sequence[i + 1]; // Output token for this hop
 
-        // Use the correct AMM config index for this hop
+        // Use the AMM config index from the current route item
         let amm_config_index = route_items[i].amm_index;
 
+        // The pool was created with sorted tokens in prepare_dex, so we need to use sorted tokens to find it
         let (token_0_mint, token_1_mint) = sort_mints(&token_a, &token_b);
 
         let amm_config = app.pda.clmm_mock_amm_config(amm_config_index);
@@ -340,37 +292,35 @@ fn build_remaining_accounts_for_route(
             .pda
             .clmm_mock_pool_state(amm_config, token_0_mint, token_1_mint);
 
-        // Make sure we're using the correct vault assignment based on token order
-        let (input_vault, output_vault) = if token_a == token_0_mint {
+        // Now determine which vault corresponds to our input/output based on the original token order
+        let (input_vault, output_vault, output_mint_for_accounts) = if token_a == token_0_mint {
             (
                 app.pda.clmm_mock_token_vault_0(pool_state, token_0_mint),
                 app.pda.clmm_mock_token_vault_1(pool_state, token_1_mint),
+                token_1_mint,
             )
         } else {
             (
                 app.pda.clmm_mock_token_vault_1(pool_state, token_1_mint),
                 app.pda.clmm_mock_token_vault_0(pool_state, token_0_mint),
+                token_0_mint,
             )
         };
 
         let observation_state = app.pda.clmm_mock_observation_state(pool_state);
         let output_token_account = app.get_or_create_ata(sender, payer, &token_b)?;
 
+        // Match the exact account order from clmm_mock_try_swap_multihop
         remaining_accounts.extend(vec![
             AccountMeta::new_readonly(amm_config, false),
             AccountMeta::new(pool_state, false),
             AccountMeta::new(output_token_account, false),
             AccountMeta::new(input_vault, false),
             AccountMeta::new(output_vault, false),
-            AccountMeta::new_readonly(token_b, false),
+            AccountMeta::new_readonly(output_mint_for_accounts, false),
             AccountMeta::new(observation_state, false),
         ]);
     }
-
-    // TODO
-    println!("Route items: {:?}", route_data.value);
-    println!("Token sequence: {:?}", token_sequence);
-    println!("Remaining accounts count: {}\n", remaining_accounts.len());
 
     Ok(remaining_accounts)
 }

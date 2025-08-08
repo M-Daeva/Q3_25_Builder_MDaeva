@@ -63,18 +63,16 @@ fn swap_multihop() -> Result<()> {
 
     app.dex_adapter_try_save_route(
         AppUser::Admin,
+        AppToken::WBTC,
+        AppToken::PYTH,
         &[
             RouteItem {
                 amm_index: AMM_CONFIG_INDEX_1,
-                token_out: AppToken::WBTC.pubkey(),
-            },
-            RouteItem {
-                amm_index: AMM_CONFIG_INDEX_1,
-                token_out: AppToken::USDC.pubkey(),
+                token_out: AppToken::USDC.pubkey(), // WBTC -> USDC (first hop output)
             },
             RouteItem {
                 amm_index: AMM_CONFIG_INDEX_0,
-                token_out: AppToken::PYTH.pubkey(),
+                token_out: AppToken::PYTH.pubkey(), // USDC -> PYTH (second hop output)
             },
         ],
     )?;
@@ -83,14 +81,13 @@ fn swap_multihop() -> Result<()> {
     let bob_wbtc_before = app.get_balance(AppUser::Bob, AppToken::WBTC);
     let bob_pyth_before = app.get_balance(AppUser::Bob, AppToken::PYTH);
 
-    let res = app.dex_adapter_try_swap_multihop(
+    app.dex_adapter_try_swap_multihop(
         AppUser::Bob,
         AppToken::WBTC,
         AppToken::PYTH,
         1_000,
         9_950_000,
     )?;
-    println!("logs: {:#?}\n", res.logs);
 
     let bob_wbtc_after = app.get_balance(AppUser::Bob, AppToken::WBTC);
     let bob_pyth_after = app.get_balance(AppUser::Bob, AppToken::PYTH);
