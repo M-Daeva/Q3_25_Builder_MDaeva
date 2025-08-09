@@ -20,14 +20,14 @@ pub const SEED_ROUTE: &str = "route";
 /// to store bumps for all app accounts
 #[account]
 #[derive(InitSpace)]
-pub struct Bump {
+pub struct DaBump {
     pub config: u8,
     pub rotation_state: u8,
 }
 
 #[account]
 #[derive(InitSpace, PartialEq, Debug)]
-pub struct Config {
+pub struct DaConfig {
     /// can update the config and execute priveled instructions
     pub admin: Pubkey,
     pub dex: Pubkey,

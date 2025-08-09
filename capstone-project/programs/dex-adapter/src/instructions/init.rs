@@ -2,8 +2,8 @@ use {
     anchor_lang::prelude::*,
     base::helpers::{get_clock_time, get_space},
     dex_adapter_cpi::state::{
-        Bump, Config, RotationState, MAINNET_USDC, MAINNET_WBTC, MAINNET_WSOL, ROTATION_TIMEOUT,
-        SEED_ADMIN_ROTATION_STATE, SEED_BUMP, SEED_CONFIG,
+        DaBump, DaConfig, RotationState, MAINNET_USDC, MAINNET_WBTC, MAINNET_WSOL,
+        ROTATION_TIMEOUT, SEED_ADMIN_ROTATION_STATE, SEED_BUMP, SEED_CONFIG,
     },
 };
 
@@ -19,20 +19,20 @@ pub struct Init<'info> {
     #[account(
         init,
         payer = sender,
-        space = get_space(Bump::INIT_SPACE),
+        space = get_space(DaBump::INIT_SPACE),
         seeds = [SEED_BUMP.as_bytes()],
         bump
     )]
-    pub bump: Account<'info, Bump>,
+    pub bump: Account<'info, DaBump>,
 
     #[account(
         init,
         payer = sender,
-        space = get_space(Config::INIT_SPACE),
+        space = get_space(DaConfig::INIT_SPACE),
         seeds = [SEED_CONFIG.as_bytes()],
         bump
     )]
-    pub config: Account<'info, Config>,
+    pub config: Account<'info, DaConfig>,
 
     #[account(
         init,
@@ -61,12 +61,12 @@ impl<'info> Init<'info> {
             ..
         } = self;
 
-        bump.set_inner(Bump {
+        bump.set_inner(DaBump {
             config: bumps.config,
             rotation_state: bumps.admin_rotation_state,
         });
 
-        config.set_inner(Config {
+        config.set_inner(DaConfig {
             admin: sender.key(),
             dex,
             registry,

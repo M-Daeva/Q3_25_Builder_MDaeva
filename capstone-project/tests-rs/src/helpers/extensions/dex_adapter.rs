@@ -42,7 +42,7 @@ pub trait DexAdapterExtension {
         route: &[RouteItem],
     ) -> Result<TransactionMetadata>;
 
-    fn dex_adapter_query_config(&self) -> Result<state::Config>;
+    fn dex_adapter_query_config(&self) -> Result<state::DaConfig>;
 
     fn dex_adapter_query_admin_rotation_state(&self) -> Result<state::RotationState>;
 
@@ -239,7 +239,7 @@ impl DexAdapterExtension for App {
         )
     }
 
-    fn dex_adapter_query_config(&self) -> Result<state::Config> {
+    fn dex_adapter_query_config(&self) -> Result<state::DaConfig> {
         get_data(&self.litesvm, &self.pda.dex_adapter_config())
     }
 

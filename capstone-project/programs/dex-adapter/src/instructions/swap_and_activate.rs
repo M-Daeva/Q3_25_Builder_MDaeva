@@ -8,7 +8,7 @@ use {
     base::helpers::transfer_token_from_user,
     dex_adapter_cpi::{
         error::CustomError,
-        state::{Bump, Config, Route, SEED_BUMP, SEED_CONFIG, SEED_ROUTE},
+        state::{DaBump, DaConfig, Route, SEED_BUMP, SEED_CONFIG, SEED_ROUTE},
     },
 };
 
@@ -36,14 +36,14 @@ pub struct SwapAndActivate<'info> {
         seeds = [SEED_BUMP.as_bytes()],
         bump
     )]
-    pub bump: Account<'info, Bump>,
+    pub bump: Account<'info, DaBump>,
 
     #[account(
         mut,
         seeds = [SEED_CONFIG.as_bytes()],
         bump = bump.config,
     )]
-    pub config: Box<Account<'info, Config>>,
+    pub config: Box<Account<'info, DaConfig>>,
 
     #[account(
         seeds = [SEED_ROUTE.as_bytes(), &input_token_mint.key().to_bytes(), &output_token_mint.key().to_bytes()],

@@ -2,7 +2,7 @@ use {
     anchor_lang::prelude::*,
     base::{error::AuthError, helpers::get_space},
     dex_adapter_cpi::{
-        state::{Bump, Config, Route, SEED_BUMP, SEED_CONFIG, SEED_ROUTE},
+        state::{DaBump, DaConfig, Route, SEED_BUMP, SEED_CONFIG, SEED_ROUTE},
         types::RouteItem,
     },
 };
@@ -21,13 +21,13 @@ pub struct SaveRoute<'info> {
         seeds = [SEED_BUMP.as_bytes()],
         bump
     )]
-    pub bump: Account<'info, Bump>,
+    pub bump: Account<'info, DaBump>,
 
     #[account(
         seeds = [SEED_CONFIG.as_bytes()],
         bump = bump.config
     )]
-    pub config: Account<'info, Config>,
+    pub config: Account<'info, DaConfig>,
 
     #[account(
         init_if_needed,

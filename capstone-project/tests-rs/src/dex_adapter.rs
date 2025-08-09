@@ -11,7 +11,7 @@ use {
     },
     anchor_lang::Result,
     dex_adapter_cpi::{
-        state::{Config, ROTATION_TIMEOUT},
+        state::{DaConfig, ROTATION_TIMEOUT},
         types::RouteItem,
     },
     pretty_assertions::assert_eq,
@@ -32,7 +32,7 @@ fn init_default() -> Result<()> {
 
     assert_eq!(
         app.dex_adapter_query_config()?,
-        Config {
+        DaConfig {
             admin: AppUser::Admin.pubkey(),
             dex: Pubkey::default(),
             registry: None,
