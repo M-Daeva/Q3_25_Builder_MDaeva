@@ -2,6 +2,7 @@ use {
     crate::helpers::suite::decimal::{str_to_dec, Decimal},
     solana_keypair::Keypair,
     solana_pubkey::Pubkey,
+    strum::IntoEnumIterator,
     strum_macros::{Display, EnumIter, IntoStaticStr},
 };
 
@@ -72,6 +73,13 @@ impl AppUser {
         Keypair::from_base58_string(base58_string)
     }
 
+    pub fn list() {
+        for item in Self::iter() {
+            println!("{:#?}: {:#?}", item, item.pubkey());
+        }
+        println!();
+    }
+
     pub fn get_initial_asset_amount(&self, asset: impl Into<AppAsset>) -> u64 {
         match self {
             Self::Admin => match asset.into() {
@@ -120,6 +128,13 @@ impl AppToken {
         };
 
         Keypair::from_base58_string(base58_string)
+    }
+
+    pub fn list() {
+        for item in Self::iter() {
+            println!("{:#?}: {:#?}", item, item.pubkey());
+        }
+        println!();
     }
 }
 

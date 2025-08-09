@@ -1,14 +1,10 @@
 use {
     crate::{
-        error::CustomError,
         state::{Bump, Config, Route, SEED_BUMP, SEED_CONFIG, SEED_ROUTE},
         types::RouteItem,
     },
     anchor_lang::prelude::*,
-    base::{
-        error::AuthError,
-        helpers::{are_mints_sorted, get_space},
-    },
+    base::{error::AuthError, helpers::get_space},
 };
 
 #[derive(Accounts)]
@@ -37,6 +33,7 @@ pub struct SaveRoute<'info> {
         init_if_needed,
         payer = sender,
         space = get_space(Route::INIT_SPACE),
+        // sorting mints isn't required as we use only single direction routes
         seeds = [SEED_ROUTE.as_bytes(), &mint_first.to_bytes(), &mint_last.to_bytes()],
         bump
     )]
@@ -46,16 +43,12 @@ pub struct SaveRoute<'info> {
 impl<'info> SaveRoute<'info> {
     pub fn save_route(
         &mut self,
-        mint_first: Pubkey,
-        mint_last: Pubkey,
+        _mint_first: Pubkey,
+        _mint_last: Pubkey,
         route: Vec<RouteItem>,
     ) -> Result<()> {
         if self.sender.key() != self.config.admin {
             Err(AuthError::Unauthorized)?;
-        }
-
-        if !are_mints_sorted(&mint_first, &mint_last) {
-            Err(CustomError::UnsortedMints)?;
         }
 
         self.route.set_inner(Route { value: route });

@@ -10,10 +10,10 @@ use {
     pretty_assertions::assert_eq,
 };
 
-const AMM_CONFIG_INDEX_0: u16 = 0;
-const AMM_CONFIG_INDEX_1: u16 = 1;
+pub const AMM_CONFIG_INDEX_0: u16 = 0;
+pub const AMM_CONFIG_INDEX_1: u16 = 1;
 
-fn prepare_dex(app: &mut App) -> Result<()> {
+pub fn prepare_dex(app: &mut App) -> Result<()> {
     app.wait(1_000);
     app.clmm_mock_try_create_operation_account(AppUser::Admin)?;
 
@@ -219,7 +219,7 @@ fn swap_multihop_default() -> Result<()> {
         1_000,
         9_950_000,
         &[
-            (AppToken::WBTC, 42),                 // unused
+            (AppToken::WBTC, AMM_CONFIG_INDEX_1), // index is unused
             (AppToken::USDC, AMM_CONFIG_INDEX_1), // WBTC -> USDC uses config_1
             (AppToken::PYTH, AMM_CONFIG_INDEX_0), // USDC -> PYTH uses config_0
         ],

@@ -544,11 +544,6 @@ impl ClmmMockExtension for App {
         amount_out_minimum: u64,
         route_with_configs: &[(AppToken, u16)], // (token, config_for_pool_ending_at_this_token)
     ) -> Result<TransactionMetadata> {
-        // validate route
-        if route_with_configs.len() < 2 {
-            panic!("Route must contain at least 2 tokens!");
-        }
-
         // programs
         let ProgramId {
             token_program_2022,

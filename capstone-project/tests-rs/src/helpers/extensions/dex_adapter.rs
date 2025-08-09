@@ -10,6 +10,7 @@ use {
     base::helpers::sort_mints,
     dex_adapter::{accounts, instruction, state, types::RouteItem},
     litesvm::types::TransactionMetadata,
+    solana_instruction::AccountMeta,
     solana_pubkey::Pubkey,
 };
 
@@ -30,12 +31,13 @@ pub trait DexAdapterExtension {
         token_out: AppToken,
         amount_in: u64,
         amount_out_minimum: u64,
-        route_config_indexes: &[u16],
     ) -> Result<TransactionMetadata>;
 
     fn dex_adapter_try_save_route(
         &mut self,
         sender: AppUser,
+        token_first: AppToken,
+        token_last: AppToken,
         route: &[RouteItem],
     ) -> Result<TransactionMetadata>;
 
@@ -45,8 +47,8 @@ pub trait DexAdapterExtension {
 
     fn dex_adapter_query_route(
         &self,
-        mint_first: AppToken,
-        mint_last: AppToken,
+        mint_first: &Pubkey,
+        mint_last: &Pubkey,
     ) -> Result<state::Route>;
 }
 
@@ -108,7 +110,6 @@ impl DexAdapterExtension for App {
         token_out: AppToken,
         amount_in: u64,
         amount_out_minimum: u64,
-        route_config_indexes: &[u16],
     ) -> Result<TransactionMetadata> {
         // programs
         let ProgramId {
@@ -118,6 +119,7 @@ impl DexAdapterExtension for App {
             associated_token_program,
             memo,
             dex_adapter: program_id,
+            clmm_mock,
             ..
         } = self.program_id;
 
@@ -131,11 +133,13 @@ impl DexAdapterExtension for App {
         // pda
         let bump = self.pda.dex_adapter_bump();
         let config = self.pda.dex_adapter_config();
+        let route = self
+            .pda
+            .dex_adapter_route(input_token_mint, output_token_mint);
 
         // ata
         let input_token_sender_ata = self.get_or_create_ata(sender, &payer, &input_token_mint)?;
         let output_token_sender_ata = self.get_or_create_ata(sender, &payer, &output_token_mint)?;
-
         let input_token_app_ata = self.get_or_create_ata(sender, &config, &input_token_mint)?;
         let output_token_app_ata = self.get_or_create_ata(sender, &config, &output_token_mint)?;
 
@@ -145,9 +149,11 @@ impl DexAdapterExtension for App {
             associated_token_program,
             token_program_2022,
             memo_program: memo,
+            clmm_mock_program: clmm_mock,
             sender: payer,
             bump,
             config,
+            route,
             input_token_mint,
             output_token_mint,
             input_token_sender_ata,
@@ -156,10 +162,18 @@ impl DexAdapterExtension for App {
             output_token_app_ata,
         };
 
+        // build remaining accounts based on the route loaded from PDA
+        let remaining_accounts = build_remaining_accounts_for_route(
+            self,
+            sender,
+            &payer,
+            input_token_mint,
+            output_token_mint,
+        )?;
+
         let instruction_data = instruction::SwapMultihop {
             amount_in,
             amount_out_minimum,
-            route_config_indexes: route_config_indexes.to_vec(),
         };
 
         send_tx_with_ix(
@@ -169,13 +183,15 @@ impl DexAdapterExtension for App {
             &instruction_data,
             &payer,
             &signers,
-            &[],
+            &remaining_accounts,
         )
     }
 
     fn dex_adapter_try_save_route(
         &mut self,
         sender: AppUser,
+        token_first: AppToken,
+        token_last: AppToken,
         route: &[RouteItem],
     ) -> Result<TransactionMetadata> {
         // programs
@@ -190,9 +206,7 @@ impl DexAdapterExtension for App {
         let signers = [sender.keypair()];
 
         // mints
-        let mint_first = route.first().map(|x| x.token_out).unwrap_or_default();
-        let mint_last = route.last().map(|x| x.token_out).unwrap_or_default();
-        let (mint_first, mint_last) = sort_mints(&mint_first, &mint_last);
+        let (mint_first, mint_last) = (token_first.pubkey(), token_last.pubkey());
 
         // pda
         let bump = self.pda.dex_adapter_bump();
@@ -234,14 +248,88 @@ impl DexAdapterExtension for App {
 
     fn dex_adapter_query_route(
         &self,
-        mint_first: AppToken,
-        mint_last: AppToken,
+        mint_first: &Pubkey,
+        mint_last: &Pubkey,
     ) -> Result<state::Route> {
         get_data(
             &self.litesvm,
-            &self
-                .pda
-                .dex_adapter_route(mint_first.pubkey(), mint_last.pubkey()),
+            &self.pda.dex_adapter_route(*mint_first, *mint_last),
         )
     }
+}
+
+fn build_remaining_accounts_for_route(
+    app: &mut App,
+    sender: AppUser,
+    payer: &Pubkey,
+    mint_in: Pubkey,
+    mint_out: Pubkey,
+) -> Result<Vec<AccountMeta>> {
+    let config = app.pda.dex_adapter_config();
+    let route_items = app.dex_adapter_query_route(&mint_in, &mint_out)?.value;
+
+    // build token sequence correctly
+    let token_sequence = route_items.iter().fold(vec![mint_in], |mut acc, cur| {
+        acc.push(cur.token_out);
+        acc
+    });
+
+    let mut remaining_accounts = vec![];
+
+    // build accounts for each hop in the route
+    for i in 0..route_items.len() {
+        let token_a = token_sequence[i]; // input token for this hop
+        let token_b = token_sequence[i + 1]; // output token for this hop
+
+        // use the AMM config index from the current route item
+        let amm_config_index = route_items[i].amm_index;
+
+        // the pool was created with sorted tokens in prepare_dex, so we need to use sorted tokens to find it
+        let (token_0_mint, token_1_mint) = sort_mints(&token_a, &token_b);
+
+        let amm_config = app.pda.clmm_mock_amm_config(amm_config_index);
+        let pool_state = app
+            .pda
+            .clmm_mock_pool_state(amm_config, token_0_mint, token_1_mint);
+        let observation_state = app.pda.clmm_mock_observation_state(pool_state);
+
+        // determine which vault corresponds to our input/output based on the original token order
+        let (input_vault, output_vault, output_mint_for_accounts) = if token_a == token_0_mint {
+            (
+                app.pda.clmm_mock_token_vault_0(pool_state, token_0_mint),
+                app.pda.clmm_mock_token_vault_1(pool_state, token_1_mint),
+                token_1_mint,
+            )
+        } else {
+            (
+                app.pda.clmm_mock_token_vault_1(pool_state, token_1_mint),
+                app.pda.clmm_mock_token_vault_0(pool_state, token_0_mint),
+                token_0_mint,
+            )
+        };
+
+        // for output token account:
+        // - last hop goes to user
+        // - intermediate hops go to app (config)
+        let output_token_account = if i == route_items.len() - 1 {
+            // final hop: output goes to user
+            app.get_or_create_ata(sender, payer, &token_b)?
+        } else {
+            // intermediate hop: output goes to app for next hop input
+            app.get_or_create_ata(sender, &config, &token_b)?
+        };
+
+        // match the exact account order and writability from clmm_mock
+        remaining_accounts.extend([
+            AccountMeta::new_readonly(amm_config, false), // amm_config (readonly)
+            AccountMeta::new(pool_state, false),          // pool_state (writable)
+            AccountMeta::new(output_token_account, false), // output_token_account (writable)
+            AccountMeta::new(input_vault, false),         // input_vault (writable)
+            AccountMeta::new(output_vault, false),        // output_vault (writable)
+            AccountMeta::new_readonly(output_mint_for_accounts, false), // output_mint (readonly)
+            AccountMeta::new(observation_state, false),   // observation_state (writable)
+        ]);
+    }
+
+    Ok(remaining_accounts)
 }

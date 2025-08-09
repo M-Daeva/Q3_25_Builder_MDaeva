@@ -14,6 +14,7 @@ use {
     clmm_mock, dex_adapter,
     litesvm::{types::TransactionMetadata, LiteSVM},
     registry,
+    solana_compute_budget::compute_budget::ComputeBudget,
     solana_instruction::{AccountMeta, Instruction},
     solana_keypair::Keypair,
     solana_kite::{
@@ -362,8 +363,6 @@ impl Pda {
     }
 
     pub fn dex_adapter_route(&self, mint_first: Pubkey, mint_last: Pubkey) -> Pubkey {
-        let (mint_first, mint_last) = sort_mints(&mint_first, &mint_last);
-
         get_pda_and_bump(
             &seeds![dex_adapter::state::SEED_ROUTE, mint_first, mint_last],
             &self.dex_adapter_program_id,
@@ -436,7 +435,10 @@ impl App {
     }
 
     fn init_env_with_balances() -> LiteSVM {
-        let mut litesvm = LiteSVM::new();
+        let mut litesvm = LiteSVM::new().with_compute_budget(ComputeBudget {
+            compute_unit_limit: 10_000_000,
+            ..ComputeBudget::default()
+        });
         let mut token_registry: Vec<(AppToken, Keypair)> = vec![];
 
         // airdrop SOL
@@ -740,6 +742,7 @@ pub mod extension {
         litesvm.send_transaction(transaction).map_err(|e| {
             let logs = e.meta.logs;
             let logs_str = format!("{:#?}", &logs);
+            // println!("logs: {:#?}\n", logs);
 
             to_anchor_err(logs_str)
         })
