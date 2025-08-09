@@ -1,6 +1,9 @@
 use {
     anchor_lang::{prelude::*, solana_program},
-    anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface},
+    anchor_spl::{
+        associated_token::AssociatedToken,
+        token_interface::{Mint, TokenAccount, TokenInterface},
+    },
     dex_adapter_cpi::{
         error::CustomError,
         state::{Bump, Config, SEED_CONFIG},
@@ -9,16 +12,16 @@ use {
 };
 
 pub fn execute_clmm_swap<'a>(
-    bump: &Account<'a, Bump>,
-    config: &Account<'a, Config>,
-    input_token_app_ata: &InterfaceAccount<'a, TokenAccount>,
-    input_token_mint: &InterfaceAccount<'a, Mint>,
+    amount_in: u64,
+    amount_out_minimum: u64,
     token_program: &Interface<'a, TokenInterface>,
     token_program_2022: &UncheckedAccount<'a>,
     memo_program: &UncheckedAccount<'a>,
+    bump: &Account<'a, Bump>,
+    config: &Account<'a, Config>,
+    input_token_mint: &InterfaceAccount<'a, Mint>,
+    input_token_app_ata: &InterfaceAccount<'a, TokenAccount>,
     remaining_accounts: &'a [AccountInfo<'a>],
-    amount_in: u64,
-    amount_out_minimum: u64,
 ) -> Result<()> {
     // validate that remaining accounts length is correct (multiple of 7)
     if remaining_accounts.len() % 7 != 0 {
@@ -84,6 +87,51 @@ pub fn execute_clmm_swap<'a>(
         &account_infos,
         signer_seeds,
     )?;
+
+    Ok(())
+}
+
+pub fn activate_account_on_registry<'a>(
+    user_to_activate: &Pubkey,
+    system_program: &Program<'a, System>,
+    token_program: &Interface<'a, TokenInterface>,
+    associated_token_program: &Program<'a, AssociatedToken>,
+    registry_program: &UncheckedAccount<'a>,
+    bump: &Account<'a, Bump>,
+    config: &Account<'a, Config>,
+    registry_bump: &Account<'a, registry_cpi::state::Bump>,
+    registry_config: &Account<'a, registry_cpi::state::Config>,
+    registry_user_id: &Account<'a, registry_cpi::state::UserId>,
+    output_token_mint: &InterfaceAccount<'a, Mint>,
+    output_token_app_ata: &InterfaceAccount<'a, TokenAccount>,
+    revenue_app_ata: &InterfaceAccount<'a, TokenAccount>,
+) -> Result<()> {
+    // prepare accounts for CPI to registry program
+    let cpi_accounts = registry::cpi::accounts::ActivateAccount {
+        system_program: system_program.to_account_info(),
+        token_program: token_program.to_account_info(),
+        associated_token_program: associated_token_program.to_account_info(),
+        sender: config.to_account_info(),
+        bump: registry_bump.to_account_info(),
+        config: registry_config.to_account_info(),
+        user_id: registry_user_id.to_account_info(),
+        revenue_mint: output_token_mint.to_account_info(),
+        revenue_sender_ata: output_token_app_ata.to_account_info(),
+        revenue_app_ata: revenue_app_ata.to_account_info(),
+    };
+
+    // create signer seeds for config PDA
+    let config_seeds = &[SEED_CONFIG.as_bytes(), &[bump.config]];
+    let signer_seeds = &[&config_seeds[..]];
+
+    let cpi_ctx = CpiContext::new_with_signer(
+        registry_program.to_account_info(),
+        cpi_accounts,
+        signer_seeds,
+    );
+
+    // make CPI call to activate account
+    registry::cpi::activate_account(cpi_ctx, *user_to_activate)?;
 
     Ok(())
 }

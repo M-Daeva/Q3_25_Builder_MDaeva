@@ -980,6 +980,8 @@ dependencies = [
  "base",
  "dex-adapter-cpi",
  "raydium-clmm-cpi",
+ "registry",
+ "registry-cpi",
 ]
 
 [[package]]

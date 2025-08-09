@@ -55,7 +55,7 @@ pub mod dex_adapter {
         amount_out_minimum: u64,
     ) -> Result<()> {
         ctx.accounts
-            .swap_and_activate(amount_in, amount_out_minimum)
+            .swap_and_activate(ctx.remaining_accounts, amount_in, amount_out_minimum)
     }
 
     // /// multi-output swap: one input token → multiple output tokens

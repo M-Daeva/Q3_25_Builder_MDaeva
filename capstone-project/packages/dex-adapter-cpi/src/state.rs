@@ -34,6 +34,7 @@ pub struct Config {
     pub registry: Option<Pubkey>,
     pub is_paused: bool,
     pub rotation_timeout: u32,
+    // TODO: can we use route instead?
     /// list of supported SPL/Token2022 tokens
     #[max_len(TOKEN_IN_WHITELIST_MAX_LEN)]
     pub token_in_whitelist: Vec<Pubkey>,
