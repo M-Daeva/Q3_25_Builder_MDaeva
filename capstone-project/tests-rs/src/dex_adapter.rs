@@ -2,9 +2,7 @@ use {
     crate::{
         clmm_mock::{prepare_dex, AMM_CONFIG_INDEX_0, AMM_CONFIG_INDEX_1},
         helpers::{
-            extensions::{
-                dex_adapter::DexAdapterExtension, registry::RegistryExtension, wsol::WsolExtension,
-            },
+            extensions::{dex_adapter::DexAdapterExtension, registry::RegistryExtension},
             suite::{
                 core::App,
                 types::{AppToken, AppUser},
@@ -64,7 +62,6 @@ fn swap_multihop() -> Result<()> {
     )?;
 
     app.dex_adapter_try_init(AppUser::Admin, app.program_id.clmm_mock, None, None, None)?;
-
     app.dex_adapter_try_save_route(
         AppUser::Admin,
         AppToken::WBTC,
@@ -103,18 +100,67 @@ fn swap_multihop() -> Result<()> {
 }
 
 #[test]
+fn swap_multihop_2() -> Result<()> {
+    let mut app = App::new();
+    prepare_dex(
+        &mut app,
+        &[
+            (AMM_CONFIG_INDEX_0, AppToken::WBTC, AppToken::PYTH),
+            (AMM_CONFIG_INDEX_1, AppToken::PYTH, AppToken::USDC),
+        ],
+        None,
+    )?;
+
+    app.dex_adapter_try_init(AppUser::Admin, app.program_id.clmm_mock, None, None, None)?;
+    app.dex_adapter_try_save_route(
+        AppUser::Admin,
+        AppToken::WBTC,
+        AppToken::USDC,
+        &[
+            RouteItem {
+                amm_index: AMM_CONFIG_INDEX_0,
+                token_out: AppToken::PYTH.pubkey(),
+            },
+            RouteItem {
+                amm_index: AMM_CONFIG_INDEX_1,
+                token_out: AppToken::USDC.pubkey(),
+            },
+        ],
+    )?;
+
+    // swap WBTC -> WSOL -> USDC
+    let bob_wbtc_before = app.get_balance(AppUser::Bob, AppToken::WBTC);
+    let bob_usdc_before = app.get_balance(AppUser::Bob, AppToken::USDC);
+
+    app.dex_adapter_try_swap_multihop(
+        AppUser::Bob,
+        AppToken::WBTC,
+        AppToken::USDC,
+        1_000,
+        995_000,
+    )?;
+
+    let bob_wbtc_after = app.get_balance(AppUser::Bob, AppToken::WBTC);
+    let bob_usdc_after = app.get_balance(AppUser::Bob, AppToken::USDC);
+
+    assert_eq!(bob_wbtc_before - bob_wbtc_after, 1_000);
+    assert_eq!(bob_usdc_after - bob_usdc_before, 996_002);
+
+    Ok(())
+}
+
+#[test]
 fn swap_and_activate_default() -> Result<()> {
     const MAX_DATA_SIZE_0: u32 = 1_000;
 
     let mut app = App::new();
-    app.wsol_try_wrap(AppUser::Admin, 1_000_000_000_000)?;
     prepare_dex(
         &mut app,
         &[
-            (AMM_CONFIG_INDEX_0, AppToken::WBTC, AppToken::WSOL),
-            (AMM_CONFIG_INDEX_1, AppToken::WSOL, AppToken::USDC),
+            (AMM_CONFIG_INDEX_0, AppToken::WBTC, AppToken::PYTH),
+            (AMM_CONFIG_INDEX_1, AppToken::PYTH, AppToken::USDC),
         ],
-        Some(1_000),
+        None,
     )?;
 
     app.registry_try_init(
@@ -137,7 +183,7 @@ fn swap_and_activate_default() -> Result<()> {
         &[
             RouteItem {
                 amm_index: AMM_CONFIG_INDEX_0,
-                token_out: AppToken::WSOL.pubkey(),
+                token_out: AppToken::PYTH.pubkey(),
             },
             RouteItem {
                 amm_index: AMM_CONFIG_INDEX_1,
@@ -151,9 +197,103 @@ fn swap_and_activate_default() -> Result<()> {
         AppUser::Bob,
         AppToken::WBTC,
         AppToken::USDC,
+        10_041,
         app.registry_query_config()?.registration_fee.amount,
-        1,
     )?;
+
+    assert_eq!(app.registry_query_user_id(AppUser::Bob)?.is_activated, true);
 
     Ok(())
 }
+
+// #[test]
+// fn swap_multihop_2() -> Result<()> {
+//     let mut app = App::new();
+//     app.wsol_try_wrap(AppUser::Admin, 10_000_000_000_000)?;
+//     prepare_dex(
+//         &mut app,
+//         &[
+//             (AMM_CONFIG_INDEX_0, AppToken::WBTC, AppToken::WSOL),
+//             (AMM_CONFIG_INDEX_1, AppToken::WSOL, AppToken::USDC),
+//         ],
+//         Some(10_000),
+//     )?;
+
+//     app.dex_adapter_try_init(AppUser::Admin, app.program_id.clmm_mock, None, None, None)?;
+//     app.dex_adapter_try_save_route(
+//         AppUser::Admin,
+//         AppToken::WBTC,
+//         AppToken::USDC,
+//         &[
+//             RouteItem {
+//                 amm_index: AMM_CONFIG_INDEX_0,
+//                 token_out: AppToken::WSOL.pubkey(),
+//             },
+//             RouteItem {
+//                 amm_index: AMM_CONFIG_INDEX_1,
+//                 token_out: AppToken::USDC.pubkey(),
+//             },
+//         ],
+//     )?;
+
+//     // swap WBTC -> WSOL -> USDC
+//     app.dex_adapter_try_swap_multihop(AppUser::Bob, AppToken::WBTC, AppToken::USDC, 1, 0)?;
+
+//     Ok(())
+// }
+
+// #[test]
+// fn swap_and_activate_default() -> Result<()> {
+//     const MAX_DATA_SIZE_0: u32 = 1_000;
+
+//     let mut app = App::new();
+//     app.wsol_try_wrap(AppUser::Admin, 1_000_000_000_000)?;
+//     prepare_dex(
+//         &mut app,
+//         &[
+//             (AMM_CONFIG_INDEX_0, AppToken::WBTC, AppToken::WSOL),
+//             (AMM_CONFIG_INDEX_1, AppToken::WSOL, AppToken::USDC),
+//         ],
+//         Some(1_000),
+//     )?;
+
+//     app.registry_try_init(
+//         AppUser::Admin,
+//         None,
+//         Some(AssetItem {
+//             amount: ACCOUNT_REGISTRATION_FEE_AMOUNT,
+//             asset: AppToken::USDC.pubkey(),
+//         }),
+//         None,
+//     )?;
+
+//     app.registry_try_create_account(AppUser::Bob, MAX_DATA_SIZE_0)?;
+
+//     app.dex_adapter_try_init(AppUser::Admin, app.program_id.clmm_mock, None, None, None)?;
+//     app.dex_adapter_try_save_route(
+//         AppUser::Admin,
+//         AppToken::WBTC,
+//         AppToken::USDC,
+//         &[
+//             RouteItem {
+//                 amm_index: AMM_CONFIG_INDEX_0,
+//                 token_out: AppToken::WSOL.pubkey(),
+//             },
+//             RouteItem {
+//                 amm_index: AMM_CONFIG_INDEX_1,
+//                 token_out: AppToken::USDC.pubkey(),
+//             },
+//         ],
+//     )?;
+
+//     // swap WBTC -> WSOL -> USDC
+//     app.dex_adapter_try_swap_and_activate(
+//         AppUser::Bob,
+//         AppToken::WBTC,
+//         AppToken::USDC,
+//         app.registry_query_config()?.registration_fee.amount,
+//         1,
+//     )?;
+
+//     Ok(())
+// }

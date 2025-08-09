@@ -145,6 +145,7 @@ impl<'info> SwapAndActivate<'info> {
             input_token_mint,
             output_token_mint,
             input_token_sender_ata,
+            output_token_sender_ata, // ← Add this back to destructuring
             input_token_app_ata,
             output_token_app_ata,
             revenue_app_ata,
@@ -155,7 +156,8 @@ impl<'info> SwapAndActivate<'info> {
             Err(CustomError::InvalidAmount)?;
         }
 
-        // store initial balances to track the swap
+        // store initial balances to track the swap - track BOTH user and app balances
+        let initial_output_user_balance = output_token_sender_ata.amount;
         let initial_output_app_balance = output_token_app_ata.amount;
 
         // transfer input tokens from sender to app ATA
@@ -183,13 +185,34 @@ impl<'info> SwapAndActivate<'info> {
         )?;
 
         // reload accounts to get updated balances
+        output_token_sender_ata.reload()?;
         output_token_app_ata.reload()?;
 
-        // check that we received output tokens from the swap
+        // check both app ATA and user ATA for output tokens
         let app_balance_change = output_token_app_ata.amount - initial_output_app_balance;
-        if app_balance_change == 0 {
+        let user_balance_change = output_token_sender_ata.amount - initial_output_user_balance;
+
+        // check that we received output tokens from the swap
+        if user_balance_change == 0 && app_balance_change == 0 {
             Err(CustomError::NoOutputTokens)?;
         }
+
+        // determine the amount to use for activation
+        let _tokens_for_activation = if app_balance_change > 0 {
+            // tokens are in app ATA, use them directly
+            app_balance_change
+        } else {
+            // tokens are in user ATA, need to transfer them to app ATA first
+            transfer_token_from_user(
+                user_balance_change,
+                output_token_mint,
+                output_token_sender_ata,
+                output_token_app_ata,
+                sender,
+                token_program,
+            )?;
+            user_balance_change
+        };
 
         // activate account on registry program
         activate_account_on_registry(
