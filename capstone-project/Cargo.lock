@@ -978,7 +978,17 @@ dependencies = [
  "anchor-lang",
  "anchor-spl",
  "base",
+ "dex-adapter-cpi",
  "raydium-clmm-cpi",
+]
+
+[[package]]
+name = "dex-adapter-cpi"
+version = "1.0.0"
+dependencies = [
+ "anchor-lang",
+ "anchor-spl",
+ "base",
 ]
 
 [[package]]
@@ -2385,6 +2395,16 @@ checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
 
 [[package]]
 name = "registry"
+version = "1.0.0"
+dependencies = [
+ "anchor-lang",
+ "anchor-spl",
+ "base",
+ "registry-cpi",
+]
+
+[[package]]
+name = "registry-cpi"
 version = "1.0.0"
 dependencies = [
  "anchor-lang",
@@ -5161,10 +5181,12 @@ dependencies = [
  "base",
  "clmm-mock",
  "dex-adapter",
+ "dex-adapter-cpi",
  "litesvm",
  "pretty_assertions",
  "raydium-clmm-cpi",
  "registry",
+ "registry-cpi",
  "serde_json",
  "solana-account",
  "solana-compute-budget",

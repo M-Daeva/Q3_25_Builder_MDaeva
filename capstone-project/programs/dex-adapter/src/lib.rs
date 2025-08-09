@@ -1,19 +1,16 @@
 #![allow(unexpected_cfgs)]
-#![allow(deprecated)]
 
 use anchor_lang::prelude::*;
 
-pub mod error;
 pub mod helpers;
 pub mod instructions;
-pub mod state;
-pub mod types;
 
 use {
-    crate::types::RouteItem,
-    instructions::{init::*, save_route::*, swap_multihop::*},
+    dex_adapter_cpi::types::RouteItem,
+    instructions::{init::*, save_route::*, swap_and_activate::*, swap_multihop::*},
 };
 
+// IDL builder doesn't see ID from cpi package, we need to duplicate it here
 declare_id!("FMsjKKPk7FQb1B9H8UQTLrdCUZ9MaoAeTnNK9kdVJmtt");
 
 #[program]
@@ -51,10 +48,15 @@ pub mod dex_adapter {
     //     unimplemented!()
     // }
 
-    // /// swap tokens and forward result to registry program (call receive_payment)
-    // pub fn swap_and_forward(amount_in: u64, token_out: Pubkey, min_amount_out: u64) -> Result<()> {
-    //     unimplemented!()
-    // }
+    /// swap tokens and forward result to registry program (call receive_payment)
+    pub fn swap_and_activate<'a, 'b, 'c: 'info, 'info>(
+        ctx: Context<'a, 'b, 'c, 'info, SwapAndActivate<'info>>,
+        amount_in: u64,
+        amount_out_minimum: u64,
+    ) -> Result<()> {
+        ctx.accounts
+            .swap_and_activate(amount_in, amount_out_minimum)
+    }
 
     // /// multi-output swap: one input token → multiple output tokens
     // pub fn multi_swap(
@@ -63,6 +65,8 @@ pub mod dex_adapter {
     // ) -> Result<()> {
     //     unimplemented!()
     // }
+
+    // TODO: swap_and_unwrap ?
 
     // /// unwrap WSOL and send native SOL to user
     // pub fn unwrap_and_send_sol(amount_in: u64, recipient: Option<Pubkey>) -> Result<()> {

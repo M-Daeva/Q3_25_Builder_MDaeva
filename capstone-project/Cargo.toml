@@ -44,9 +44,11 @@ spl-associated-token-account = "7.0.0"
 spl-token = "8.0.0"
 solana-kite = "0.1.4"
 
+base = { path = "./packages/base" }
+registry-cpi = { path = "./packages/registry-cpi" }
+dex-adapter-cpi = { path = "./packages/dex-adapter-cpi" }
 raydium-clmm-cpi = { path = "./packages/clmm-cpi" }
 
-base = { path = "./packages/base" }
 clmm-mock = { path = "./programs/clmm-mock" }
 registry = { path = "./programs/registry" }
 dex-adapter = { path = "./programs/dex-adapter" }

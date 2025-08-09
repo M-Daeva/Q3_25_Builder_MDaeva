@@ -1,14 +1,14 @@
 use {
-    crate::{
-        error::CustomError,
-        state::{Bump, Config, SEED_BUMP, SEED_CONFIG},
-    },
     anchor_lang::prelude::*,
     anchor_spl::{
         associated_token::AssociatedToken,
         token_interface::{Mint, TokenAccount, TokenInterface},
     },
     base::{error::AuthError, helpers::transfer_token_from_program},
+    registry_cpi::{
+        error::CustomError,
+        state::{Bump, Config, SEED_BUMP, SEED_CONFIG},
+    },
 };
 
 #[derive(Accounts)]
@@ -61,7 +61,7 @@ pub struct WithdrawRevenue<'info> {
 
 impl<'info> WithdrawRevenue<'info> {
     pub fn withdraw_revenue(&mut self, amount: Option<u64>) -> Result<()> {
-        let WithdrawRevenue {
+        let Self {
             token_program,
             sender,
             bump,

@@ -1873,63 +1873,6 @@ export type Registry = {
       ]
     }
   ],
-  "errors": [
-    {
-      "code": 6000,
-      "name": "noParameters",
-      "msg": "Parameters are not provided!"
-    },
-    {
-      "code": 6001,
-      "name": "wrongAssetType",
-      "msg": "Wrong asset type!"
-    },
-    {
-      "code": 6002,
-      "name": "zeroAmount",
-      "msg": "Zero amount to send!"
-    },
-    {
-      "code": 6003,
-      "name": "exceededAvailableAssetAmount",
-      "msg": "Exceeded available asset amount!"
-    },
-    {
-      "code": 6004,
-      "name": "contractIsPaused",
-      "msg": "The contract is temporary paused!"
-    },
-    {
-      "code": 6005,
-      "name": "maxDataSizeIsOutOfRange",
-      "msg": "Max data size is out of range!"
-    },
-    {
-      "code": 6006,
-      "name": "maxDataSizeIsExceeded",
-      "msg": "Max data size is exceeded!"
-    },
-    {
-      "code": 6007,
-      "name": "wrongUserId",
-      "msg": "Wrong user ID!"
-    },
-    {
-      "code": 6008,
-      "name": "activateAccountTwice",
-      "msg": "Account can't be activated twice!"
-    },
-    {
-      "code": 6009,
-      "name": "accountIsNotActivated",
-      "msg": "Account isn't activated!"
-    },
-    {
-      "code": 6010,
-      "name": "badNonce",
-      "msg": "Nonce must be unique!"
-    }
-  ],
   "types": [
     {
       "name": "assetItem",

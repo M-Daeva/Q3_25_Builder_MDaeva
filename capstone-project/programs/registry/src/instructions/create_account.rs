@@ -1,13 +1,13 @@
 use {
-    crate::{
+    anchor_lang::prelude::*,
+    base::helpers::{get_clock_time, get_space},
+    registry_cpi::{
         error::CustomError,
         state::{
             Bump, Config, RotationState, UserAccount, UserCounter, UserId, SEED_BUMP, SEED_CONFIG,
             SEED_USER_ACCOUNT, SEED_USER_COUNTER, SEED_USER_ID, SEED_USER_ROTATION_STATE,
         },
     },
-    anchor_lang::prelude::*,
-    base::helpers::{get_clock_time, get_space},
 };
 
 #[derive(Accounts)]
@@ -75,7 +75,7 @@ impl<'info> CreateAccount<'info> {
         max_data_size: u32,
         expected_user_id: u32,
     ) -> Result<()> {
-        let CreateAccount {
+        let Self {
             sender,
             config,
             user_counter,

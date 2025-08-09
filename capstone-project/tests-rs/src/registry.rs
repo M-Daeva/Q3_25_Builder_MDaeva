@@ -9,7 +9,7 @@ use {
     anchor_lang::Result,
     base::error::AuthError,
     pretty_assertions::assert_eq,
-    registry::{
+    registry_cpi::{
         state::{
             Config, UserAccount, ACCOUNT_DATA_SIZE_MAX, ACCOUNT_DATA_SIZE_MIN,
             ACCOUNT_REGISTRATION_FEE_AMOUNT, ROTATION_TIMEOUT,

@@ -1,11 +1,11 @@
 use {
-    crate::{
+    anchor_lang::prelude::*,
+    base::{error::AuthError, helpers::get_clock_time},
+    registry_cpi::{
         error::CustomError,
         state::{Bump, Config, RotationState, SEED_ADMIN_ROTATION_STATE, SEED_BUMP, SEED_CONFIG},
         types::{AssetItem, Range},
     },
-    anchor_lang::prelude::*,
-    base::{error::AuthError, helpers::get_clock_time},
 };
 
 #[derive(Accounts)]
@@ -44,7 +44,7 @@ impl<'info> UpdateConfig<'info> {
         registration_fee: Option<AssetItem>,
         data_size_range: Option<Range>,
     ) -> Result<()> {
-        let UpdateConfig {
+        let Self {
             sender,
             config,
             admin_rotation_state,

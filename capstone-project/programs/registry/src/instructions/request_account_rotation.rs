@@ -1,10 +1,10 @@
 use {
-    crate::state::{
+    anchor_lang::prelude::*,
+    base::helpers::get_clock_time,
+    registry_cpi::state::{
         Bump, Config, RotationState, UserId, SEED_BUMP, SEED_CONFIG, SEED_USER_ID,
         SEED_USER_ROTATION_STATE,
     },
-    anchor_lang::prelude::*,
-    base::helpers::get_clock_time,
 };
 
 #[derive(Accounts)]
@@ -41,7 +41,7 @@ pub struct RequestAccountRotation<'info> {
 
 impl<'info> RequestAccountRotation<'info> {
     pub fn request_account_rotation(&mut self, new_owner: Pubkey) -> Result<()> {
-        let RequestAccountRotation {
+        let Self {
             user_rotation_state,
             config,
             ..

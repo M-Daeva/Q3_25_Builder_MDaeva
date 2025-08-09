@@ -1,10 +1,10 @@
 use {
-    crate::state::{
+    anchor_lang::prelude::*,
+    base::helpers::{get_clock_time, get_space},
+    dex_adapter_cpi::state::{
         Bump, Config, RotationState, MAINNET_USDC, MAINNET_WBTC, MAINNET_WSOL, ROTATION_TIMEOUT,
         SEED_ADMIN_ROTATION_STATE, SEED_BUMP, SEED_CONFIG,
     },
-    anchor_lang::prelude::*,
-    base::helpers::{get_clock_time, get_space},
 };
 
 #[derive(Accounts)]

@@ -1,5 +1,5 @@
 [package]
-name = "registry"
+name = "dex-adapter-cpi"
 version = "1.0.0"
 description = "Created with Anchor"
 repository = { workspace = true }
@@ -22,4 +22,3 @@ idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
 anchor-lang = { workspace = true }
 anchor-spl = { workspace = true }
 base = { workspace = true }
-registry-cpi = { workspace = true }

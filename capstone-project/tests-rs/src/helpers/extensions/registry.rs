@@ -8,8 +8,9 @@ use {
     },
     anchor_lang::Result,
     litesvm::types::TransactionMetadata,
-    registry::{
-        accounts, instruction, state,
+    registry::{accounts, instruction},
+    registry_cpi::{
+        state,
         types::{AssetItem, Range},
     },
 };

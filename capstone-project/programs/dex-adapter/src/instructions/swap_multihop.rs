@@ -1,15 +1,15 @@
 use {
-    crate::{
-        error::CustomError,
-        helpers::execute_clmm_swap,
-        state::{Bump, Config, Route, SEED_BUMP, SEED_CONFIG, SEED_ROUTE},
-    },
+    crate::helpers::execute_clmm_swap,
     anchor_lang::prelude::*,
     anchor_spl::{
         associated_token::AssociatedToken,
         token_interface::{Mint, TokenAccount, TokenInterface},
     },
     base::helpers::{transfer_token_from_program, transfer_token_from_user},
+    dex_adapter_cpi::{
+        error::CustomError,
+        state::{Bump, Config, Route, SEED_BUMP, SEED_CONFIG, SEED_ROUTE},
+    },
 };
 
 #[derive(Accounts)]

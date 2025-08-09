@@ -10,7 +10,7 @@ use {
         },
     },
     anchor_lang::Result,
-    dex_adapter::{
+    dex_adapter_cpi::{
         state::{Config, ROTATION_TIMEOUT},
         types::RouteItem,
     },

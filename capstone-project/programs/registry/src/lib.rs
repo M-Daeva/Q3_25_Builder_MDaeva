@@ -1,10 +1,6 @@
 #![allow(unexpected_cfgs)]
-#![allow(deprecated)]
 
-pub mod error;
 pub mod instructions;
-pub mod state;
-pub mod types;
 
 use {
     anchor_lang::prelude::*,
@@ -13,9 +9,10 @@ use {
         confirm_admin_rotation::*, create_account::*, init::*, reopen_account::*,
         request_account_rotation::*, update_config::*, withdraw_revenue::*, write_data::*,
     },
-    types::{AssetItem, Range},
+    registry_cpi::types::{AssetItem, Range},
 };
 
+// IDL builder doesn't see ID from cpi package, we need to duplicate it here
 declare_id!("3RVBZDA6dgcjkGJtXRJxLvLh5g8qY6QwGHoribyKPN2E");
 
 #[program]

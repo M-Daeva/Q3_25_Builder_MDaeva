@@ -1,10 +1,10 @@
 use {
-    crate::{
+    anchor_lang::prelude::*,
+    base::{error::AuthError, helpers::get_space},
+    dex_adapter_cpi::{
         state::{Bump, Config, Route, SEED_BUMP, SEED_CONFIG, SEED_ROUTE},
         types::RouteItem,
     },
-    anchor_lang::prelude::*,
-    base::{error::AuthError, helpers::get_space},
 };
 
 #[derive(Accounts)]

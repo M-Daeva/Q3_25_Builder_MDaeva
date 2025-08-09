@@ -1,6 +1,4 @@
-use anchor_lang::prelude::*;
-
-use crate::types::RouteItem;
+use {crate::types::RouteItem, anchor_lang::prelude::*};
 
 pub const SECONDS_PER_DAY: u32 = 24 * 3_600;
 pub const ROTATION_TIMEOUT: u32 = SECONDS_PER_DAY;

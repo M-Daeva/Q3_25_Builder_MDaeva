@@ -11,9 +11,8 @@ use {
         associated_token::AssociatedToken, memo, token::Mint, token_2022::spl_token_2022,
     },
     base::helpers::sort_mints,
-    clmm_mock, dex_adapter,
+    clmm_mock,
     litesvm::{types::TransactionMetadata, LiteSVM},
-    registry,
     solana_compute_budget::compute_budget::ComputeBudget,
     solana_instruction::{AccountMeta, Instruction},
     solana_keypair::Keypair,
@@ -276,7 +275,7 @@ impl Pda {
     //
     pub fn registry_bump(&self) -> Pubkey {
         get_pda_and_bump(
-            &seeds![registry::state::SEED_BUMP],
+            &seeds![registry_cpi::state::SEED_BUMP],
             &self.registry_program_id,
         )
         .0
@@ -284,7 +283,7 @@ impl Pda {
 
     pub fn registry_config(&self) -> Pubkey {
         get_pda_and_bump(
-            &seeds![registry::state::SEED_CONFIG],
+            &seeds![registry_cpi::state::SEED_CONFIG],
             &self.registry_program_id,
         )
         .0
@@ -292,7 +291,7 @@ impl Pda {
 
     pub fn registry_user_counter(&self) -> Pubkey {
         get_pda_and_bump(
-            &seeds![registry::state::SEED_USER_COUNTER],
+            &seeds![registry_cpi::state::SEED_USER_COUNTER],
             &self.registry_program_id,
         )
         .0
@@ -300,7 +299,7 @@ impl Pda {
 
     pub fn registry_admin_rotation_state(&self) -> Pubkey {
         get_pda_and_bump(
-            &seeds![registry::state::SEED_ADMIN_ROTATION_STATE],
+            &seeds![registry_cpi::state::SEED_ADMIN_ROTATION_STATE],
             &self.registry_program_id,
         )
         .0
@@ -308,7 +307,7 @@ impl Pda {
 
     pub fn registry_user_id(&self, user: Pubkey) -> Pubkey {
         get_pda_and_bump(
-            &seeds![registry::state::SEED_USER_ID, user],
+            &seeds![registry_cpi::state::SEED_USER_ID, user],
             &self.registry_program_id,
         )
         .0
@@ -317,7 +316,7 @@ impl Pda {
     pub fn registry_user_account(&self, user_id: u32) -> Pubkey {
         get_pda_and_bump(
             &seeds![
-                registry::state::SEED_USER_ACCOUNT,
+                registry_cpi::state::SEED_USER_ACCOUNT,
                 user_id.to_le_bytes().as_ref()
             ],
             &self.registry_program_id,
@@ -328,7 +327,7 @@ impl Pda {
     pub fn registry_user_rotation_state(&self, user_id: u32) -> Pubkey {
         get_pda_and_bump(
             &seeds![
-                registry::state::SEED_USER_ROTATION_STATE,
+                registry_cpi::state::SEED_USER_ROTATION_STATE,
                 user_id.to_le_bytes().as_ref()
             ],
             &self.registry_program_id,
@@ -340,7 +339,7 @@ impl Pda {
     //
     pub fn dex_adapter_bump(&self) -> Pubkey {
         get_pda_and_bump(
-            &seeds![dex_adapter::state::SEED_BUMP],
+            &seeds![dex_adapter_cpi::state::SEED_BUMP],
             &self.dex_adapter_program_id,
         )
         .0
@@ -348,7 +347,7 @@ impl Pda {
 
     pub fn dex_adapter_config(&self) -> Pubkey {
         get_pda_and_bump(
-            &seeds![dex_adapter::state::SEED_CONFIG],
+            &seeds![dex_adapter_cpi::state::SEED_CONFIG],
             &self.dex_adapter_program_id,
         )
         .0
@@ -356,7 +355,7 @@ impl Pda {
 
     pub fn dex_adapter_admin_rotation_state(&self) -> Pubkey {
         get_pda_and_bump(
-            &seeds![dex_adapter::state::SEED_ADMIN_ROTATION_STATE],
+            &seeds![dex_adapter_cpi::state::SEED_ADMIN_ROTATION_STATE],
             &self.dex_adapter_program_id,
         )
         .0
@@ -364,7 +363,7 @@ impl Pda {
 
     pub fn dex_adapter_route(&self, mint_first: Pubkey, mint_last: Pubkey) -> Pubkey {
         get_pda_and_bump(
-            &seeds![dex_adapter::state::SEED_ROUTE, mint_first, mint_last],
+            &seeds![dex_adapter_cpi::state::SEED_ROUTE, mint_first, mint_last],
             &self.dex_adapter_program_id,
         )
         .0
@@ -397,8 +396,8 @@ impl App {
             clmm_mock: clmm_mock::ID,
 
             // custom
-            registry: registry::ID,
-            dex_adapter: dex_adapter::ID,
+            registry: registry_cpi::ID,
+            dex_adapter: dex_adapter_cpi::ID,
         };
 
         // specify PDA
