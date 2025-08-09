@@ -10,7 +10,6 @@ use {
         error::CustomError,
         state::{Bump, Config, Route, SEED_BUMP, SEED_CONFIG, SEED_ROUTE},
     },
-    registry_cpi,
 };
 
 #[derive(Accounts)]
@@ -44,13 +43,13 @@ pub struct SwapAndActivate<'info> {
         seeds = [SEED_CONFIG.as_bytes()],
         bump = bump.config,
     )]
-    pub config: Account<'info, Config>,
+    pub config: Box<Account<'info, Config>>,
 
     #[account(
         seeds = [SEED_ROUTE.as_bytes(), &input_token_mint.key().to_bytes(), &output_token_mint.key().to_bytes()],
         bump
     )]
-    pub route: Account<'info, Route>,
+    pub route: Box<Account<'info, Route>>,
 
     #[account(
         seeds = [registry_cpi::state::SEED_BUMP.as_bytes()],
@@ -64,7 +63,7 @@ pub struct SwapAndActivate<'info> {
         bump = registry_bump.config,
         seeds::program = registry_program.key()
     )]
-    pub registry_config: Account<'info, registry_cpi::state::Config>,
+    pub registry_config: Box<Account<'info, registry_cpi::state::Config>>,
 
     #[account(
         mut,
@@ -72,7 +71,7 @@ pub struct SwapAndActivate<'info> {
         bump,
         seeds::program = registry_program.key()
     )]
-    pub registry_user_id: Account<'info, registry_cpi::state::UserId>,
+    pub registry_user_id: Box<Account<'info, registry_cpi::state::UserId>>,
 
     // mint
     //
@@ -113,14 +112,14 @@ pub struct SwapAndActivate<'info> {
         associated_token::mint = output_token_mint,
         associated_token::authority = config
     )]
-    pub output_token_app_ata: InterfaceAccount<'info, TokenAccount>,
+    pub output_token_app_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         mut,
         associated_token::mint = output_token_mint,
         associated_token::authority = registry_config
     )]
-    pub revenue_app_ata: InterfaceAccount<'info, TokenAccount>,
+    pub revenue_app_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 }
 
 impl<'info> SwapAndActivate<'info> {

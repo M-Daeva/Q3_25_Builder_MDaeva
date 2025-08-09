@@ -25,4 +25,4 @@ base = { workspace = true }
 registry-cpi = { workspace = true }
 dex-adapter-cpi = { workspace = true }
 raydium-clmm-cpi = { workspace = true }
-registry = { workspace = true }
+registry = { workspace = true, features = ["cpi"] }
