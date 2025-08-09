@@ -650,16 +650,17 @@ pub fn sort_tokens(token_a: AppToken, token_b: AppToken) -> (AppToken, AppToken)
     }
 }
 
-pub fn calc_token_amount_for_pool(token: AppToken) -> u64 {
+pub fn calc_token_amount_for_pool(token: AppToken, base_amount: Option<u128>) -> u64 {
     const BASE_AMOUNT: u128 = 1_000_000; // $
 
+    let base_amount = base_amount.unwrap_or(BASE_AMOUNT);
     let token_decimals = token.get_decimals();
     let token_price = token.get_price();
 
     let price_atomics = token_price.atomics();
     let dec_multiplier = 10_u128.pow(token_decimals as u32);
 
-    (dec_multiplier * (BASE_AMOUNT * Decimal::DECIMAL_FRACTIONAL / price_atomics)) as u64
+    (dec_multiplier * (base_amount * Decimal::DECIMAL_FRACTIONAL / price_atomics)) as u64
 }
 
 // /// returns src data sorted by mint

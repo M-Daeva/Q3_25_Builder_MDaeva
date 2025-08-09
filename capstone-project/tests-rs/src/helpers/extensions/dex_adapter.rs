@@ -25,6 +25,15 @@ pub trait DexAdapterExtension {
         token_in_whitelist: Option<Vec<AppToken>>,
     ) -> Result<TransactionMetadata>;
 
+    fn dex_adapter_try_swap_and_activate(
+        &mut self,
+        sender: AppUser,
+        token_in: AppToken,
+        token_out: AppToken,
+        amount_in: u64,
+        amount_out_minimum: u64,
+    ) -> Result<TransactionMetadata>;
+
     fn dex_adapter_try_swap_multihop(
         &mut self,
         sender: AppUser,
@@ -101,6 +110,101 @@ impl DexAdapterExtension for App {
             &payer,
             &signers,
             &[],
+        )
+    }
+
+    fn dex_adapter_try_swap_and_activate(
+        &mut self,
+        sender: AppUser,
+        token_in: AppToken,
+        token_out: AppToken,
+        amount_in: u64,
+        amount_out_minimum: u64,
+    ) -> Result<TransactionMetadata> {
+        // programs
+        let ProgramId {
+            system_program,
+            token_program_2022,
+            token_program,
+            associated_token_program,
+            memo,
+            registry,
+            dex_adapter: program_id,
+            clmm_mock,
+            ..
+        } = self.program_id;
+
+        // signers
+        let payer = sender.pubkey();
+        let signers = [sender.keypair()];
+
+        // mints
+        let (input_token_mint, output_token_mint) = (token_in.pubkey(), token_out.pubkey());
+
+        // pda
+        let bump = self.pda.dex_adapter_bump();
+        let config = self.pda.dex_adapter_config();
+        let route = self
+            .pda
+            .dex_adapter_route(input_token_mint, output_token_mint);
+
+        let registry_bump = self.pda.registry_bump();
+        let registry_config = self.pda.registry_config();
+        let registry_user_id = self.pda.registry_user_id(payer);
+
+        // ata
+        let input_token_sender_ata = self.get_or_create_ata(sender, &payer, &input_token_mint)?;
+        let output_token_sender_ata = self.get_or_create_ata(sender, &payer, &output_token_mint)?;
+        let input_token_app_ata = self.get_or_create_ata(sender, &config, &input_token_mint)?;
+        let output_token_app_ata = self.get_or_create_ata(sender, &config, &output_token_mint)?;
+        let revenue_app_ata = App::get_ata(&registry_config, &output_token_mint);
+
+        let accounts = accounts::SwapAndActivate {
+            system_program,
+            token_program,
+            associated_token_program,
+            token_program_2022,
+            memo_program: memo,
+            clmm_mock_program: clmm_mock,
+            sender: payer,
+            bump,
+            config,
+            route,
+            registry_program: registry,
+            registry_bump,
+            registry_config,
+            registry_user_id,
+            input_token_mint,
+            output_token_mint,
+            input_token_sender_ata,
+            output_token_sender_ata,
+            input_token_app_ata,
+            output_token_app_ata,
+            revenue_app_ata,
+        };
+
+        // build remaining accounts based on the route loaded from PDA
+        let remaining_accounts = build_remaining_accounts_for_route(
+            self,
+            sender,
+            &payer,
+            input_token_mint,
+            output_token_mint,
+        )?;
+
+        let instruction_data = instruction::SwapAndActivate {
+            amount_in,
+            amount_out_minimum,
+        };
+
+        send_tx_with_ix(
+            self,
+            &program_id,
+            &accounts,
+            &instruction_data,
+            &payer,
+            &signers,
+            &remaining_accounts,
         )
     }
 

@@ -2,7 +2,9 @@ use {
     crate::{
         clmm_mock::{prepare_dex, AMM_CONFIG_INDEX_0, AMM_CONFIG_INDEX_1},
         helpers::{
-            extensions::dex_adapter::DexAdapterExtension,
+            extensions::{
+                dex_adapter::DexAdapterExtension, registry::RegistryExtension, wsol::WsolExtension,
+            },
             suite::{
                 core::App,
                 types::{AppToken, AppUser},
@@ -15,6 +17,7 @@ use {
         types::RouteItem,
     },
     pretty_assertions::assert_eq,
+    registry_cpi::{state::ACCOUNT_REGISTRATION_FEE_AMOUNT, types::AssetItem},
     solana_pubkey::Pubkey,
 };
 
@@ -51,7 +54,14 @@ fn init_default() -> Result<()> {
 #[test]
 fn swap_multihop() -> Result<()> {
     let mut app = App::new();
-    prepare_dex(&mut app)?;
+    prepare_dex(
+        &mut app,
+        &[
+            (AMM_CONFIG_INDEX_0, AppToken::USDC, AppToken::PYTH),
+            (AMM_CONFIG_INDEX_1, AppToken::WBTC, AppToken::USDC),
+        ],
+        None,
+    )?;
 
     app.dex_adapter_try_init(AppUser::Admin, app.program_id.clmm_mock, None, None, None)?;
 
@@ -88,6 +98,62 @@ fn swap_multihop() -> Result<()> {
 
     assert_eq!(bob_wbtc_before - bob_wbtc_after, 1_000);
     assert_eq!(bob_pyth_after - bob_pyth_before, 9_960_020);
+
+    Ok(())
+}
+
+#[test]
+fn swap_and_activate_default() -> Result<()> {
+    const MAX_DATA_SIZE_0: u32 = 1_000;
+
+    let mut app = App::new();
+    app.wsol_try_wrap(AppUser::Admin, 1_000_000_000_000)?;
+    prepare_dex(
+        &mut app,
+        &[
+            (AMM_CONFIG_INDEX_0, AppToken::WBTC, AppToken::WSOL),
+            (AMM_CONFIG_INDEX_1, AppToken::WSOL, AppToken::USDC),
+        ],
+        Some(1_000),
+    )?;
+
+    app.registry_try_init(
+        AppUser::Admin,
+        None,
+        Some(AssetItem {
+            amount: ACCOUNT_REGISTRATION_FEE_AMOUNT,
+            asset: AppToken::USDC.pubkey(),
+        }),
+        None,
+    )?;
+
+    app.registry_try_create_account(AppUser::Bob, MAX_DATA_SIZE_0)?;
+
+    app.dex_adapter_try_init(AppUser::Admin, app.program_id.clmm_mock, None, None, None)?;
+    app.dex_adapter_try_save_route(
+        AppUser::Admin,
+        AppToken::WBTC,
+        AppToken::USDC,
+        &[
+            RouteItem {
+                amm_index: AMM_CONFIG_INDEX_0,
+                token_out: AppToken::WSOL.pubkey(),
+            },
+            RouteItem {
+                amm_index: AMM_CONFIG_INDEX_1,
+                token_out: AppToken::USDC.pubkey(),
+            },
+        ],
+    )?;
+
+    // swap WBTC -> WSOL -> USDC
+    app.dex_adapter_try_swap_and_activate(
+        AppUser::Bob,
+        AppToken::WBTC,
+        AppToken::USDC,
+        app.registry_query_config()?.registration_fee.amount,
+        1,
+    )?;
 
     Ok(())
 }

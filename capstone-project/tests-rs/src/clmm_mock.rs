@@ -13,22 +13,23 @@ use {
 pub const AMM_CONFIG_INDEX_0: u16 = 0;
 pub const AMM_CONFIG_INDEX_1: u16 = 1;
 
-pub fn prepare_dex(app: &mut App) -> Result<()> {
+pub fn prepare_dex(
+    app: &mut App,
+    config: &[(u16, AppToken, AppToken)],
+    base_amount: Option<u128>,
+) -> Result<()> {
     app.wait(1_000);
     app.clmm_mock_try_create_operation_account(AppUser::Admin)?;
 
-    for (amm_index, token_0, token_1) in [
-        (AMM_CONFIG_INDEX_0, AppToken::USDC, AppToken::PYTH),
-        (AMM_CONFIG_INDEX_1, AppToken::WBTC, AppToken::USDC),
-    ] {
-        let (token_0, token_1) = sort_tokens(token_0, token_1);
+    for (amm_index, token_0, token_1) in config {
+        let (token_0, token_1) = sort_tokens(*token_0, *token_1);
 
-        app.clmm_mock_try_create_amm_config(AppUser::Admin, amm_index, 1, 1, 1, 1)?;
+        app.clmm_mock_try_create_amm_config(AppUser::Admin, *amm_index, 1, 1, 1, 1)?;
         app.clmm_mock_try_create_pool(
             AppUser::Admin,
             1,
             app.get_clock_time() - 1,
-            amm_index,
+            *amm_index,
             token_0,
             token_1,
         )?;
@@ -39,11 +40,11 @@ pub fn prepare_dex(app: &mut App) -> Result<()> {
             0,
             0,
             1,
-            calc_token_amount_for_pool(token_0),
-            calc_token_amount_for_pool(token_1),
+            calc_token_amount_for_pool(token_0, base_amount),
+            calc_token_amount_for_pool(token_1, base_amount),
             false,
             None,
-            amm_index,
+            *amm_index,
             token_0,
             token_1,
         )?;
@@ -80,8 +81,8 @@ fn swap_default() -> Result<()> {
         0,
         0,
         1,
-        calc_token_amount_for_pool(AppToken::USDC),
-        calc_token_amount_for_pool(AppToken::PYTH),
+        calc_token_amount_for_pool(AppToken::USDC, None),
+        calc_token_amount_for_pool(AppToken::PYTH, None),
         false,
         None,
         AMM_CONFIG_INDEX,
@@ -157,7 +158,14 @@ fn swap_default() -> Result<()> {
 #[test]
 fn swap_with_decimals() -> Result<()> {
     let mut app = App::new();
-    prepare_dex(&mut app)?;
+    prepare_dex(
+        &mut app,
+        &[
+            (AMM_CONFIG_INDEX_0, AppToken::USDC, AppToken::PYTH),
+            (AMM_CONFIG_INDEX_1, AppToken::WBTC, AppToken::USDC),
+        ],
+        None,
+    )?;
 
     // swap USDC -> WBTC
     let bob_usdc_before = app.get_balance(AppUser::Bob, AppToken::USDC);
@@ -208,7 +216,14 @@ fn swap_with_decimals() -> Result<()> {
 #[test]
 fn swap_multihop_default() -> Result<()> {
     let mut app = App::new();
-    prepare_dex(&mut app)?;
+    prepare_dex(
+        &mut app,
+        &[
+            (AMM_CONFIG_INDEX_0, AppToken::USDC, AppToken::PYTH),
+            (AMM_CONFIG_INDEX_1, AppToken::WBTC, AppToken::USDC),
+        ],
+        None,
+    )?;
 
     // swap WBTC -> USDC -> PYTH
     let bob_wbtc_before = app.get_balance(AppUser::Bob, AppToken::WBTC);
@@ -237,7 +252,14 @@ fn swap_multihop_default() -> Result<()> {
 #[test]
 fn swap_multihop_reversed() -> Result<()> {
     let mut app = App::new();
-    prepare_dex(&mut app)?;
+    prepare_dex(
+        &mut app,
+        &[
+            (AMM_CONFIG_INDEX_0, AppToken::USDC, AppToken::PYTH),
+            (AMM_CONFIG_INDEX_1, AppToken::WBTC, AppToken::USDC),
+        ],
+        None,
+    )?;
 
     // swap PYTH -> USDC -> WBTC
     let bob_pyth_before = app.get_balance(AppUser::Bob, AppToken::PYTH);
@@ -266,7 +288,14 @@ fn swap_multihop_reversed() -> Result<()> {
 #[test]
 fn swap_multihop_single_pool() -> Result<()> {
     let mut app = App::new();
-    prepare_dex(&mut app)?;
+    prepare_dex(
+        &mut app,
+        &[
+            (AMM_CONFIG_INDEX_0, AppToken::USDC, AppToken::PYTH),
+            (AMM_CONFIG_INDEX_1, AppToken::WBTC, AppToken::USDC),
+        ],
+        None,
+    )?;
 
     // swap WBTC -> USDC
     let bob_wbtc_before = app.get_balance(AppUser::Bob, AppToken::WBTC);
@@ -321,8 +350,8 @@ fn swap_multihop_same_config() -> Result<()> {
             0,
             0,
             1,
-            calc_token_amount_for_pool(token_0),
-            calc_token_amount_for_pool(token_1),
+            calc_token_amount_for_pool(token_0, None),
+            calc_token_amount_for_pool(token_1, None),
             false,
             None,
             amm_index,

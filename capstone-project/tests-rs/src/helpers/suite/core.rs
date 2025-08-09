@@ -24,7 +24,7 @@ use {
         system_instruction, system_program,
     },
     solana_pubkey::Pubkey,
-    solana_signer::{signers::Signers, Signer},
+    solana_signer::signers::Signers,
     solana_transaction::Transaction,
     spl_associated_token_account::get_associated_token_address,
     strum::IntoEnumIterator,
@@ -69,14 +69,14 @@ pub mod sol_kite {
         litesvm: &mut LiteSVM,
         mint_authority: &Keypair,
         decimals: u8,
-        mint: Option<Keypair>,
-    ) -> Result<Keypair, SolanaKiteError> {
-        let mint = mint.unwrap_or(Keypair::new());
+        mint: Option<Pubkey>,
+    ) -> Result<Pubkey, SolanaKiteError> {
+        let mint = mint.unwrap_or(Pubkey::new_unique());
         let rent = litesvm.minimum_balance_for_rent_exemption(82);
 
         litesvm
             .set_account(
-                mint.pubkey(),
+                mint,
                 solana_account::Account {
                     lamports: rent,
                     data: vec![0u8; 82],
@@ -94,7 +94,7 @@ pub mod sol_kite {
 
         let initialize_mint_instruction = spl_token::instruction::initialize_mint(
             &spl_token::ID,
-            &mint.pubkey(),
+            &mint,
             &mint_authority.pubkey(),
             None,
             decimals,
@@ -438,7 +438,6 @@ impl App {
             compute_unit_limit: 10_000_000,
             ..ComputeBudget::default()
         });
-        let mut token_registry: Vec<(AppToken, Keypair)> = vec![];
 
         // airdrop SOL
         for user in AppUser::iter() {
@@ -457,22 +456,20 @@ impl App {
                 continue;
             }
 
-            let mint = create_token_mint(
+            create_token_mint(
                 &mut litesvm,
                 &AppUser::Admin.keypair(),
                 token.get_decimals(),
-                Some(token.keypair()),
+                Some(token.pubkey()),
             )
             .unwrap();
-
-            token_registry.push((token, mint));
         }
 
         // mint tokens
         for user in AppUser::iter() {
-            for (token, mint) in &token_registry {
+            for token in AppToken::iter() {
                 // skip WSOL
-                if token == &AppToken::WSOL {
+                if token == AppToken::WSOL {
                     continue;
                 }
 
@@ -480,15 +477,15 @@ impl App {
                     &mut litesvm,
                     &AppUser::Admin.keypair(),
                     &user.pubkey(),
-                    &mint.pubkey(),
+                    &token.pubkey(),
                 )
                 .unwrap();
 
                 mint_tokens_to_account(
                     &mut litesvm,
-                    &mint.pubkey(),
+                    &token.pubkey(),
                     &ata,
-                    user.get_initial_asset_amount(*token) * 10u64.pow(token.get_decimals() as u32),
+                    user.get_initial_asset_amount(token) * 10u64.pow(token.get_decimals() as u32),
                     &AppUser::Admin.keypair(),
                 )
                 .unwrap();
@@ -741,7 +738,7 @@ pub mod extension {
         litesvm.send_transaction(transaction).map_err(|e| {
             let logs = e.meta.logs;
             let logs_str = format!("{:#?}", &logs);
-            // println!("logs: {:#?}\n", logs);
+            println!("logs: {:#?}\n", logs);
 
             to_anchor_err(logs_str)
         })
