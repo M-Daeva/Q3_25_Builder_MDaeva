@@ -8,7 +8,8 @@ pub mod instructions;
 use {
     dex_adapter_cpi::types::RouteItem,
     instructions::{
-        init::*, save_route::*, swap_and_activate::*, swap_and_unwrap_wsol::*, swap_multihop::*,
+        confirm_admin_rotation::*, init::*, save_route::*, swap_and_activate::*,
+        swap_and_unwrap_wsol::*, swap_multihop::*, update_config::*,
     },
 };
 
@@ -24,31 +25,26 @@ pub mod dex_adapter {
         dex: Pubkey,
         registry: Option<Pubkey>,
         rotation_timeout: Option<u32>,
-        token_in_whitelist: Option<Vec<Pubkey>>,
     ) -> Result<()> {
-        ctx.accounts.init(
-            ctx.bumps,
-            dex,
-            registry,
-            rotation_timeout,
-            token_in_whitelist,
-        )
+        ctx.accounts
+            .init(ctx.bumps, dex, registry, rotation_timeout)
     }
 
-    // pub fn update_config(
-    //     admin: Option<Pubkey>,
-    //     dex: Option<Pubkey>,
-    //     registry: Option<Pubkey>,
-    //     is_paused: Option<bool>,
-    //     rotation_timeout: Option<u32>,
-    //     token_in_whitelist: Option<Vec<Pubkey>>,
-    // ) -> Result<()> {
-    //     unimplemented!()
-    // }
+    pub fn update_config(
+        ctx: Context<UpdateConfig>,
+        admin: Option<Pubkey>,
+        dex: Option<Pubkey>,
+        registry: Option<Pubkey>,
+        is_paused: Option<bool>,
+        rotation_timeout: Option<u32>,
+    ) -> Result<()> {
+        ctx.accounts
+            .update_config(admin, dex, registry, is_paused, rotation_timeout)
+    }
 
-    // pub fn confirm_admin_rotation() -> Result<()> {
-    //     unimplemented!()
-    // }
+    pub fn confirm_admin_rotation(ctx: Context<ConfirmAdminRotation>) -> Result<()> {
+        ctx.accounts.confirm_admin_rotation()
+    }
 
     pub fn save_route(
         ctx: Context<SaveRoute>,

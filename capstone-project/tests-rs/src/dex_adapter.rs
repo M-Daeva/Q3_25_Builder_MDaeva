@@ -26,13 +26,7 @@ use {
 fn init_default() -> Result<()> {
     let mut app = App::new();
 
-    app.dex_adapter_try_init(
-        AppUser::Admin,
-        Pubkey::default(),
-        None,
-        None,
-        Some(vec![AppToken::USDC, AppToken::WBTC]),
-    )?;
+    app.dex_adapter_try_init(AppUser::Admin, Pubkey::default(), None, None)?;
 
     assert_eq!(
         app.dex_adapter_query_config()?,
@@ -42,10 +36,6 @@ fn init_default() -> Result<()> {
             registry: None,
             is_paused: false,
             rotation_timeout: ROTATION_TIMEOUT,
-            token_in_whitelist: [AppToken::USDC, AppToken::WBTC]
-                .iter()
-                .map(|y| y.pubkey())
-                .collect()
         }
     );
 
@@ -64,7 +54,7 @@ fn swap_multihop() -> Result<()> {
         None,
     )?;
 
-    app.dex_adapter_try_init(AppUser::Admin, app.program_id.clmm_mock, None, None, None)?;
+    app.dex_adapter_try_init(AppUser::Admin, app.program_id.clmm_mock, None, None)?;
     app.dex_adapter_try_save_route(
         AppUser::Admin,
         AppToken::WBTC,
@@ -114,7 +104,7 @@ fn swap_multihop_2() -> Result<()> {
         None,
     )?;
 
-    app.dex_adapter_try_init(AppUser::Admin, app.program_id.clmm_mock, None, None, None)?;
+    app.dex_adapter_try_init(AppUser::Admin, app.program_id.clmm_mock, None, None)?;
     app.dex_adapter_try_save_route(
         AppUser::Admin,
         AppToken::WBTC,
@@ -178,7 +168,7 @@ fn swap_and_activate_default() -> Result<()> {
 
     app.registry_try_create_account(AppUser::Bob, MAX_DATA_SIZE_0)?;
 
-    app.dex_adapter_try_init(AppUser::Admin, app.program_id.clmm_mock, None, None, None)?;
+    app.dex_adapter_try_init(AppUser::Admin, app.program_id.clmm_mock, None, None)?;
     app.dex_adapter_try_save_route(
         AppUser::Admin,
         AppToken::WBTC,
@@ -230,7 +220,7 @@ fn swap_to_wsol_default() -> Result<()> {
         Some(BASE_AMOUNT),
     )?;
 
-    app.dex_adapter_try_init(AppUser::Admin, app.program_id.clmm_mock, None, None, None)?;
+    app.dex_adapter_try_init(AppUser::Admin, app.program_id.clmm_mock, None, None)?;
     app.dex_adapter_try_save_route(
         AppUser::Admin,
         AppToken::USDC,
@@ -268,7 +258,7 @@ fn swap_and_unwrap_wsol_default() -> Result<()> {
         Some(BASE_AMOUNT),
     )?;
 
-    app.dex_adapter_try_init(AppUser::Admin, app.program_id.clmm_mock, None, None, None)?;
+    app.dex_adapter_try_init(AppUser::Admin, app.program_id.clmm_mock, None, None)?;
     app.dex_adapter_try_save_route(
         AppUser::Admin,
         AppToken::USDC,

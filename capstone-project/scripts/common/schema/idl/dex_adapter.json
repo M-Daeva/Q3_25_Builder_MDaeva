@@ -9,6 +9,94 @@
   },
   "instructions": [
     {
+      "name": "confirm_admin_rotation",
+      "discriminator": [
+        35,
+        96,
+        147,
+        139,
+        128,
+        212,
+        60,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "sender",
+          "signer": true
+        },
+        {
+          "name": "bump",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  117,
+                  109,
+                  112
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin_rotation_state",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  100,
+                  109,
+                  105,
+                  110,
+                  95,
+                  114,
+                  111,
+                  116,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  95,
+                  115,
+                  116,
+                  97,
+                  116,
+                  101
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "init",
       "discriminator": [
         220,
@@ -115,14 +203,6 @@
           "name": "rotation_timeout",
           "type": {
             "option": "u32"
-          }
-        },
-        {
-          "name": "token_in_whitelist",
-          "type": {
-            "option": {
-              "vec": "pubkey"
-            }
           }
         }
       ]
@@ -1293,6 +1373,125 @@
           "type": "u64"
         }
       ]
+    },
+    {
+      "name": "update_config",
+      "discriminator": [
+        29,
+        158,
+        252,
+        191,
+        10,
+        83,
+        219,
+        99
+      ],
+      "accounts": [
+        {
+          "name": "sender",
+          "signer": true
+        },
+        {
+          "name": "bump",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  117,
+                  109,
+                  112
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin_rotation_state",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  100,
+                  109,
+                  105,
+                  110,
+                  95,
+                  114,
+                  111,
+                  116,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  95,
+                  115,
+                  116,
+                  97,
+                  116,
+                  101
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "admin",
+          "type": {
+            "option": "pubkey"
+          }
+        },
+        {
+          "name": "dex",
+          "type": {
+            "option": "pubkey"
+          }
+        },
+        {
+          "name": "registry",
+          "type": {
+            "option": "pubkey"
+          }
+        },
+        {
+          "name": "is_paused",
+          "type": {
+            "option": "bool"
+          }
+        },
+        {
+          "name": "rotation_timeout",
+          "type": {
+            "option": "u32"
+          }
+        }
+      ]
     }
   ],
   "accounts": [
@@ -1515,15 +1714,6 @@
           {
             "name": "rotation_timeout",
             "type": "u32"
-          },
-          {
-            "name": "token_in_whitelist",
-            "docs": [
-              "list of supported SPL/Token2022 tokens"
-            ],
-            "type": {
-              "vec": "pubkey"
-            }
           }
         ]
       }
@@ -1552,6 +1742,10 @@
       "type": {
         "kind": "struct",
         "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
           {
             "name": "new_owner",
             "type": {

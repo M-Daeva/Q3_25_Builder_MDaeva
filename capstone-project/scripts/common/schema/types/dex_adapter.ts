@@ -15,6 +15,94 @@ export type DexAdapter = {
   },
   "instructions": [
     {
+      "name": "confirmAdminRotation",
+      "discriminator": [
+        35,
+        96,
+        147,
+        139,
+        128,
+        212,
+        60,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "sender",
+          "signer": true
+        },
+        {
+          "name": "bump",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  117,
+                  109,
+                  112
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "adminRotationState",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  100,
+                  109,
+                  105,
+                  110,
+                  95,
+                  114,
+                  111,
+                  116,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  95,
+                  115,
+                  116,
+                  97,
+                  116,
+                  101
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "init",
       "discriminator": [
         220,
@@ -121,14 +209,6 @@ export type DexAdapter = {
           "name": "rotationTimeout",
           "type": {
             "option": "u32"
-          }
-        },
-        {
-          "name": "tokenInWhitelist",
-          "type": {
-            "option": {
-              "vec": "pubkey"
-            }
           }
         }
       ]
@@ -1299,6 +1379,125 @@ export type DexAdapter = {
           "type": "u64"
         }
       ]
+    },
+    {
+      "name": "updateConfig",
+      "discriminator": [
+        29,
+        158,
+        252,
+        191,
+        10,
+        83,
+        219,
+        99
+      ],
+      "accounts": [
+        {
+          "name": "sender",
+          "signer": true
+        },
+        {
+          "name": "bump",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  117,
+                  109,
+                  112
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "adminRotationState",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  100,
+                  109,
+                  105,
+                  110,
+                  95,
+                  114,
+                  111,
+                  116,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  95,
+                  115,
+                  116,
+                  97,
+                  116,
+                  101
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "admin",
+          "type": {
+            "option": "pubkey"
+          }
+        },
+        {
+          "name": "dex",
+          "type": {
+            "option": "pubkey"
+          }
+        },
+        {
+          "name": "registry",
+          "type": {
+            "option": "pubkey"
+          }
+        },
+        {
+          "name": "isPaused",
+          "type": {
+            "option": "bool"
+          }
+        },
+        {
+          "name": "rotationTimeout",
+          "type": {
+            "option": "u32"
+          }
+        }
+      ]
     }
   ],
   "accounts": [
@@ -1521,15 +1720,6 @@ export type DexAdapter = {
           {
             "name": "rotationTimeout",
             "type": "u32"
-          },
-          {
-            "name": "tokenInWhitelist",
-            "docs": [
-              "list of supported SPL/Token2022 tokens"
-            ],
-            "type": {
-              "vec": "pubkey"
-            }
           }
         ]
       }
@@ -1558,6 +1748,10 @@ export type DexAdapter = {
       "type": {
         "kind": "struct",
         "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
           {
             "name": "newOwner",
             "type": {

@@ -22,7 +22,21 @@ pub trait DexAdapterExtension {
         dex: Pubkey,
         registry: Option<Pubkey>,
         rotation_timeout: Option<u32>,
-        token_in_whitelist: Option<Vec<AppToken>>,
+    ) -> Result<TransactionMetadata>;
+
+    fn dex_adapter_try_update_config(
+        &mut self,
+        sender: AppUser,
+        admin: Option<AppUser>,
+        is_paused: Option<bool>,
+        dex: Option<Pubkey>,
+        registry: Option<Pubkey>,
+        rotation_timeout: Option<u32>,
+    ) -> Result<TransactionMetadata>;
+
+    fn dex_adapter_try_confirm_admin_rotation(
+        &mut self,
+        sender: AppUser,
     ) -> Result<TransactionMetadata>;
 
     fn dex_adapter_try_save_route(
@@ -78,7 +92,6 @@ impl DexAdapterExtension for App {
         dex: Pubkey,
         registry: Option<Pubkey>,
         rotation_timeout: Option<u32>,
-        token_in_whitelist: Option<Vec<AppToken>>,
     ) -> Result<TransactionMetadata> {
         // programs
         let ProgramId {
@@ -108,8 +121,96 @@ impl DexAdapterExtension for App {
             dex,
             registry,
             rotation_timeout,
-            token_in_whitelist: token_in_whitelist.map(|x| x.iter().map(|y| y.pubkey()).collect()),
         };
+
+        send_tx_with_ix(
+            self,
+            &program_id,
+            &accounts,
+            &instruction_data,
+            &payer,
+            &signers,
+            &[],
+        )
+    }
+
+    fn dex_adapter_try_update_config(
+        &mut self,
+        sender: AppUser,
+        admin: Option<AppUser>,
+        is_paused: Option<bool>,
+        dex: Option<Pubkey>,
+        registry: Option<Pubkey>,
+        rotation_timeout: Option<u32>,
+    ) -> Result<TransactionMetadata> {
+        // programs
+        let ProgramId {
+            dex_adapter: program_id,
+            ..
+        } = self.program_id;
+
+        // signers
+        let payer = sender.pubkey();
+        let signers = [sender.keypair()];
+
+        // pda
+        let bump = self.pda.dex_adapter_bump();
+        let config = self.pda.dex_adapter_config();
+        let admin_rotation_state = self.pda.dex_adapter_admin_rotation_state();
+
+        let accounts = accounts::UpdateConfig {
+            sender: payer,
+            bump,
+            config,
+            admin_rotation_state,
+        };
+
+        let instruction_data = instruction::UpdateConfig {
+            admin: admin.map(|x| x.pubkey()),
+            is_paused,
+            dex,
+            registry,
+            rotation_timeout,
+        };
+
+        send_tx_with_ix(
+            self,
+            &program_id,
+            &accounts,
+            &instruction_data,
+            &payer,
+            &signers,
+            &[],
+        )
+    }
+
+    fn dex_adapter_try_confirm_admin_rotation(
+        &mut self,
+        sender: AppUser,
+    ) -> Result<TransactionMetadata> {
+        // programs
+        let ProgramId {
+            dex_adapter: program_id,
+            ..
+        } = self.program_id;
+
+        // signers
+        let payer = sender.pubkey();
+        let signers = [sender.keypair()];
+
+        // pda
+        let bump = self.pda.dex_adapter_bump();
+        let config = self.pda.dex_adapter_config();
+        let admin_rotation_state = self.pda.dex_adapter_admin_rotation_state();
+
+        let accounts = accounts::ConfirmAdminRotation {
+            sender: payer,
+            bump,
+            config,
+            admin_rotation_state,
+        };
+
+        let instruction_data = instruction::ConfirmAdminRotation {};
 
         send_tx_with_ix(
             self,
