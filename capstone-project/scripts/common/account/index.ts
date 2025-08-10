@@ -453,47 +453,75 @@ export class DexAdapterHelpers {
     return await this.handleTx([ix], params, isDisplayed);
   }
 
-  // /// swap across multiple pools
-  // pub fn swap<'a, 'b, 'c: 'info, 'info>(
-  //     ctx: Context<'a, 'b, 'c, 'info, Swap<'info>>,
-  //     amount_in: u64,
-  //     amount_out_minimum: u64,
-  // ) -> Result<()> {
-  //     ctx.accounts
-  //         .swap(ctx.remaining_accounts, amount_in, amount_out_minimum)
-  // }
+  async trySwap(
+    args: IDexAdapter.SwapArgs,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const [tokenIn, tokenOut, amountIn, amountOutMinimum] =
+      IADexAdapter.convertSwapArgs(args);
+
+    // PDA
+    const [config, configBump] = this.getConfigPda();
+    const [route] = this.getRoutePda(tokenIn, tokenOut);
+
+    // ATA
+    const inputTokenSenderAta = getAssociatedTokenAddressSync(
+      tokenIn,
+      this.sender
+    );
+    const outputTokenSenderAta = getAssociatedTokenAddressSync(
+      tokenOut,
+      this.sender
+    );
+
+    // Build remaining accounts for the route
+    const remainingAccounts = await this.buildRemainingAccountsForRoute(
+      tokenIn,
+      tokenOut
+    );
+
+    const accounts = {
+      systemProgram: anchor.web3.SystemProgram.programId,
+      tokenProgram: spl.TOKEN_PROGRAM_ID,
+      associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+      tokenProgram2022: spl.TOKEN_2022_PROGRAM_ID,
+      memoProgram: new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
+      clmmMockProgram: this.clmmMockProgram.programId,
+      sender: this.sender,
+      bump: configBump,
+      config,
+      route,
+      inputTokenMint: tokenIn,
+      outputTokenMint: tokenOut,
+      inputTokenSenderAta,
+      outputTokenSenderAta,
+    };
+
+    const ix = await this.program.methods
+      .swap(amountIn, amountOutMinimum)
+      .accounts(accounts)
+      .remainingAccounts(remainingAccounts)
+      .instruction();
+
+    return await this.handleTx([ix], params, isDisplayed);
+  }
 
   async trySwapAndActivate(
     args: IDexAdapter.SwapArgs,
     params: TxParams = {},
     isDisplayed: boolean = false
   ): Promise<anchor.web3.TransactionSignature> {
-    const { tokenIn, tokenOut } = args;
-    const [_a, _b, amountIn, amountOutMinimum] =
+    const [tokenIn, tokenOut, amountIn, amountOutMinimum] =
       IADexAdapter.convertSwapArgs(args);
 
-    // Get PDAs
-    const [config, configBump] = PublicKey.findProgramAddressSync(
-      [Buffer.from("config")],
-      this.program.programId
-    );
+    // PDA
+    const [config, configBump] = this.getConfigPda();
+    const [route] = this.getRoutePda(tokenIn, tokenOut);
+    const [registryConfig, registryBump] = this.getRegistryConfigPda();
+    const [registryUserId] = this.getRegistryUserIdPda();
 
-    const [route] = PublicKey.findProgramAddressSync(
-      [Buffer.from("route"), tokenIn.toBuffer(), tokenOut.toBuffer()],
-      this.program.programId
-    );
-
-    const [registryConfig, registryBump] = PublicKey.findProgramAddressSync(
-      [Buffer.from("config")],
-      this.registryProgram.programId
-    );
-
-    const [registryUserId] = PublicKey.findProgramAddressSync(
-      [Buffer.from("user_id"), this.sender.toBuffer()],
-      this.registryProgram.programId
-    );
-
-    // Get ATAs
+    // ATA
     const inputTokenSenderAta = getAssociatedTokenAddressSync(
       tokenIn,
       this.sender
@@ -545,21 +573,67 @@ export class DexAdapterHelpers {
     return await this.handleTx([ix], params, isDisplayed);
   }
 
+  async trySwapAndUnwrapSol(
+    args: IDexAdapter.SwapArgs,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const [tokenIn, tokenOut, amountIn, amountOutMinimum] =
+      IADexAdapter.convertSwapArgs(args);
+
+    // PDA
+    const [config, configBump] = this.getConfigPda();
+    const [route] = this.getRoutePda(tokenIn, tokenOut);
+
+    // ATA
+    const inputTokenSenderAta = getAssociatedTokenAddressSync(
+      tokenIn,
+      this.sender
+    );
+    const outputTokenSenderAta = getAssociatedTokenAddressSync(
+      tokenOut,
+      this.sender
+    );
+
+    // Build remaining accounts for the route
+    const remainingAccounts = await this.buildRemainingAccountsForRoute(
+      tokenIn,
+      tokenOut
+    );
+
+    const accounts = {
+      systemProgram: anchor.web3.SystemProgram.programId,
+      tokenProgram: spl.TOKEN_PROGRAM_ID,
+      associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+      tokenProgram2022: spl.TOKEN_2022_PROGRAM_ID,
+      memoProgram: new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
+      clmmMockProgram: this.clmmMockProgram.programId,
+      sender: this.sender,
+      bump: configBump,
+      config,
+      route,
+      inputTokenMint: tokenIn,
+      outputTokenMint: tokenOut,
+      inputTokenSenderAta,
+      outputTokenSenderAta,
+    };
+
+    const ix = await this.program.methods
+      .swapAndUnwrapWsol(amountIn, amountOutMinimum)
+      .accounts(accounts)
+      .remainingAccounts(remainingAccounts)
+      .instruction();
+
+    return await this.handleTx([ix], params, isDisplayed);
+  }
+
   private async buildRemainingAccountsForRoute(
     mintIn: PublicKey,
     mintOut: PublicKey
   ): Promise<AccountMeta[]> {
-    // Query route from PDA
+    // Query route from PDA and build token sequence
     const { value: routeItems } = await this.queryRoute(mintIn, mintOut);
-
-    // Build token sequence
-    const tokenSequence = routeItems.reduce(
-      (acc, cur) => {
-        acc.push(cur.tokenOut);
-        return acc;
-      },
-      [mintIn]
-    );
+    const tokenSequence = [mintIn, ...routeItems.map((x) => x.tokenOut)];
 
     const remainingAccounts: AccountMeta[] = [];
 
@@ -573,25 +647,13 @@ export class DexAdapterHelpers {
       const [token0Mint, token1Mint] = this.sortMints(tokenA, tokenB);
 
       // Get PDAs for CLMM mock
-      const [ammConfig] = PublicKey.findProgramAddressSync(
-        [Buffer.from("amm_config"), Buffer.from([ammConfigIndex])],
-        this.clmmMockProgram.programId
+      const [ammConfig] = this.getClmmMockAmmConfigPda(ammConfigIndex);
+      const [poolState] = this.getClmmMockPoolStatePda(
+        ammConfig,
+        token0Mint,
+        token1Mint
       );
-
-      const [poolState] = PublicKey.findProgramAddressSync(
-        [
-          Buffer.from("pool_state"),
-          ammConfig.toBuffer(),
-          token0Mint.toBuffer(),
-          token1Mint.toBuffer(),
-        ],
-        this.clmmMockProgram.programId
-      );
-
-      const [observationState] = PublicKey.findProgramAddressSync(
-        [Buffer.from("observation_state"), poolState.toBuffer()],
-        this.clmmMockProgram.programId
-      );
+      const [observationState] = this.getClmmMockObservationStatePda(poolState);
 
       // Determine vaults based on token order
       let inputVault: PublicKey;
@@ -599,40 +661,12 @@ export class DexAdapterHelpers {
       let outputMintForAccounts: PublicKey;
 
       if (tokenA.equals(token0Mint)) {
-        [inputVault] = PublicKey.findProgramAddressSync(
-          [
-            Buffer.from("token_vault_0"),
-            poolState.toBuffer(),
-            token0Mint.toBuffer(),
-          ],
-          this.clmmMockProgram.programId
-        );
-        [outputVault] = PublicKey.findProgramAddressSync(
-          [
-            Buffer.from("token_vault_1"),
-            poolState.toBuffer(),
-            token1Mint.toBuffer(),
-          ],
-          this.clmmMockProgram.programId
-        );
+        [inputVault] = this.getClmmMockTokenVault0Pda(poolState, token0Mint);
+        [outputVault] = this.getClmmMockTokenVault1Pda(poolState, token1Mint);
         outputMintForAccounts = token1Mint;
       } else {
-        [inputVault] = PublicKey.findProgramAddressSync(
-          [
-            Buffer.from("token_vault_1"),
-            poolState.toBuffer(),
-            token1Mint.toBuffer(),
-          ],
-          this.clmmMockProgram.programId
-        );
-        [outputVault] = PublicKey.findProgramAddressSync(
-          [
-            Buffer.from("token_vault_0"),
-            poolState.toBuffer(),
-            token0Mint.toBuffer(),
-          ],
-          this.clmmMockProgram.programId
-        );
+        [inputVault] = this.getClmmMockTokenVault1Pda(poolState, token1Mint);
+        [outputVault] = this.getClmmMockTokenVault0Pda(poolState, token0Mint);
         outputMintForAccounts = token0Mint;
       }
 
@@ -657,34 +691,78 @@ export class DexAdapterHelpers {
     return remainingAccounts;
   }
 
-  // /// swap a token to WSOL and unwrap it to SOL
-  // pub fn swap_and_unwrap_wsol<'a, 'b, 'c: 'info, 'info>(
-  //     ctx: Context<'a, 'b, 'c, 'info, SwapAndUnwrapWsol<'info>>,
-  //     amount_in: u64,
-  //     amount_out_minimum: u64,
-  // ) -> Result<()> {
-  //     ctx.accounts
-  //         .swap_and_unwrap_wsol(ctx.remaining_accounts, amount_in, amount_out_minimum)
-  // }
+  private areMintsSorted(mintA: PublicKey, mintB: PublicKey) {
+    return mintA <= mintB;
+  }
 
-  // TODO
+  sortMints(mintA: PublicKey, mintB: PublicKey) {
+    return this.areMintsSorted(mintA, mintB) ? [mintA, mintB] : [mintB, mintA];
+  }
 
-  private sortMints(
-    mintA: PublicKey,
-    mintB: PublicKey
-  ): [PublicKey, PublicKey] {
-    const bufferA = mintA.toBuffer();
-    const bufferB = mintB.toBuffer();
+  getRegistryConfigPda() {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("config")],
+      this.registryProgram.programId
+    );
+  }
 
-    for (let i = 0; i < 32; i++) {
-      if (bufferA[i] < bufferB[i]) {
-        return [mintA, mintB];
-      } else if (bufferA[i] > bufferB[i]) {
-        return [mintB, mintA];
-      }
-    }
+  getRegistryUserIdPda() {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("user_id"), this.sender.toBuffer()],
+      this.registryProgram.programId
+    );
+  }
 
-    return [mintA, mintB];
+  getClmmMockAmmConfigPda(ammConfigIndex: number) {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("amm_config"), Buffer.from([ammConfigIndex])],
+      this.clmmMockProgram.programId
+    );
+  }
+
+  getClmmMockPoolStatePda(
+    ammConfig: PublicKey,
+    token0Mint: PublicKey,
+    token1Mint: PublicKey
+  ) {
+    return PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("pool_state"),
+        ammConfig.toBuffer(),
+        token0Mint.toBuffer(),
+        token1Mint.toBuffer(),
+      ],
+      this.clmmMockProgram.programId
+    );
+  }
+
+  getClmmMockObservationStatePda(poolState: PublicKey) {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("observation_state"), poolState.toBuffer()],
+      this.clmmMockProgram.programId
+    );
+  }
+
+  getClmmMockTokenVault0Pda(poolState: PublicKey, token0Mint: PublicKey) {
+    return PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("token_vault_0"),
+        poolState.toBuffer(),
+        token0Mint.toBuffer(),
+      ],
+      this.clmmMockProgram.programId
+    );
+  }
+
+  getClmmMockTokenVault1Pda(poolState: PublicKey, token1Mint: PublicKey) {
+    return PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("token_vault_1"),
+        poolState.toBuffer(),
+        token1Mint.toBuffer(),
+      ],
+      this.clmmMockProgram.programId
+    );
   }
 
   getConfigPda() {
