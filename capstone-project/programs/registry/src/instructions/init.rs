@@ -77,6 +77,7 @@ pub struct Init<'info> {
     pub revenue_app_ata: InterfaceAccount<'info, TokenAccount>,
 }
 
+// TODO: add localnet/mainnet admin guard based on clock_time
 impl<'info> Init<'info> {
     pub fn init(
         &mut self,
@@ -100,7 +101,6 @@ impl<'info> Init<'info> {
             rotation_state: bumps.admin_rotation_state,
         });
 
-        // TODO: add localnet/mainnet admin guard based on clock_time
         config.set_inner(Config {
             admin: sender.key(),
             is_paused: false,

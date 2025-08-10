@@ -312,7 +312,7 @@ impl DexAdapterExtension for App {
         let input_token_sender_ata = self.get_or_create_ata(sender, &payer, &input_token_mint)?;
         let output_token_sender_ata = self.get_or_create_ata(sender, &payer, &output_token_mint)?;
 
-        let accounts = accounts::SwapMultihop {
+        let accounts = accounts::Swap {
             system_program,
             token_program,
             associated_token_program,
@@ -338,7 +338,7 @@ impl DexAdapterExtension for App {
             output_token_mint,
         )?;
 
-        let instruction_data = instruction::SwapMultihop {
+        let instruction_data = instruction::Swap {
             amount_in,
             amount_out_minimum,
         };

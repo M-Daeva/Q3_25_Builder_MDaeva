@@ -12,7 +12,7 @@ use {
 };
 
 #[derive(Accounts)]
-pub struct SwapMultihop<'info> {
+pub struct Swap<'info> {
     pub system_program: Program<'info, System>,
     pub token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -73,8 +73,8 @@ pub struct SwapMultihop<'info> {
     pub output_token_sender_ata: InterfaceAccount<'info, TokenAccount>,
 }
 
-impl<'info> SwapMultihop<'info> {
-    pub fn swap_multihop(
+impl<'info> Swap<'info> {
+    pub fn swap(
         &mut self,
         remaining_accounts: &'info [AccountInfo<'info>],
         amount_in: u64,

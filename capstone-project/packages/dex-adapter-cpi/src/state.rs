@@ -3,7 +3,7 @@ use {crate::types::RouteItem, anchor_lang::prelude::*};
 pub const SECONDS_PER_DAY: u32 = 24 * 3_600;
 pub const ROTATION_TIMEOUT: u32 = SECONDS_PER_DAY;
 pub const TOKEN_IN_WHITELIST_MAX_LEN: usize = 16;
-pub const ROUTE_MAX_LEN: usize = 3;
+pub const ROUTE_MAX_LEN: usize = 4;
 
 pub const SEED_BUMP: &str = "bump";
 pub const SEED_CONFIG: &str = "config";
@@ -43,6 +43,6 @@ pub struct RotationState {
 #[account]
 #[derive(InitSpace, PartialEq, Debug)]
 pub struct Route {
-    #[max_len(ROUTE_MAX_LEN + 1)] // 1 for 1st symbol
+    #[max_len(ROUTE_MAX_LEN)]
     pub value: Vec<RouteItem>,
 }

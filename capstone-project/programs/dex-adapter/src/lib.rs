@@ -8,8 +8,8 @@ pub mod instructions;
 use {
     dex_adapter_cpi::types::RouteItem,
     instructions::{
-        confirm_admin_rotation::*, init::*, save_route::*, swap_and_activate::*,
-        swap_and_unwrap_wsol::*, swap_multihop::*, update_config::*,
+        confirm_admin_rotation::*, init::*, save_route::*, swap::*, swap_and_activate::*,
+        swap_and_unwrap_wsol::*, update_config::*,
     },
 };
 
@@ -56,13 +56,13 @@ pub mod dex_adapter {
     }
 
     /// swap across multiple pools
-    pub fn swap_multihop<'a, 'b, 'c: 'info, 'info>(
-        ctx: Context<'a, 'b, 'c, 'info, SwapMultihop<'info>>,
+    pub fn swap<'a, 'b, 'c: 'info, 'info>(
+        ctx: Context<'a, 'b, 'c, 'info, Swap<'info>>,
         amount_in: u64,
         amount_out_minimum: u64,
     ) -> Result<()> {
         ctx.accounts
-            .swap_multihop(ctx.remaining_accounts, amount_in, amount_out_minimum)
+            .swap(ctx.remaining_accounts, amount_in, amount_out_minimum)
     }
 
     /// swap tokens and call activate_account of registry program

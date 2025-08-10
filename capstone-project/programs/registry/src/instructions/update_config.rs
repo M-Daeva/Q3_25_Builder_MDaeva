@@ -75,7 +75,6 @@ impl<'info> UpdateConfig<'info> {
         }
 
         if let Some(x) = registration_fee {
-            // TODO: withdraw prev fee
             config.registration_fee = x;
             is_config_updated = true;
         }
