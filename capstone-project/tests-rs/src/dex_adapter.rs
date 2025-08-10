@@ -7,7 +7,7 @@ use {
             },
             suite::{
                 core::App,
-                types::{AppToken, AppUser},
+                types::{AppCoin, AppToken, AppUser},
             },
         },
     },
@@ -219,6 +219,44 @@ fn swap_and_activate_default() -> Result<()> {
 }
 
 #[test]
+fn swap_to_wsol_default() -> Result<()> {
+    const BASE_AMOUNT: u128 = 10_000;
+
+    let mut app = App::new();
+    app.wsol_try_wrap(AppUser::Admin, BASE_AMOUNT as u64 * LAMPORTS_PER_SOL)?;
+    prepare_dex(
+        &mut app,
+        &[(AMM_CONFIG_INDEX_0, AppToken::USDC, AppToken::WSOL)],
+        Some(BASE_AMOUNT),
+    )?;
+
+    app.dex_adapter_try_init(AppUser::Admin, app.program_id.clmm_mock, None, None, None)?;
+    app.dex_adapter_try_save_route(
+        AppUser::Admin,
+        AppToken::USDC,
+        AppToken::WSOL,
+        &[RouteItem {
+            amm_index: AMM_CONFIG_INDEX_0,
+            token_out: AppToken::WSOL.pubkey(),
+        }],
+    )?;
+
+    // swap USDC -> WSOL
+    let bob_usdc_before = app.get_balance(AppUser::Bob, AppToken::USDC);
+    let bob_wsol_before = app.get_balance(AppUser::Bob, AppToken::WSOL);
+
+    app.dex_adapter_try_swap_multihop(AppUser::Bob, AppToken::USDC, AppToken::WSOL, 1_000, 1)?;
+
+    let bob_usdc_after = app.get_balance(AppUser::Bob, AppToken::USDC);
+    let bob_wsol_after = app.get_balance(AppUser::Bob, AppToken::WSOL);
+
+    assert_eq!(bob_usdc_before - bob_usdc_after, 1_000);
+    assert_eq!(bob_wsol_after - bob_wsol_before, 9_979);
+
+    Ok(())
+}
+
+#[test]
 fn swap_and_unwrap_wsol_default() -> Result<()> {
     const BASE_AMOUNT: u128 = 10_000;
 
@@ -236,12 +274,31 @@ fn swap_and_unwrap_wsol_default() -> Result<()> {
         AppToken::USDC,
         AppToken::WSOL,
         &[RouteItem {
-            amm_index: AMM_CONFIG_INDEX_1,
+            amm_index: AMM_CONFIG_INDEX_0,
             token_out: AppToken::WSOL.pubkey(),
         }],
     )?;
 
-    app.dex_adapter_try_swap_multihop(AppUser::Bob, AppToken::USDC, AppToken::WSOL, 1_000, 1)?;
+    // swap USDC -> SOL
+    let bob_usdc_before = app.get_balance(AppUser::Bob, AppToken::USDC);
+    let bob_wsol_before = app.get_balance(AppUser::Bob, AppToken::WSOL);
+    let bob_sol_before = app.get_balance(AppUser::Bob, AppCoin::SOL);
+
+    app.dex_adapter_try_swap_and_unwrap_wsol(
+        AppUser::Bob,
+        AppToken::USDC,
+        AppToken::WSOL,
+        1_000_000,
+        1,
+    )?;
+
+    let bob_usdc_after = app.get_balance(AppUser::Bob, AppToken::USDC);
+    let bob_wsol_after = app.get_balance(AppUser::Bob, AppToken::WSOL);
+    let bob_sol_after = app.get_balance(AppUser::Bob, AppCoin::SOL);
+
+    assert_eq!(bob_usdc_before - bob_usdc_after, 1_000_000);
+    assert_eq!(bob_wsol_after - bob_wsol_before, 0);
+    assert_eq!(bob_sol_after - bob_sol_before, 9_969_004);
 
     Ok(())
 }
