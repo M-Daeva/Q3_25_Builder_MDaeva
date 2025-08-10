@@ -155,8 +155,6 @@ impl DexAdapterExtension for App {
         // ata
         let input_token_sender_ata = self.get_or_create_ata(sender, &payer, &input_token_mint)?;
         let output_token_sender_ata = self.get_or_create_ata(sender, &payer, &output_token_mint)?;
-        let input_token_app_ata = self.get_or_create_ata(sender, &config, &input_token_mint)?;
-        let output_token_app_ata = self.get_or_create_ata(sender, &config, &output_token_mint)?;
         let revenue_app_ata = App::get_ata(&registry_config, &output_token_mint);
 
         let accounts = accounts::SwapAndActivate {
@@ -178,8 +176,6 @@ impl DexAdapterExtension for App {
             output_token_mint,
             input_token_sender_ata,
             output_token_sender_ata,
-            input_token_app_ata,
-            output_token_app_ata,
             revenue_app_ata,
         };
 
@@ -245,8 +241,6 @@ impl DexAdapterExtension for App {
         // ata
         let input_token_sender_ata = self.get_or_create_ata(sender, &payer, &input_token_mint)?;
         let output_token_sender_ata = self.get_or_create_ata(sender, &payer, &output_token_mint)?;
-        let input_token_app_ata = self.get_or_create_ata(sender, &config, &input_token_mint)?;
-        let output_token_app_ata = self.get_or_create_ata(sender, &config, &output_token_mint)?;
 
         let accounts = accounts::SwapMultihop {
             system_program,
@@ -263,8 +257,6 @@ impl DexAdapterExtension for App {
             output_token_mint,
             input_token_sender_ata,
             output_token_sender_ata,
-            input_token_app_ata,
-            output_token_app_ata,
         };
 
         // build remaining accounts based on the route loaded from PDA
@@ -370,7 +362,6 @@ fn build_remaining_accounts_for_route(
     mint_in: Pubkey,
     mint_out: Pubkey,
 ) -> Result<Vec<AccountMeta>> {
-    let config = app.pda.dex_adapter_config();
     let route_items = app.dex_adapter_query_route(&mint_in, &mint_out)?.value;
 
     // build token sequence correctly
@@ -413,16 +404,8 @@ fn build_remaining_accounts_for_route(
             )
         };
 
-        // for output token account:
-        // - last hop goes to user
-        // - intermediate hops go to app (config)
-        let output_token_account = if i == route_items.len() - 1 {
-            // final hop: output goes to user
-            app.get_or_create_ata(sender, payer, &token_b)?
-        } else {
-            // intermediate hop: output goes to app for next hop input
-            app.get_or_create_ata(sender, &config, &token_b)?
-        };
+        // all output token accounts go directly to user
+        let output_token_account = app.get_or_create_ata(sender, payer, &token_b)?;
 
         // match the exact account order and writability from clmm_mock
         remaining_accounts.extend([

@@ -193,15 +193,24 @@ fn swap_and_activate_default() -> Result<()> {
     )?;
 
     // swap WBTC -> WSOL -> USDC
+    let bob_wbtc_before = app.get_balance(AppUser::Bob, AppToken::WBTC);
+    let bob_usdc_before = app.get_balance(AppUser::Bob, AppToken::USDC);
+
     app.dex_adapter_try_swap_and_activate(
         AppUser::Bob,
         AppToken::WBTC,
         AppToken::USDC,
-        10_041,
+        11_000,
         app.registry_query_config()?.registration_fee.amount,
     )?;
 
     assert_eq!(app.registry_query_user_id(AppUser::Bob)?.is_activated, true);
+
+    let bob_wbtc_after = app.get_balance(AppUser::Bob, AppToken::WBTC);
+    let bob_usdc_after = app.get_balance(AppUser::Bob, AppToken::USDC);
+
+    assert_eq!(bob_wbtc_before - bob_wbtc_after, 11_000);
+    assert_eq!(bob_usdc_after - bob_usdc_before, 955_803);
 
     Ok(())
 }

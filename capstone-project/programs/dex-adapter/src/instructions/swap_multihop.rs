@@ -5,7 +5,6 @@ use {
         associated_token::AssociatedToken,
         token_interface::{Mint, TokenAccount, TokenInterface},
     },
-    base::helpers::{transfer_token_from_program, transfer_token_from_user},
     dex_adapter_cpi::{
         error::CustomError,
         state::{DaBump, DaConfig, Route, SEED_BUMP, SEED_CONFIG, SEED_ROUTE},
@@ -53,6 +52,7 @@ pub struct SwapMultihop<'info> {
     //
     #[account(mut)]
     pub input_token_mint: InterfaceAccount<'info, Mint>,
+
     #[account(mut)]
     pub output_token_mint: InterfaceAccount<'info, Mint>,
 
@@ -72,22 +72,6 @@ pub struct SwapMultihop<'info> {
         associated_token::authority = sender
     )]
     pub output_token_sender_ata: InterfaceAccount<'info, TokenAccount>,
-
-    #[account(
-        init_if_needed,
-        payer = sender,
-        associated_token::mint = input_token_mint,
-        associated_token::authority = config
-    )]
-    pub input_token_app_ata: InterfaceAccount<'info, TokenAccount>,
-
-    #[account(
-        init_if_needed,
-        payer = sender,
-        associated_token::mint = output_token_mint,
-        associated_token::authority = config
-    )]
-    pub output_token_app_ata: InterfaceAccount<'info, TokenAccount>,
 }
 
 impl<'info> SwapMultihop<'info> {
@@ -102,14 +86,10 @@ impl<'info> SwapMultihop<'info> {
             token_program_2022,
             memo_program,
             sender,
-            bump,
             config,
             input_token_mint,
-            output_token_mint,
             input_token_sender_ata,
             output_token_sender_ata,
-            input_token_app_ata,
-            output_token_app_ata,
             ..
         } = self;
 
@@ -117,19 +97,8 @@ impl<'info> SwapMultihop<'info> {
             Err(CustomError::InvalidAmount)?;
         }
 
-        // store initial balances to track the swap
-        let initial_output_user_balance = output_token_sender_ata.amount;
-        let initial_output_app_balance = output_token_app_ata.amount;
-
-        // transfer input tokens from sender to app ATA
-        transfer_token_from_user(
-            amount_in,
-            input_token_mint,
-            input_token_sender_ata,
-            input_token_app_ata,
-            sender,
-            token_program,
-        )?;
+        // store initial output balance to verify the swap occurred
+        let initial_output_balance = output_token_sender_ata.amount;
 
         // execute multihop swap on clmm_mock
         execute_clmm_swap(
@@ -138,36 +107,21 @@ impl<'info> SwapMultihop<'info> {
             token_program,
             token_program_2022,
             memo_program,
-            bump,
-            config,
+            &config.dex,
+            sender,
             input_token_mint,
-            input_token_app_ata,
+            input_token_sender_ata,
             remaining_accounts,
         )?;
 
-        // reload accounts to get updated balances
+        // reload account to get updated balance
         output_token_sender_ata.reload()?;
-        output_token_app_ata.reload()?;
 
-        // check both app ATA and user ATA for output tokens
-        let app_balance_change = output_token_app_ata.amount - initial_output_app_balance;
-        let user_balance_change = output_token_sender_ata.amount - initial_output_user_balance;
-
-        // transfer any tokens from app ATA to user ATA
-        if user_balance_change == 0 {
+        // verify that we received output tokens from the swap
+        let tokens_received = output_token_sender_ata.amount - initial_output_balance;
+        if tokens_received == 0 {
             Err(CustomError::NoOutputTokens)?;
         }
-
-        transfer_token_from_program(
-            app_balance_change,
-            output_token_mint,
-            output_token_app_ata,
-            output_token_sender_ata,
-            &[SEED_CONFIG.as_bytes()],
-            bump.config,
-            config,
-            token_program,
-        )?;
 
         Ok(())
     }

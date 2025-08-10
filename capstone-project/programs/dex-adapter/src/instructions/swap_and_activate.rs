@@ -5,7 +5,6 @@ use {
         associated_token::AssociatedToken,
         token_interface::{Mint, TokenAccount, TokenInterface},
     },
-    base::helpers::transfer_token_from_user,
     dex_adapter_cpi::{
         error::CustomError,
         state::{DaBump, DaConfig, Route, SEED_BUMP, SEED_CONFIG, SEED_ROUTE},
@@ -99,22 +98,6 @@ pub struct SwapAndActivate<'info> {
     pub output_token_sender_ata: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
-        init_if_needed,
-        payer = sender,
-        associated_token::mint = input_token_mint,
-        associated_token::authority = config
-    )]
-    pub input_token_app_ata: InterfaceAccount<'info, TokenAccount>,
-
-    #[account(
-        init_if_needed,
-        payer = sender,
-        associated_token::mint = output_token_mint,
-        associated_token::authority = config
-    )]
-    pub output_token_app_ata: Box<InterfaceAccount<'info, TokenAccount>>,
-
-    #[account(
         mut,
         associated_token::mint = output_token_mint,
         associated_token::authority = registry_config
@@ -137,7 +120,6 @@ impl<'info> SwapAndActivate<'info> {
             memo_program,
             registry_program,
             sender,
-            bump,
             config,
             registry_bump,
             registry_config,
@@ -145,9 +127,7 @@ impl<'info> SwapAndActivate<'info> {
             input_token_mint,
             output_token_mint,
             input_token_sender_ata,
-            output_token_sender_ata, // ← Add this back to destructuring
-            input_token_app_ata,
-            output_token_app_ata,
+            output_token_sender_ata,
             revenue_app_ata,
             ..
         } = self;
@@ -156,78 +136,45 @@ impl<'info> SwapAndActivate<'info> {
             Err(CustomError::InvalidAmount)?;
         }
 
-        // store initial balances to track the swap - track BOTH user and app balances
-        let initial_output_user_balance = output_token_sender_ata.amount;
-        let initial_output_app_balance = output_token_app_ata.amount;
+        // store initial output balance to verify the swap occurred
+        let initial_output_balance = output_token_sender_ata.amount;
 
-        // transfer input tokens from sender to app ATA
-        transfer_token_from_user(
-            amount_in,
-            input_token_mint,
-            input_token_sender_ata,
-            input_token_app_ata,
-            sender,
-            token_program,
-        )?;
-
-        // execute multihop swap on clmm_mock
+        // execute multihop swap on clmm_mock - swap directly from/to user ATAs
         execute_clmm_swap(
             amount_in,
             amount_out_minimum,
             token_program,
             token_program_2022,
             memo_program,
-            bump,
-            config,
+            &config.dex,
+            sender,
             input_token_mint,
-            input_token_app_ata,
+            input_token_sender_ata,
             remaining_accounts,
         )?;
 
-        // reload accounts to get updated balances
+        // reload account to get updated balance
         output_token_sender_ata.reload()?;
-        output_token_app_ata.reload()?;
 
-        // check both app ATA and user ATA for output tokens
-        let app_balance_change = output_token_app_ata.amount - initial_output_app_balance;
-        let user_balance_change = output_token_sender_ata.amount - initial_output_user_balance;
-
-        // check that we received output tokens from the swap
-        if user_balance_change == 0 && app_balance_change == 0 {
+        // verify that we received output tokens from the swap
+        let tokens_received = output_token_sender_ata.amount - initial_output_balance;
+        if tokens_received == 0 {
             Err(CustomError::NoOutputTokens)?;
         }
 
-        // determine the amount to use for activation
-        let _tokens_for_activation = if app_balance_change > 0 {
-            // tokens are in app ATA, use them directly
-            app_balance_change
-        } else {
-            // tokens are in user ATA, need to transfer them to app ATA first
-            transfer_token_from_user(
-                user_balance_change,
-                output_token_mint,
-                output_token_sender_ata,
-                output_token_app_ata,
-                sender,
-                token_program,
-            )?;
-            user_balance_change
-        };
-
-        // activate account on registry program
+        // activate account on registry program using tokens directly from user's ATA
         activate_account_on_registry(
             sender.key,
             system_program,
             token_program,
             associated_token_program,
             registry_program,
-            bump,
-            config,
+            sender,
             registry_bump,
             registry_config,
             registry_user_id,
             output_token_mint,
-            output_token_app_ata,
+            output_token_sender_ata,
             revenue_app_ata,
         )?;
 

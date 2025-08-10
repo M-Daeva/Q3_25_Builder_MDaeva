@@ -4,11 +4,7 @@ use {
         associated_token::AssociatedToken,
         token_interface::{Mint, TokenAccount, TokenInterface},
     },
-    dex_adapter_cpi::{
-        error::CustomError,
-        state::{DaBump, DaConfig, SEED_CONFIG},
-        types::SwapRouterBaseInData,
-    },
+    dex_adapter_cpi::{error::CustomError, types::SwapRouterBaseInData},
 };
 
 pub fn execute_clmm_swap<'a>(
@@ -17,10 +13,10 @@ pub fn execute_clmm_swap<'a>(
     token_program: &Interface<'a, TokenInterface>,
     token_program_2022: &UncheckedAccount<'a>,
     memo_program: &UncheckedAccount<'a>,
-    bump: &Account<'a, DaBump>,
-    config: &Account<'a, DaConfig>,
+    dex_program_id: &Pubkey,
+    sender: &Signer<'a>,
     input_token_mint: &InterfaceAccount<'a, Mint>,
-    input_token_app_ata: &InterfaceAccount<'a, TokenAccount>,
+    input_token_sender_ata: &InterfaceAccount<'a, TokenAccount>,
     remaining_accounts: &'a [AccountInfo<'a>],
 ) -> Result<()> {
     // validate that remaining accounts length is correct (multiple of 7)
@@ -30,8 +26,8 @@ pub fn execute_clmm_swap<'a>(
 
     let account_infos = [
         &[
-            config.to_account_info(),
-            input_token_app_ata.to_account_info(),
+            sender.to_account_info(),
+            input_token_sender_ata.to_account_info(),
             input_token_mint.to_account_info(),
             token_program.to_account_info(),
             token_program_2022.to_account_info(),
@@ -41,11 +37,11 @@ pub fn execute_clmm_swap<'a>(
     ]
     .concat();
 
-    // build accounts for CPI call to clmm_mock - match exact structure from clmm-mock
+    // build accounts for CPI call to clmm_mock
     let mut accounts = vec![
-        AccountMeta::new(config.key(), true), // payer (signer)
-        AccountMeta::new(input_token_app_ata.key(), false), // input_token_account (writable)
-        AccountMeta::new(input_token_mint.key(), false), // input_token_mint (writable) ← FIXED
+        AccountMeta::new(sender.key(), true), // payer (signer)
+        AccountMeta::new(input_token_sender_ata.key(), false), // input_token_account (writable)
+        AccountMeta::new(input_token_mint.key(), false), // input_token_mint (writable)
         AccountMeta::new_readonly(token_program.key(), false), // token_program
         AccountMeta::new_readonly(token_program_2022.key(), false), // token_program_2022
         AccountMeta::new_readonly(memo_program.key(), false), // memo_program
@@ -72,21 +68,13 @@ pub fn execute_clmm_swap<'a>(
     };
 
     let instruction = solana_program::instruction::Instruction {
-        program_id: config.dex,
+        program_id: *dex_program_id,
         accounts,
         data: instruction_data.try_to_vec()?,
     };
 
-    // create signer seeds for config PDA
-    let config_seeds = &[SEED_CONFIG.as_bytes(), &[bump.config]];
-    let signer_seeds = &[&config_seeds[..]];
-
-    // execute CPI call with config as signer
-    anchor_lang::solana_program::program::invoke_signed(
-        &instruction,
-        &account_infos,
-        signer_seeds,
-    )?;
+    // execute CPI call with user as signer
+    anchor_lang::solana_program::program::invoke(&instruction, &account_infos)?;
 
     Ok(())
 }
@@ -97,13 +85,12 @@ pub fn activate_account_on_registry<'a>(
     token_program: &Interface<'a, TokenInterface>,
     associated_token_program: &Program<'a, AssociatedToken>,
     registry_program: &UncheckedAccount<'a>,
-    bump: &Account<'a, DaBump>,
-    config: &Account<'a, DaConfig>,
+    sender: &Signer<'a>,
     registry_bump: &Account<'a, registry_cpi::state::Bump>,
     registry_config: &Account<'a, registry_cpi::state::Config>,
     registry_user_id: &Account<'a, registry_cpi::state::UserId>,
     output_token_mint: &InterfaceAccount<'a, Mint>,
-    output_token_app_ata: &InterfaceAccount<'a, TokenAccount>,
+    output_token_sender_ata: &InterfaceAccount<'a, TokenAccount>,
     revenue_app_ata: &InterfaceAccount<'a, TokenAccount>,
 ) -> Result<()> {
     // prepare accounts for CPI to registry program
@@ -111,24 +98,16 @@ pub fn activate_account_on_registry<'a>(
         system_program: system_program.to_account_info(),
         token_program: token_program.to_account_info(),
         associated_token_program: associated_token_program.to_account_info(),
-        sender: config.to_account_info(),
+        sender: sender.to_account_info(),
         bump: registry_bump.to_account_info(),
         config: registry_config.to_account_info(),
         user_id: registry_user_id.to_account_info(),
         revenue_mint: output_token_mint.to_account_info(),
-        revenue_sender_ata: output_token_app_ata.to_account_info(),
+        revenue_sender_ata: output_token_sender_ata.to_account_info(),
         revenue_app_ata: revenue_app_ata.to_account_info(),
     };
 
-    // create signer seeds for config PDA
-    let config_seeds = &[SEED_CONFIG.as_bytes(), &[bump.config]];
-    let signer_seeds = &[&config_seeds[..]];
-
-    let cpi_ctx = CpiContext::new_with_signer(
-        registry_program.to_account_info(),
-        cpi_accounts,
-        signer_seeds,
-    );
+    let cpi_ctx = CpiContext::new(registry_program.to_account_info(), cpi_accounts);
 
     // make CPI call to activate account
     registry::cpi::activate_account(cpi_ctx, *user_to_activate)?;
