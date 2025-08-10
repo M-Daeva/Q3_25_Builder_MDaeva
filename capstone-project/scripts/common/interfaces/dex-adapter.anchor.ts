@@ -30,6 +30,8 @@ export interface AnchorRouteItem {
 }
 
 export type AnchorSwapArgs = [
+  PublicKey,
+  PublicKey,
   anchor.BN,
   anchor.BN
 ];
@@ -81,6 +83,8 @@ export function convertSwapArgs(
   args: SwapArgs
 ): AnchorSwapArgs {
   return [
+    args.tokenIn,
+    args.tokenOut,
     new anchor.BN(args.amountIn),
     new anchor.BN(args.amountOutMinimum)
   ];

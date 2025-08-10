@@ -1,6 +1,11 @@
 import * as anchor from "@coral-xyz/anchor";
 import * as spl from "@solana/spl-token";
-import { LAMPORTS_PER_SOL, PublicKey, SystemProgram } from "@solana/web3.js";
+import {
+  AccountMeta,
+  LAMPORTS_PER_SOL,
+  PublicKey,
+  SystemProgram,
+} from "@solana/web3.js";
 import { DataRecord, TxParams } from "../interfaces";
 import { decryptDeserialize, serializeEncrypt } from "./converters";
 import { generateEncryptionKey, MessageSigningWallet } from "./encryption";
@@ -13,23 +18,16 @@ import {
   logAndReturn,
   publicKeyFromString,
 } from "../../common/utils";
-import {
-  ActivateAccountArgs,
-  InitArgs,
-  ReopenAccountArgs,
-  RequestAccountRotationArgs,
-  UpdateConfigArgs,
-  WithdrawRevenueArgs,
-} from "../interfaces/registry";
-import {
-  convertInitArgs,
-  convertReopenAccountArgs,
-  convertRequestAccountRotationArgs,
-  convertUpdateConfigArgs,
-  convertWithdrawRevenueArgs,
-} from "../interfaces/registry.anchor";
+
+import * as IRegistry from "../interfaces/registry";
+import * as IDexAdapter from "../interfaces/dex-adapter";
+
+import * as IARegistry from "../interfaces/registry.anchor";
+import * as IADexAdapter from "../interfaces/dex-adapter.anchor";
 
 import { Registry } from "../schema/types/registry";
+import { DexAdapter } from "../schema/types/dex_adapter";
+import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 
 export class RegistryHelpers {
   private provider: anchor.AnchorProvider;
@@ -58,13 +56,13 @@ export class RegistryHelpers {
   }
 
   async tryInit(
-    args: InitArgs,
+    args: IRegistry.InitArgs,
     revenueMint: PublicKey,
     params: TxParams = {},
     isDisplayed: boolean = false
   ): Promise<anchor.web3.TransactionSignature> {
     const ix = await this.program.methods
-      .init(...convertInitArgs(args))
+      .init(...IARegistry.convertInitArgs(args))
       .accounts({
         tokenProgram: await this.getTokenProgram(revenueMint),
         revenueMint,
@@ -76,12 +74,12 @@ export class RegistryHelpers {
   }
 
   async tryUpdateConfig(
-    args: UpdateConfigArgs,
+    args: IRegistry.UpdateConfigArgs,
     params: TxParams = {},
     isDisplayed: boolean = false
   ): Promise<anchor.web3.TransactionSignature> {
     const ix = await this.program.methods
-      .updateConfig(...convertUpdateConfigArgs(args))
+      .updateConfig(...IARegistry.convertUpdateConfigArgs(args))
       .accounts({
         sender: this.sender,
       })
@@ -105,14 +103,14 @@ export class RegistryHelpers {
   }
 
   async tryWithdrawRevenue(
-    args: WithdrawRevenueArgs,
+    args: IRegistry.WithdrawRevenueArgs,
     revenueMint: PublicKey,
     recipient?: PublicKey,
     params: TxParams = {},
     isDisplayed: boolean = false
   ): Promise<anchor.web3.TransactionSignature> {
     const ix = await this.program.methods
-      .withdrawRevenue(...convertWithdrawRevenueArgs(args))
+      .withdrawRevenue(...IARegistry.convertWithdrawRevenueArgs(args))
       .accounts({
         tokenProgram: await this.getTokenProgram(revenueMint),
         revenueMint,
@@ -194,12 +192,12 @@ export class RegistryHelpers {
   }
 
   async tryReopenAccount(
-    args: ReopenAccountArgs,
+    args: IRegistry.ReopenAccountArgs,
     params: TxParams = {},
     isDisplayed: boolean = false
   ): Promise<anchor.web3.TransactionSignature> {
     const ix = await this.program.methods
-      .reopenAccount(...convertReopenAccountArgs(args))
+      .reopenAccount(...IARegistry.convertReopenAccountArgs(args))
       .accounts({
         sender: this.sender,
       })
@@ -209,7 +207,7 @@ export class RegistryHelpers {
   }
 
   async tryActivateAccount(
-    args: ActivateAccountArgs,
+    args: IRegistry.ActivateAccountArgs,
     revenueMint: PublicKey,
     params: TxParams = {},
     isDisplayed: boolean = false
@@ -247,12 +245,14 @@ export class RegistryHelpers {
   }
 
   async tryRequestAccountRotation(
-    args: RequestAccountRotationArgs,
+    args: IRegistry.RequestAccountRotationArgs,
     params: TxParams = {},
     isDisplayed: boolean = false
   ): Promise<anchor.web3.TransactionSignature> {
     const ix = await this.program.methods
-      .requestAccountRotation(...convertRequestAccountRotationArgs(args))
+      .requestAccountRotation(
+        ...IARegistry.convertRequestAccountRotationArgs(args)
+      )
       .accounts({
         sender: this.sender,
       })
@@ -357,6 +357,378 @@ export class RegistryHelpers {
       this.program.programId
     );
     const res = await this.program.account.rotationState.fetch(pda);
+
+    return logAndReturn(res, isDisplayed);
+  }
+}
+
+export class DexAdapterHelpers {
+  private provider: anchor.AnchorProvider;
+  private program: anchor.Program<DexAdapter>;
+  private registryProgram: anchor.Program<any>;
+  private clmmMockProgram: anchor.Program<any>;
+  private sender: PublicKey;
+
+  private handleTx: (
+    instructions: anchor.web3.TransactionInstruction[],
+    params: TxParams,
+    isDisplayed: boolean
+  ) => Promise<anchor.web3.TransactionSignature>;
+
+  private getTokenProgram: (
+    mint: anchor.web3.PublicKey
+  ) => Promise<anchor.web3.PublicKey>;
+
+  constructor(
+    provider: anchor.AnchorProvider,
+    program: anchor.Program<DexAdapter>,
+    registryProgram: anchor.Program<any>,
+    clmmMockProgram: anchor.Program<any>
+  ) {
+    this.provider = provider;
+    this.program = program;
+    this.registryProgram = registryProgram;
+    this.clmmMockProgram = clmmMockProgram;
+    this.sender = provider.wallet.publicKey;
+    this.handleTx = getHandleTx(provider);
+    this.getTokenProgram = getTokenProgramFactory(provider);
+  }
+
+  async tryInit(
+    args: IDexAdapter.InitArgs,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const ix = await this.program.methods
+      .init(...IADexAdapter.convertInitArgs(args))
+      .accounts({
+        sender: this.sender,
+      })
+      .instruction();
+
+    return await this.handleTx([ix], params, isDisplayed);
+  }
+
+  async tryUpdateConfig(
+    args: IDexAdapter.UpdateConfigArgs,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const ix = await this.program.methods
+      .updateConfig(...IADexAdapter.convertUpdateConfigArgs(args))
+      .accounts({
+        sender: this.sender,
+      })
+      .instruction();
+
+    return await this.handleTx([ix], params, isDisplayed);
+  }
+
+  async tryConfirmAdminRotation(
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const ix = await this.program.methods
+      .confirmAdminRotation()
+      .accounts({
+        sender: this.sender,
+      })
+      .instruction();
+
+    return await this.handleTx([ix], params, isDisplayed);
+  }
+
+  async trySaveRoute(
+    args: IDexAdapter.SaveRouteArgs,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const ix = await this.program.methods
+      .saveRoute(...IADexAdapter.convertSaveRouteArgs(args))
+      .accounts({
+        sender: this.sender,
+      })
+      .instruction();
+
+    return await this.handleTx([ix], params, isDisplayed);
+  }
+
+  // /// swap across multiple pools
+  // pub fn swap<'a, 'b, 'c: 'info, 'info>(
+  //     ctx: Context<'a, 'b, 'c, 'info, Swap<'info>>,
+  //     amount_in: u64,
+  //     amount_out_minimum: u64,
+  // ) -> Result<()> {
+  //     ctx.accounts
+  //         .swap(ctx.remaining_accounts, amount_in, amount_out_minimum)
+  // }
+
+  async trySwapAndActivate(
+    args: IDexAdapter.SwapArgs,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const { tokenIn, tokenOut } = args;
+    const [_a, _b, amountIn, amountOutMinimum] =
+      IADexAdapter.convertSwapArgs(args);
+
+    // Get PDAs
+    const [config, configBump] = PublicKey.findProgramAddressSync(
+      [Buffer.from("config")],
+      this.program.programId
+    );
+
+    const [route] = PublicKey.findProgramAddressSync(
+      [Buffer.from("route"), tokenIn.toBuffer(), tokenOut.toBuffer()],
+      this.program.programId
+    );
+
+    const [registryConfig, registryBump] = PublicKey.findProgramAddressSync(
+      [Buffer.from("config")],
+      this.registryProgram.programId
+    );
+
+    const [registryUserId] = PublicKey.findProgramAddressSync(
+      [Buffer.from("user_id"), this.sender.toBuffer()],
+      this.registryProgram.programId
+    );
+
+    // Get ATAs
+    const inputTokenSenderAta = getAssociatedTokenAddressSync(
+      tokenIn,
+      this.sender
+    );
+    const outputTokenSenderAta = getAssociatedTokenAddressSync(
+      tokenOut,
+      this.sender
+    );
+    const revenueAppAta = getAssociatedTokenAddressSync(
+      tokenOut,
+      registryConfig,
+      true
+    );
+
+    // Build remaining accounts for the route
+    const remainingAccounts = await this.buildRemainingAccountsForRoute(
+      tokenIn,
+      tokenOut
+    );
+
+    const accounts = {
+      systemProgram: anchor.web3.SystemProgram.programId,
+      tokenProgram: spl.TOKEN_PROGRAM_ID,
+      associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
+      tokenProgram2022: spl.TOKEN_2022_PROGRAM_ID,
+      memoProgram: new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
+      clmmMockProgram: this.clmmMockProgram.programId,
+      sender: this.sender,
+      bump: configBump,
+      config,
+      route,
+      registryProgram: this.registryProgram.programId,
+      registryBump,
+      registryConfig,
+      registryUserId,
+      inputTokenMint: tokenIn,
+      outputTokenMint: tokenOut,
+      inputTokenSenderAta,
+      outputTokenSenderAta,
+      revenueAppAta,
+    };
+
+    const ix = await this.program.methods
+      .swapAndActivate(amountIn, amountOutMinimum)
+      .accounts(accounts)
+      .remainingAccounts(remainingAccounts)
+      .instruction();
+
+    return await this.handleTx([ix], params, isDisplayed);
+  }
+
+  private async buildRemainingAccountsForRoute(
+    mintIn: PublicKey,
+    mintOut: PublicKey
+  ): Promise<AccountMeta[]> {
+    // Query route from PDA
+    const { value: routeItems } = await this.queryRoute(mintIn, mintOut);
+
+    // Build token sequence
+    const tokenSequence = routeItems.reduce(
+      (acc, cur) => {
+        acc.push(cur.tokenOut);
+        return acc;
+      },
+      [mintIn]
+    );
+
+    const remainingAccounts: AccountMeta[] = [];
+
+    // Build accounts for each hop in the route
+    for (let i = 0; i < routeItems.length; i++) {
+      const tokenA = tokenSequence[i]; // input token for this hop
+      const tokenB = tokenSequence[i + 1]; // output token for this hop
+      const ammConfigIndex = routeItems[i].ammIndex;
+
+      // Sort mints (pools are created with sorted tokens)
+      const [token0Mint, token1Mint] = this.sortMints(tokenA, tokenB);
+
+      // Get PDAs for CLMM mock
+      const [ammConfig] = PublicKey.findProgramAddressSync(
+        [Buffer.from("amm_config"), Buffer.from([ammConfigIndex])],
+        this.clmmMockProgram.programId
+      );
+
+      const [poolState] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("pool_state"),
+          ammConfig.toBuffer(),
+          token0Mint.toBuffer(),
+          token1Mint.toBuffer(),
+        ],
+        this.clmmMockProgram.programId
+      );
+
+      const [observationState] = PublicKey.findProgramAddressSync(
+        [Buffer.from("observation_state"), poolState.toBuffer()],
+        this.clmmMockProgram.programId
+      );
+
+      // Determine vaults based on token order
+      let inputVault: PublicKey;
+      let outputVault: PublicKey;
+      let outputMintForAccounts: PublicKey;
+
+      if (tokenA.equals(token0Mint)) {
+        [inputVault] = PublicKey.findProgramAddressSync(
+          [
+            Buffer.from("token_vault_0"),
+            poolState.toBuffer(),
+            token0Mint.toBuffer(),
+          ],
+          this.clmmMockProgram.programId
+        );
+        [outputVault] = PublicKey.findProgramAddressSync(
+          [
+            Buffer.from("token_vault_1"),
+            poolState.toBuffer(),
+            token1Mint.toBuffer(),
+          ],
+          this.clmmMockProgram.programId
+        );
+        outputMintForAccounts = token1Mint;
+      } else {
+        [inputVault] = PublicKey.findProgramAddressSync(
+          [
+            Buffer.from("token_vault_1"),
+            poolState.toBuffer(),
+            token1Mint.toBuffer(),
+          ],
+          this.clmmMockProgram.programId
+        );
+        [outputVault] = PublicKey.findProgramAddressSync(
+          [
+            Buffer.from("token_vault_0"),
+            poolState.toBuffer(),
+            token0Mint.toBuffer(),
+          ],
+          this.clmmMockProgram.programId
+        );
+        outputMintForAccounts = token0Mint;
+      }
+
+      // Output token account (user's ATA)
+      const outputTokenAccount = getAssociatedTokenAddressSync(
+        tokenB,
+        this.sender
+      );
+
+      // Add accounts in the exact order expected by the program
+      remainingAccounts.push(
+        { pubkey: ammConfig, isSigner: false, isWritable: false }, // amm_config (readonly)
+        { pubkey: poolState, isSigner: false, isWritable: true }, // pool_state (writable)
+        { pubkey: outputTokenAccount, isSigner: false, isWritable: true }, // output_token_account (writable)
+        { pubkey: inputVault, isSigner: false, isWritable: true }, // input_vault (writable)
+        { pubkey: outputVault, isSigner: false, isWritable: true }, // output_vault (writable)
+        { pubkey: outputMintForAccounts, isSigner: false, isWritable: false }, // output_mint (readonly)
+        { pubkey: observationState, isSigner: false, isWritable: true } // observation_state (writable)
+      );
+    }
+
+    return remainingAccounts;
+  }
+
+  // /// swap a token to WSOL and unwrap it to SOL
+  // pub fn swap_and_unwrap_wsol<'a, 'b, 'c: 'info, 'info>(
+  //     ctx: Context<'a, 'b, 'c, 'info, SwapAndUnwrapWsol<'info>>,
+  //     amount_in: u64,
+  //     amount_out_minimum: u64,
+  // ) -> Result<()> {
+  //     ctx.accounts
+  //         .swap_and_unwrap_wsol(ctx.remaining_accounts, amount_in, amount_out_minimum)
+  // }
+
+  // TODO
+
+  private sortMints(
+    mintA: PublicKey,
+    mintB: PublicKey
+  ): [PublicKey, PublicKey] {
+    const bufferA = mintA.toBuffer();
+    const bufferB = mintB.toBuffer();
+
+    for (let i = 0; i < 32; i++) {
+      if (bufferA[i] < bufferB[i]) {
+        return [mintA, mintB];
+      } else if (bufferA[i] > bufferB[i]) {
+        return [mintB, mintA];
+      }
+    }
+
+    return [mintA, mintB];
+  }
+
+  getConfigPda() {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("config")],
+      this.program.programId
+    );
+  }
+
+  getAdminRotationStatePda() {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("admin_rotation_state")],
+      this.program.programId
+    );
+  }
+
+  getRoutePda(mintFirst: PublicKey, mintLast: PublicKey) {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("route"), mintFirst.toBuffer(), mintLast.toBuffer()],
+      this.program.programId
+    );
+  }
+
+  async queryConfig(isDisplayed: boolean = false) {
+    const [pda] = this.getConfigPda();
+    const res = await this.program.account.config.fetch(pda);
+
+    return logAndReturn(res, isDisplayed);
+  }
+
+  async queryAdminRotationState(isDisplayed: boolean = false) {
+    const [pda] = this.getAdminRotationStatePda();
+    const res = await this.program.account.rotationState.fetch(pda);
+
+    return logAndReturn(res, isDisplayed);
+  }
+
+  async queryRoute(
+    mintFirst: PublicKey,
+    mintLast: PublicKey,
+    isDisplayed: boolean = false
+  ) {
+    const [pda] = this.getRoutePda(mintFirst, mintLast);
+    const res = await this.program.account.route.fetch(pda);
 
     return logAndReturn(res, isDisplayed);
   }

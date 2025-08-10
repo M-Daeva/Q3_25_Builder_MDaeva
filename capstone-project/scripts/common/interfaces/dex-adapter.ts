@@ -27,6 +27,8 @@ export interface RouteItem {
 }
 
 export interface SwapArgs {
+  tokenIn: PublicKey;
+  tokenOut: PublicKey;
   amountIn: N<64>;
   amountOutMinimum: N<64>;
 }
