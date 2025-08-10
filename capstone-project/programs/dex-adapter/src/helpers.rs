@@ -2,8 +2,9 @@ use {
     anchor_lang::{prelude::*, solana_program},
     anchor_spl::{
         associated_token::AssociatedToken,
-        token_interface::{Mint, TokenAccount, TokenInterface},
+        token_interface::{close_account, CloseAccount, Mint, TokenAccount, TokenInterface},
     },
+    base::helpers::get_discriminator,
     dex_adapter_cpi::{error::CustomError, types::SwapRouterBaseInData},
 };
 
@@ -74,9 +75,10 @@ pub fn execute_clmm_swap<'a>(
     };
 
     // execute CPI call with user as signer
-    anchor_lang::solana_program::program::invoke(&instruction, &account_infos)?;
-
-    Ok(())
+    Ok(solana_program::program::invoke(
+        &instruction,
+        &account_infos,
+    )?)
 }
 
 pub fn activate_account_on_registry<'a>(
@@ -93,7 +95,6 @@ pub fn activate_account_on_registry<'a>(
     output_token_sender_ata: &InterfaceAccount<'a, TokenAccount>,
     revenue_app_ata: &InterfaceAccount<'a, TokenAccount>,
 ) -> Result<()> {
-    // prepare accounts for CPI to registry program
     let cpi_accounts = registry::cpi::accounts::ActivateAccount {
         system_program: system_program.to_account_info(),
         token_program: token_program.to_account_info(),
@@ -109,15 +110,21 @@ pub fn activate_account_on_registry<'a>(
 
     let cpi_ctx = CpiContext::new(registry_program.to_account_info(), cpi_accounts);
 
-    // make CPI call to activate account
-    registry::cpi::activate_account(cpi_ctx, *user_to_activate)?;
-
-    Ok(())
+    registry::cpi::activate_account(cpi_ctx, *user_to_activate)
 }
 
-fn get_discriminator(instruction_name: &str) -> [u8; 8] {
-    let mut discriminator = [0u8; 8];
-    let hash = solana_program::hash::hash(format!("global:{}", instruction_name).as_bytes());
-    discriminator.copy_from_slice(&hash.to_bytes()[..8]);
-    discriminator
+pub fn unwrap_wsol<'a>(
+    token_program: &Interface<'a, TokenInterface>,
+    sender: &Signer<'a>,
+    output_token_sender_ata: &InterfaceAccount<'a, TokenAccount>,
+) -> Result<()> {
+    let cpi_accounts = CloseAccount {
+        account: output_token_sender_ata.to_account_info(),
+        destination: sender.to_account_info(),
+        authority: sender.to_account_info(),
+    };
+
+    let cpi_ctx = CpiContext::new(token_program.to_account_info(), cpi_accounts);
+
+    close_account(cpi_ctx)
 }

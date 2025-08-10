@@ -23,7 +23,7 @@ pub struct SwapAndActivate<'info> {
     pub memo_program: UncheckedAccount<'info>,
     /// CHECK: clmm_mock_program
     pub clmm_mock_program: UncheckedAccount<'info>,
-    /// CHECK: registry program ID
+    /// CHECK: registry_program
     pub registry_program: UncheckedAccount<'info>,
 
     #[account(mut)]
@@ -38,7 +38,6 @@ pub struct SwapAndActivate<'info> {
     pub bump: Account<'info, DaBump>,
 
     #[account(
-        mut,
         seeds = [SEED_CONFIG.as_bytes()],
         bump = bump.config,
     )]
@@ -136,10 +135,7 @@ impl<'info> SwapAndActivate<'info> {
             Err(CustomError::InvalidAmount)?;
         }
 
-        // store initial output balance to verify the swap occurred
-        let initial_output_balance = output_token_sender_ata.amount;
-
-        // execute multihop swap on clmm_mock - swap directly from/to user ATAs
+        // execute multihop swap on clmm_mock
         execute_clmm_swap(
             amount_in,
             amount_out_minimum,
@@ -153,16 +149,7 @@ impl<'info> SwapAndActivate<'info> {
             remaining_accounts,
         )?;
 
-        // reload account to get updated balance
-        output_token_sender_ata.reload()?;
-
-        // verify that we received output tokens from the swap
-        let tokens_received = output_token_sender_ata.amount - initial_output_balance;
-        if tokens_received == 0 {
-            Err(CustomError::NoOutputTokens)?;
-        }
-
-        // activate account on registry program using tokens directly from user's ATA
+        // activate account on registry program
         activate_account_on_registry(
             sender.key,
             system_program,

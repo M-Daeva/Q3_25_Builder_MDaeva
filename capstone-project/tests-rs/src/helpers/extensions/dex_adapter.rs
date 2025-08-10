@@ -25,13 +25,12 @@ pub trait DexAdapterExtension {
         token_in_whitelist: Option<Vec<AppToken>>,
     ) -> Result<TransactionMetadata>;
 
-    fn dex_adapter_try_swap_and_activate(
+    fn dex_adapter_try_save_route(
         &mut self,
         sender: AppUser,
-        token_in: AppToken,
-        token_out: AppToken,
-        amount_in: u64,
-        amount_out_minimum: u64,
+        token_first: AppToken,
+        token_last: AppToken,
+        route: &[RouteItem],
     ) -> Result<TransactionMetadata>;
 
     fn dex_adapter_try_swap_multihop(
@@ -43,12 +42,22 @@ pub trait DexAdapterExtension {
         amount_out_minimum: u64,
     ) -> Result<TransactionMetadata>;
 
-    fn dex_adapter_try_save_route(
+    fn dex_adapter_try_swap_and_activate(
         &mut self,
         sender: AppUser,
-        token_first: AppToken,
-        token_last: AppToken,
-        route: &[RouteItem],
+        token_in: AppToken,
+        token_out: AppToken,
+        amount_in: u64,
+        amount_out_minimum: u64,
+    ) -> Result<TransactionMetadata>;
+
+    fn dex_adapter_try_swap_and_unwrap_wsol(
+        &mut self,
+        sender: AppUser,
+        token_in: AppToken,
+        token_out: AppToken,
+        amount_in: u64,
+        amount_out_minimum: u64,
     ) -> Result<TransactionMetadata>;
 
     fn dex_adapter_query_config(&self) -> Result<state::DaConfig>;
@@ -110,6 +119,137 @@ impl DexAdapterExtension for App {
             &payer,
             &signers,
             &[],
+        )
+    }
+
+    fn dex_adapter_try_save_route(
+        &mut self,
+        sender: AppUser,
+        token_first: AppToken,
+        token_last: AppToken,
+        route: &[RouteItem],
+    ) -> Result<TransactionMetadata> {
+        // programs
+        let ProgramId {
+            system_program,
+            dex_adapter: program_id,
+            ..
+        } = self.program_id;
+
+        // signers
+        let payer = sender.pubkey();
+        let signers = [sender.keypair()];
+
+        // mints
+        let (mint_first, mint_last) = (token_first.pubkey(), token_last.pubkey());
+
+        // pda
+        let bump = self.pda.dex_adapter_bump();
+        let config = self.pda.dex_adapter_config();
+        let route_pda = self.pda.dex_adapter_route(mint_first, mint_last);
+
+        let accounts = accounts::SaveRoute {
+            system_program,
+            sender: payer,
+            bump,
+            config,
+            route: route_pda,
+        };
+
+        let instruction_data = instruction::SaveRoute {
+            mint_first,
+            mint_last,
+            route: route.to_vec(),
+        };
+
+        send_tx_with_ix(
+            self,
+            &program_id,
+            &accounts,
+            &instruction_data,
+            &payer,
+            &signers,
+            &[],
+        )
+    }
+
+    fn dex_adapter_try_swap_multihop(
+        &mut self,
+        sender: AppUser,
+        token_in: AppToken,
+        token_out: AppToken,
+        amount_in: u64,
+        amount_out_minimum: u64,
+    ) -> Result<TransactionMetadata> {
+        // programs
+        let ProgramId {
+            system_program,
+            token_program_2022,
+            token_program,
+            associated_token_program,
+            memo,
+            dex_adapter: program_id,
+            clmm_mock,
+            ..
+        } = self.program_id;
+
+        // signers
+        let payer = sender.pubkey();
+        let signers = [sender.keypair()];
+
+        // mints
+        let (input_token_mint, output_token_mint) = (token_in.pubkey(), token_out.pubkey());
+
+        // pda
+        let bump = self.pda.dex_adapter_bump();
+        let config = self.pda.dex_adapter_config();
+        let route = self
+            .pda
+            .dex_adapter_route(input_token_mint, output_token_mint);
+
+        // ata
+        let input_token_sender_ata = self.get_or_create_ata(sender, &payer, &input_token_mint)?;
+        let output_token_sender_ata = self.get_or_create_ata(sender, &payer, &output_token_mint)?;
+
+        let accounts = accounts::SwapMultihop {
+            system_program,
+            token_program,
+            associated_token_program,
+            token_program_2022,
+            memo_program: memo,
+            clmm_mock_program: clmm_mock,
+            sender: payer,
+            bump,
+            config,
+            route,
+            input_token_mint,
+            output_token_mint,
+            input_token_sender_ata,
+            output_token_sender_ata,
+        };
+
+        // build remaining accounts based on the route loaded from PDA
+        let remaining_accounts = build_remaining_accounts_for_route(
+            self,
+            sender,
+            &payer,
+            input_token_mint,
+            output_token_mint,
+        )?;
+
+        let instruction_data = instruction::SwapMultihop {
+            amount_in,
+            amount_out_minimum,
+        };
+
+        send_tx_with_ix(
+            self,
+            &program_id,
+            &accounts,
+            &instruction_data,
+            &payer,
+            &signers,
+            &remaining_accounts,
         )
     }
 
@@ -204,7 +344,7 @@ impl DexAdapterExtension for App {
         )
     }
 
-    fn dex_adapter_try_swap_multihop(
+    fn dex_adapter_try_swap_and_unwrap_wsol(
         &mut self,
         sender: AppUser,
         token_in: AppToken,
@@ -242,7 +382,7 @@ impl DexAdapterExtension for App {
         let input_token_sender_ata = self.get_or_create_ata(sender, &payer, &input_token_mint)?;
         let output_token_sender_ata = self.get_or_create_ata(sender, &payer, &output_token_mint)?;
 
-        let accounts = accounts::SwapMultihop {
+        let accounts = accounts::SwapAndUnwrapWsol {
             system_program,
             token_program,
             associated_token_program,
@@ -268,7 +408,7 @@ impl DexAdapterExtension for App {
             output_token_mint,
         )?;
 
-        let instruction_data = instruction::SwapMultihop {
+        let instruction_data = instruction::SwapAndUnwrapWsol {
             amount_in,
             amount_out_minimum,
         };
@@ -281,57 +421,6 @@ impl DexAdapterExtension for App {
             &payer,
             &signers,
             &remaining_accounts,
-        )
-    }
-
-    fn dex_adapter_try_save_route(
-        &mut self,
-        sender: AppUser,
-        token_first: AppToken,
-        token_last: AppToken,
-        route: &[RouteItem],
-    ) -> Result<TransactionMetadata> {
-        // programs
-        let ProgramId {
-            system_program,
-            dex_adapter: program_id,
-            ..
-        } = self.program_id;
-
-        // signers
-        let payer = sender.pubkey();
-        let signers = [sender.keypair()];
-
-        // mints
-        let (mint_first, mint_last) = (token_first.pubkey(), token_last.pubkey());
-
-        // pda
-        let bump = self.pda.dex_adapter_bump();
-        let config = self.pda.dex_adapter_config();
-        let route_pda = self.pda.dex_adapter_route(mint_first, mint_last);
-
-        let accounts = accounts::SaveRoute {
-            system_program,
-            sender: payer,
-            bump,
-            config,
-            route: route_pda,
-        };
-
-        let instruction_data = instruction::SaveRoute {
-            mint_first,
-            mint_last,
-            route: route.to_vec(),
-        };
-
-        send_tx_with_ix(
-            self,
-            &program_id,
-            &accounts,
-            &instruction_data,
-            &payer,
-            &signers,
-            &[],
         )
     }
 

@@ -1,5 +1,5 @@
 use {
-    crate::helpers::execute_clmm_swap,
+    crate::helpers::{execute_clmm_swap, unwrap_wsol},
     anchor_lang::prelude::*,
     anchor_spl::{
         associated_token::AssociatedToken,
@@ -12,7 +12,7 @@ use {
 };
 
 #[derive(Accounts)]
-pub struct SwapMultihop<'info> {
+pub struct SwapAndUnwrapWsol<'info> {
     pub system_program: Program<'info, System>,
     pub token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -39,13 +39,13 @@ pub struct SwapMultihop<'info> {
         seeds = [SEED_CONFIG.as_bytes()],
         bump = bump.config,
     )]
-    pub config: Account<'info, DaConfig>,
+    pub config: Box<Account<'info, DaConfig>>,
 
     #[account(
         seeds = [SEED_ROUTE.as_bytes(), &input_token_mint.key().to_bytes(), &output_token_mint.key().to_bytes()],
         bump
     )]
-    pub route: Account<'info, Route>,
+    pub route: Box<Account<'info, Route>>,
 
     // mint
     //
@@ -73,8 +73,8 @@ pub struct SwapMultihop<'info> {
     pub output_token_sender_ata: InterfaceAccount<'info, TokenAccount>,
 }
 
-impl<'info> SwapMultihop<'info> {
-    pub fn swap_multihop(
+impl<'info> SwapAndUnwrapWsol<'info> {
+    pub fn swap_and_unwrap_wsol(
         &mut self,
         remaining_accounts: &'info [AccountInfo<'info>],
         amount_in: u64,
@@ -88,6 +88,7 @@ impl<'info> SwapMultihop<'info> {
             config,
             input_token_mint,
             input_token_sender_ata,
+            output_token_sender_ata,
             ..
         } = self;
 
@@ -108,6 +109,9 @@ impl<'info> SwapMultihop<'info> {
             input_token_sender_ata,
             remaining_accounts,
         )?;
+
+        // exhange wsol -> sol
+        unwrap_wsol(token_program, sender, output_token_sender_ata)?;
 
         Ok(())
     }

@@ -7,7 +7,9 @@ pub mod instructions;
 
 use {
     dex_adapter_cpi::types::RouteItem,
-    instructions::{init::*, save_route::*, swap_and_activate::*, swap_multihop::*},
+    instructions::{
+        init::*, save_route::*, swap_and_activate::*, swap_and_unwrap_wsol::*, swap_multihop::*,
+    },
 };
 
 // IDL builder doesn't see ID from cpi package, we need to duplicate it here
@@ -48,31 +50,16 @@ pub mod dex_adapter {
     //     unimplemented!()
     // }
 
-    /// swap tokens and forward result to registry program (call receive_payment)
-    pub fn swap_and_activate<'a, 'b, 'c: 'info, 'info>(
-        ctx: Context<'a, 'b, 'c, 'info, SwapAndActivate<'info>>,
-        amount_in: u64,
-        amount_out_minimum: u64,
+    pub fn save_route(
+        ctx: Context<SaveRoute>,
+        mint_first: Pubkey,
+        mint_last: Pubkey,
+        route: Vec<RouteItem>,
     ) -> Result<()> {
-        ctx.accounts
-            .swap_and_activate(ctx.remaining_accounts, amount_in, amount_out_minimum)
+        ctx.accounts.save_route(mint_first, mint_last, route)
     }
 
-    // /// multi-output swap: one input token → multiple output tokens
-    // pub fn multi_swap(
-    //     amount_in: u64,
-    //     swap_specs: Vec<SwapSpec>, // each spec defines output token and ratio
-    // ) -> Result<()> {
-    //     unimplemented!()
-    // }
-
-    // TODO: swap_and_unwrap ?
-
-    // /// unwrap WSOL and send native SOL to user
-    // pub fn unwrap_and_send_sol(amount_in: u64, recipient: Option<Pubkey>) -> Result<()> {
-    //     unimplemented!()
-    // }
-
+    /// swap across multiple pools
     pub fn swap_multihop<'a, 'b, 'c: 'info, 'info>(
         ctx: Context<'a, 'b, 'c, 'info, SwapMultihop<'info>>,
         amount_in: u64,
@@ -82,12 +69,23 @@ pub mod dex_adapter {
             .swap_multihop(ctx.remaining_accounts, amount_in, amount_out_minimum)
     }
 
-    pub fn save_route(
-        ctx: Context<SaveRoute>,
-        mint_first: Pubkey,
-        mint_last: Pubkey,
-        route: Vec<RouteItem>,
+    /// swap tokens and call activate_account of registry program
+    pub fn swap_and_activate<'a, 'b, 'c: 'info, 'info>(
+        ctx: Context<'a, 'b, 'c, 'info, SwapAndActivate<'info>>,
+        amount_in: u64,
+        amount_out_minimum: u64,
     ) -> Result<()> {
-        ctx.accounts.save_route(mint_first, mint_last, route)
+        ctx.accounts
+            .swap_and_activate(ctx.remaining_accounts, amount_in, amount_out_minimum)
+    }
+
+    /// swap a token to WSOL and unwrap it to SOL
+    pub fn swap_and_unwrap_wsol<'a, 'b, 'c: 'info, 'info>(
+        ctx: Context<'a, 'b, 'c, 'info, SwapAndUnwrapWsol<'info>>,
+        amount_in: u64,
+        amount_out_minimum: u64,
+    ) -> Result<()> {
+        ctx.accounts
+            .swap_and_unwrap_wsol(ctx.remaining_accounts, amount_in, amount_out_minimum)
     }
 }

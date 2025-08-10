@@ -1,5 +1,5 @@
 use {
-    anchor_lang::{prelude::*, system_program},
+    anchor_lang::{prelude::*, solana_program, system_program},
     anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface},
     std::{collections::HashSet, hash::Hash},
 };
@@ -40,6 +40,13 @@ where
 {
     let data = &account.try_borrow_data()?;
     Ok(T::deserialize(&mut &data[DISCRIMINATOR_SPACE..])?)
+}
+
+pub fn get_discriminator(instruction_name: &str) -> [u8; DISCRIMINATOR_SPACE] {
+    let mut discriminator = [0u8; DISCRIMINATOR_SPACE];
+    let hash = solana_program::hash::hash(format!("global:{}", instruction_name).as_bytes());
+    discriminator.copy_from_slice(&hash.to_bytes()[..DISCRIMINATOR_SPACE]);
+    discriminator
 }
 
 pub fn get_space(struct_space: usize) -> usize {
