@@ -6,11 +6,11 @@ skip-lint = false
 
 [programs.localnet]
 registry = "3RVBZDA6dgcjkGJtXRJxLvLh5g8qY6QwGHoribyKPN2E"
-dex-adapter = "FMsjKKPk7FQb1B9H8UQTLrdCUZ9MaoAeTnNK9kdVJmtt"
+dex-adapter = "HwGMSaJuVN5xAJLXFy9pkP4znPgm19PGSAtJZyf1CFu2"
 
 [programs.devnet]
 registry = "3RVBZDA6dgcjkGJtXRJxLvLh5g8qY6QwGHoribyKPN2E"
-dex-adapter = "FMsjKKPk7FQb1B9H8UQTLrdCUZ9MaoAeTnNK9kdVJmtt"
+dex-adapter = "HwGMSaJuVN5xAJLXFy9pkP4znPgm19PGSAtJZyf1CFu2"
 
 [registry]
 url = "https://api.apr.dev"

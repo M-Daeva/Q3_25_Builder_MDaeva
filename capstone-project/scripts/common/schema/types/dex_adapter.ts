@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/dex_adapter.json`.
  */
 export type DexAdapter = {
-  "address": "FMsjKKPk7FQb1B9H8UQTLrdCUZ9MaoAeTnNK9kdVJmtt",
+  "address": "HwGMSaJuVN5xAJLXFy9pkP4znPgm19PGSAtJZyf1CFu2",
   "metadata": {
     "name": "dexAdapter",
     "version": "1.0.0",

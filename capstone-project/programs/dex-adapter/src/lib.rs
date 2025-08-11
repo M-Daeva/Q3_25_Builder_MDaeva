@@ -14,7 +14,7 @@ use {
 };
 
 // IDL builder doesn't see ID from cpi package, we need to duplicate it here
-declare_id!("FMsjKKPk7FQb1B9H8UQTLrdCUZ9MaoAeTnNK9kdVJmtt");
+declare_id!("HwGMSaJuVN5xAJLXFy9pkP4znPgm19PGSAtJZyf1CFu2");
 
 #[program]
 pub mod dex_adapter {

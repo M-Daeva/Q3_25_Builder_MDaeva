@@ -29,21 +29,27 @@ async function main() {
   };
 
   const registryProgram = getProgram<Registry>(provider, RegistryIdl as any);
-  const registry = new RegistryHelpers(provider, registryProgram);
+  const dexAdapterProgram = getProgram<DexAdapter>(
+    provider,
+    DexAdapterIdl as any
+  );
 
   const registryAddress = registryProgram.programId;
+  const dexAdapterAddress = dexAdapterProgram.programId;
   const dexAddress = new PublicKey(
     "devi51mZmdwUJGU9hjN27vEz64Gps7uUefqxg27EAtH"
   );
 
   li({
-    registryAddress,
-    dexAddress,
+    registry: registryAddress.toString(),
+    dexAdapter: dexAdapterAddress.toString(),
+    dex: dexAddress.toString(),
   });
 
+  const registry = new RegistryHelpers(provider, registryProgram);
   const dexAdapter = new DexAdapterHelpers(
     provider,
-    getProgram<DexAdapter>(provider, DexAdapterIdl as any),
+    dexAdapterProgram,
     registryAddress,
     dexAddress
   );
