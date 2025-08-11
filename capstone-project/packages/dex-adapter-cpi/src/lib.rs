@@ -4,4 +4,4 @@ pub mod types;
 
 use anchor_lang::prelude::*;
 
-declare_id!("FMsjKKPk7FQb1B9H8UQTLrdCUZ9MaoAeTnNK9kdVJmtt");
+declare_id!("HwGMSaJuVN5xAJLXFy9pkP4znPgm19PGSAtJZyf1CFu2");

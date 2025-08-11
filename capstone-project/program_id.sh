@@ -20,13 +20,29 @@ fi
 # 2) Get the pubkey
 PUBKEY=$(solana --config ~/dev/.solana-configs/localnet.yml address -k "$KEYPAIR_FILE")
 
-# 3) Replace declare_id! in lib.rs
+# 3) Replace declare_id! in lib.rs files
+# Update programs directory
 LIB_RS="./programs/${NAME}/src/lib.rs"
 if [ -f "$LIB_RS" ]; then
   sed -i.bak -E "s#declare_id!\(\"[^\"]+\"\);#declare_id!(\"$PUBKEY\");#" "$LIB_RS"
   rm -f "${LIB_RS}.bak"
+  echo "Updated: $LIB_RS"
 else
   echo "File not found: $LIB_RS"
+fi
+
+# Update packages directory (look for packages that include the program name)
+if [ -d "./packages" ]; then
+  for package_dir in ./packages/*${NAME}*/; do
+    if [ -d "$package_dir" ]; then
+      PACKAGE_LIB_RS="${package_dir}src/lib.rs"
+      if [ -f "$PACKAGE_LIB_RS" ]; then
+        sed -i.bak -E "s#declare_id!\(\"[^\"]+\"\);#declare_id!(\"$PUBKEY\");#" "$PACKAGE_LIB_RS"
+        rm -f "${PACKAGE_LIB_RS}.bak"
+        echo "Updated: $PACKAGE_LIB_RS"
+      fi
+    fi
+  done
 fi
 
 # 4) Replace pubkey in Anchor.toml for localnet and devnet

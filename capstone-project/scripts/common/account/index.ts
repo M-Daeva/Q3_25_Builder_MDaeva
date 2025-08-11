@@ -788,7 +788,8 @@ export class DexAdapterHelpers {
 
   async queryConfig(isDisplayed: boolean = false) {
     const [pda] = this.getConfigPda();
-    const res = await this.program.account.config.fetch(pda);
+    // anchor generates types for all programs, we need daConfig instead of config here
+    const res = await this.program.account.daConfig.fetch(pda);
 
     return logAndReturn(res, isDisplayed);
   }

@@ -54,16 +54,15 @@ async function main() {
     dexAddress
   );
 
-  await dexAdapter.tryInit(
-    {
-      registry: registryAddress,
-      dex: dexAddress,
-    },
-    TX_PARAMS,
-    true
-  );
+  // await dexAdapter.tryInit(
+  //   {
+  //     registry: registryAddress,
+  //     dex: dexAddress,
+  //   },
+  //   TX_PARAMS
+  // );
 
-  // await dexAdapter.queryConfig(true);
+  await dexAdapter.queryConfig(true);
 
   // await registry.tryInit(
   //   { accountRegistrationFee: { amount: 100_000, asset: REVENUE_MINT.DEVNET } },
