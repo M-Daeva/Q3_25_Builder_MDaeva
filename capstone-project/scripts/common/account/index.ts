@@ -732,7 +732,7 @@ export class DexAdapterHelpers {
   ) {
     return PublicKey.findProgramAddressSync(
       [
-        Buffer.from("pool_state"),
+        Buffer.from("pool"),
         ammConfig.toBuffer(),
         token0Mint.toBuffer(),
         token1Mint.toBuffer(),
@@ -743,29 +743,21 @@ export class DexAdapterHelpers {
 
   getClmmMockObservationStatePda(poolState: PublicKey) {
     return PublicKey.findProgramAddressSync(
-      [Buffer.from("observation_state"), poolState.toBuffer()],
+      [Buffer.from("observation"), poolState.toBuffer()],
       this.clmmMockProgram.programId
     );
   }
 
   getClmmMockTokenVault0Pda(poolState: PublicKey, token0Mint: PublicKey) {
     return PublicKey.findProgramAddressSync(
-      [
-        Buffer.from("token_vault_0"),
-        poolState.toBuffer(),
-        token0Mint.toBuffer(),
-      ],
+      [Buffer.from("pool_vault"), poolState.toBuffer(), token0Mint.toBuffer()],
       this.clmmMockProgram.programId
     );
   }
 
   getClmmMockTokenVault1Pda(poolState: PublicKey, token1Mint: PublicKey) {
     return PublicKey.findProgramAddressSync(
-      [
-        Buffer.from("token_vault_1"),
-        poolState.toBuffer(),
-        token1Mint.toBuffer(),
-      ],
+      [Buffer.from("pool_vault"), poolState.toBuffer(), token1Mint.toBuffer()],
       this.clmmMockProgram.programId
     );
   }
@@ -834,6 +826,33 @@ export class DexAdapterHelpers {
   async queryAmmConfig(ammConfigIndex: number, isDisplayed: boolean = false) {
     const [pda] = this.getClmmMockAmmConfigPda(ammConfigIndex);
     const res = await this.clmmMockProgram.account.ammConfig.fetch(pda);
+
+    return logAndReturn(res, isDisplayed);
+  }
+
+  async queryAmmConfigByAddr(pda: PublicKey, isDisplayed: boolean = false) {
+    const res = await this.clmmMockProgram.account.ammConfig.fetch(pda);
+
+    return logAndReturn(res, isDisplayed);
+  }
+
+  async queryAmmPoolState(
+    ammConfigIndex: number,
+    mintA: PublicKey,
+    mintB: PublicKey,
+    isDisplayed: boolean = false
+  ) {
+    const [ammConfigPda] = this.getClmmMockAmmConfigPda(ammConfigIndex);
+    const [token0Mint, token1Mint] = this.sortMints(mintA, mintB);
+    const [poolStatePda] = this.getClmmMockPoolStatePda(
+      ammConfigPda,
+      token0Mint,
+      token1Mint
+    );
+
+    const res = await this.clmmMockProgram.account.poolState.fetch(
+      poolStatePda
+    );
 
     return logAndReturn(res, isDisplayed);
   }

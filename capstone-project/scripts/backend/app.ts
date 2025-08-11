@@ -43,9 +43,7 @@ async function main() {
 
   const registryAddress = registryProgram.programId;
   const dexAdapterAddress = dexAdapterProgram.programId;
-  const dexAddress = new PublicKey(
-    "devi51mZmdwUJGU9hjN27vEz64Gps7uUefqxg27EAtH"
-  );
+  const dexAddress = clmmMockProgram.programId;
 
   li({
     registry: registryAddress.toString(),
@@ -96,20 +94,11 @@ async function main() {
   // Check if pool exists before swapping
   const AMM_CONFIG_INDEX = 0;
 
-  // // "CD4aJtX11cqTCAc83nxSPkkh5JW2yjD6uwHeovjqQ1qu"
-  // const ammConfigPda = dexAdapter.getClmmMockAmmConfigPda(idx);
-  // li({ ammConfigPda });
-
-  // const ammConfig = await dexAdapter.queryAmmConfig(idx);
-  // li({ ammConfig });
-  // return;
-
-  const [ammConfig] = dexAdapter.getClmmMockAmmConfigPda(AMM_CONFIG_INDEX);
-  const [token0Mint, token1Mint] = dexAdapter.sortMints(mintWsol, mintUsdc);
-  const [poolState] = dexAdapter.getClmmMockPoolStatePda(
-    ammConfig,
-    token0Mint,
-    token1Mint
+  await dexAdapter.queryAmmPoolState(
+    AMM_CONFIG_INDEX,
+    mintUsdc,
+    mintWsol,
+    true
   );
 
   (async () => {
