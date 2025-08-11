@@ -462,7 +462,8 @@ export class DexAdapterHelpers {
       IADexAdapter.convertSwapArgs(args);
 
     // PDA
-    const [config, configBump] = this.getConfigPda();
+    const [bump] = this.getBumpPda();
+    const [config] = this.getConfigPda();
     const [route] = this.getRoutePda(tokenIn, tokenOut);
 
     // ATA
@@ -489,7 +490,7 @@ export class DexAdapterHelpers {
       memoProgram: new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
       clmmMockProgram: this.clmmMockProgramId,
       sender: this.sender,
-      bump: configBump,
+      bump,
       config,
       route,
       inputTokenMint: tokenIn,
@@ -516,7 +517,8 @@ export class DexAdapterHelpers {
       IADexAdapter.convertSwapArgs(args);
 
     // PDA
-    const [config, configBump] = this.getConfigPda();
+    const [bump] = this.getBumpPda();
+    const [config] = this.getConfigPda();
     const [route] = this.getRoutePda(tokenIn, tokenOut);
     const [registryConfig, registryBump] = this.getRegistryConfigPda();
     const [registryUserId] = this.getRegistryUserIdPda();
@@ -550,7 +552,7 @@ export class DexAdapterHelpers {
       memoProgram: new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
       clmmMockProgram: this.clmmMockProgramId,
       sender: this.sender,
-      bump: configBump,
+      bump,
       config,
       route,
       registryProgram: this.registryProgramId,
@@ -582,7 +584,8 @@ export class DexAdapterHelpers {
       IADexAdapter.convertSwapArgs(args);
 
     // PDA
-    const [config, configBump] = this.getConfigPda();
+    const [bump] = this.getBumpPda();
+    const [config] = this.getConfigPda();
     const [route] = this.getRoutePda(tokenIn, tokenOut);
 
     // ATA
@@ -609,7 +612,7 @@ export class DexAdapterHelpers {
       memoProgram: new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
       clmmMockProgram: this.clmmMockProgramId,
       sender: this.sender,
-      bump: configBump,
+      bump,
       config,
       route,
       inputTokenMint: tokenIn,
@@ -765,6 +768,13 @@ export class DexAdapterHelpers {
     );
   }
 
+  getBumpPda() {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("bump")],
+      this.program.programId
+    );
+  }
+
   getConfigPda() {
     return PublicKey.findProgramAddressSync(
       [Buffer.from("config")],
@@ -784,6 +794,13 @@ export class DexAdapterHelpers {
       [Buffer.from("route"), mintFirst.toBuffer(), mintLast.toBuffer()],
       this.program.programId
     );
+  }
+
+  async queryBump(isDisplayed: boolean = false) {
+    const [pda] = this.getBumpPda();
+    const res = await this.program.account.daBump.fetch(pda);
+
+    return logAndReturn(res, isDisplayed);
   }
 
   async queryConfig(isDisplayed: boolean = false) {

@@ -57,6 +57,14 @@ async function main() {
     dexAddress
   );
 
+  // await registry.tryInit(
+  //   { accountRegistrationFee: { amount: 100_000, asset: REVENUE_MINT.DEVNET } },
+  //   REVENUE_MINT.DEVNET,
+  //   TX_PARAMS
+  // );
+
+  // await registry.queryConfig(true);
+
   // await dexAdapter.tryInit(
   //   {
   //     registry: registryAddress,
@@ -122,14 +130,6 @@ async function main() {
       balanceUsdc,
     });
   })();
-
-  // await registry.tryInit(
-  //   { accountRegistrationFee: { amount: 100_000, asset: REVENUE_MINT.DEVNET } },
-  //   REVENUE_MINT.DEVNET,
-  //   TX_PARAMS
-  // );
-
-  // await registry.queryConfig(true);
 }
 
 main();
