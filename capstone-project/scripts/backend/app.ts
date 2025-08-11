@@ -2,7 +2,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { COMMITMENT, PATH, REVENUE_MINT } from "../common/config";
 import { getProgram, getProvider, getRpc, li } from "../common/utils";
 import { getWallet, parseNetwork, readKeypair, rootPath } from "./utils";
-import { PublicKey } from "@solana/web3.js";
+import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import {
   ChainHelpers,
   RegistryHelpers,
@@ -27,6 +27,9 @@ async function main() {
   const TX_PARAMS = {
     cpu: { k: 1, b: 150 },
   };
+
+  const mintWsol = new PublicKey("So11111111111111111111111111111111111111112");
+  const mintUsdc = new PublicKey("USDCoctVLVnvTXBEuP9s8hntucdJokbo17RwHuNXemT");
 
   const registryProgram = getProgram<Registry>(provider, RegistryIdl as any);
   const dexAdapterProgram = getProgram<DexAdapter>(
@@ -62,7 +65,63 @@ async function main() {
   //   TX_PARAMS
   // );
 
-  await dexAdapter.queryConfig(true);
+  // await dexAdapter.trySaveRoute(
+  //   {
+  //     mintFirst: mintWsol,
+  //     mintLast: mintUsdc,
+  //     route: [{ ammIndex: 0, tokenOut: mintUsdc }],
+  //   },
+  //   TX_PARAMS
+  // );
+
+  // await dexAdapter.queryConfig(true);
+  // await dexAdapter.queryRoute(mintWsol, mintUsdc, true);
+
+  // await chain.getTokenBalance(mintWsol, ownerKeypair.publicKey, true);
+  // await chain.wrapSol(5, TX_PARAMS);
+  // await chain.getTokenBalance(mintWsol, ownerKeypair.publicKey, true);
+
+  (async () => {
+    const balanceWsol = await chain.getTokenBalance(
+      mintWsol,
+      ownerKeypair.publicKey
+    );
+    const balanceUsdc = await chain.getTokenBalance(
+      mintUsdc,
+      ownerKeypair.publicKey
+    );
+
+    li({
+      balanceWsol,
+      balanceUsdc,
+    });
+  })();
+
+  await dexAdapter.trySwap(
+    {
+      amountIn: 5 * LAMPORTS_PER_SOL,
+      amountOutMinimum: 1,
+      tokenIn: mintWsol,
+      tokenOut: mintUsdc,
+    },
+    TX_PARAMS
+  );
+
+  (async () => {
+    const balanceWsol = await chain.getTokenBalance(
+      mintWsol,
+      ownerKeypair.publicKey
+    );
+    const balanceUsdc = await chain.getTokenBalance(
+      mintUsdc,
+      ownerKeypair.publicKey
+    );
+
+    li({
+      balanceWsol,
+      balanceUsdc,
+    });
+  })();
 
   // await registry.tryInit(
   //   { accountRegistrationFee: { amount: 100_000, asset: REVENUE_MINT.DEVNET } },

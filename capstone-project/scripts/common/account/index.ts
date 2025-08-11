@@ -1068,4 +1068,91 @@ export class ChainHelpers {
 
     return logAndReturn(lamportsPerCu, isDisplayed);
   }
+
+  async wrapSol(
+    amount: number,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const owner = this.provider.wallet.publicKey;
+    const amountInLamports = amount * anchor.web3.LAMPORTS_PER_SOL;
+
+    // Get or create ATA for WSOL (native mint)
+    const { ata: wsolAta, ixs: createAtaIxs } =
+      await getOrCreateAtaInstructions(
+        this.provider.connection,
+        owner,
+        spl.NATIVE_MINT, // WSOL mint address
+        owner,
+        false
+      );
+
+    const instructions: anchor.web3.TransactionInstruction[] = [
+      ...createAtaIxs,
+      // Transfer SOL to the WSOL token account
+      SystemProgram.transfer({
+        fromPubkey: owner,
+        toPubkey: wsolAta,
+        lamports: amountInLamports,
+      }),
+      // Sync native instruction to convert SOL to WSOL tokens
+      spl.createSyncNativeInstruction(wsolAta),
+    ];
+
+    return await this.handleTx(instructions, params, isDisplayed);
+  }
+
+  async unwrapSol(
+    amount?: number,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const owner = this.provider.wallet.publicKey;
+
+    const wsolAta = await spl.getAssociatedTokenAddress(
+      spl.NATIVE_MINT,
+      owner,
+      false
+    );
+
+    // Get current WSOL balance if amount not specified
+    let amountToUnwrap = amount;
+    if (!amountToUnwrap) {
+      const balance = await this.getTokenBalance(spl.NATIVE_MINT, owner, false);
+      amountToUnwrap = balance;
+    }
+
+    if (amountToUnwrap <= 0) {
+      throw new Error("No WSOL balance to unwrap");
+    }
+
+    const { decimals } = await spl.getMint(
+      this.provider.connection,
+      spl.NATIVE_MINT
+    );
+    const amountInTokens = amountToUnwrap * 10 ** decimals;
+
+    const instructions: anchor.web3.TransactionInstruction[] = [
+      // Close the WSOL token account to unwrap all, or transfer specific amount first
+      ...(amount
+        ? [
+            spl.createTransferCheckedInstruction(
+              wsolAta,
+              spl.NATIVE_MINT,
+              wsolAta, // Transfer to self to adjust balance
+              owner,
+              amountInTokens,
+              decimals
+            ),
+          ]
+        : []),
+      spl.createCloseAccountInstruction(
+        wsolAta,
+        owner, // Destination for remaining SOL
+        owner // Owner
+      ),
+    ];
+
+    return await this.handleTx(instructions, params, isDisplayed);
+  }
 }
