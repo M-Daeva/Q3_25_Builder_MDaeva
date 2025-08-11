@@ -1,5 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import * as spl from "@solana/spl-token";
+import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import {
   AccountMeta,
   LAMPORTS_PER_SOL,
@@ -16,6 +17,7 @@ import {
   getTokenProgramFactory,
   li,
   logAndReturn,
+  numberToRustBuffer,
   publicKeyFromString,
 } from "../../common/utils";
 
@@ -27,7 +29,7 @@ import * as IADexAdapter from "../interfaces/dex-adapter.anchor";
 
 import { Registry } from "../schema/types/registry";
 import { DexAdapter } from "../schema/types/dex_adapter";
-import { getAssociatedTokenAddressSync } from "@solana/spl-token";
+import { ClmmMock } from "../schema/types/clmm_mock";
 
 export class RegistryHelpers {
   private provider: anchor.AnchorProvider;
@@ -366,7 +368,7 @@ export class DexAdapterHelpers {
   private provider: anchor.AnchorProvider;
   private program: anchor.Program<DexAdapter>;
   private registryProgramId: PublicKey;
-  private clmmMockProgramId: PublicKey;
+  private clmmMockProgram: anchor.Program<ClmmMock>;
   private sender: PublicKey;
 
   private handleTx: (
@@ -383,12 +385,12 @@ export class DexAdapterHelpers {
     provider: anchor.AnchorProvider,
     program: anchor.Program<DexAdapter>,
     registryProgramId: PublicKey,
-    clmmMockProgramId: PublicKey
+    clmmMockProgram: anchor.Program<ClmmMock>
   ) {
     this.provider = provider;
     this.program = program;
     this.registryProgramId = registryProgramId;
-    this.clmmMockProgramId = clmmMockProgramId;
+    this.clmmMockProgram = clmmMockProgram;
     this.sender = provider.wallet.publicKey;
     this.handleTx = getHandleTx(provider);
     this.getTokenProgram = getTokenProgramFactory(provider);
@@ -488,7 +490,7 @@ export class DexAdapterHelpers {
       associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
       tokenProgram2022: spl.TOKEN_2022_PROGRAM_ID,
       memoProgram: new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
-      clmmMockProgram: this.clmmMockProgramId,
+      clmmMockProgram: this.clmmMockProgram.programId,
       sender: this.sender,
       bump,
       config,
@@ -550,7 +552,7 @@ export class DexAdapterHelpers {
       associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
       tokenProgram2022: spl.TOKEN_2022_PROGRAM_ID,
       memoProgram: new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
-      clmmMockProgram: this.clmmMockProgramId,
+      clmmMockProgram: this.clmmMockProgram.programId,
       sender: this.sender,
       bump,
       config,
@@ -610,7 +612,7 @@ export class DexAdapterHelpers {
       associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
       tokenProgram2022: spl.TOKEN_2022_PROGRAM_ID,
       memoProgram: new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
-      clmmMockProgram: this.clmmMockProgramId,
+      clmmMockProgram: this.clmmMockProgram.programId,
       sender: this.sender,
       bump,
       config,
@@ -718,8 +720,8 @@ export class DexAdapterHelpers {
 
   getClmmMockAmmConfigPda(ammConfigIndex: number) {
     return PublicKey.findProgramAddressSync(
-      [Buffer.from("amm_config"), Buffer.from([ammConfigIndex])],
-      this.clmmMockProgramId
+      [Buffer.from("amm_config"), numberToRustBuffer(ammConfigIndex, "u16")],
+      this.clmmMockProgram.programId
     );
   }
 
@@ -735,14 +737,14 @@ export class DexAdapterHelpers {
         token0Mint.toBuffer(),
         token1Mint.toBuffer(),
       ],
-      this.clmmMockProgramId
+      this.clmmMockProgram.programId
     );
   }
 
   getClmmMockObservationStatePda(poolState: PublicKey) {
     return PublicKey.findProgramAddressSync(
       [Buffer.from("observation_state"), poolState.toBuffer()],
-      this.clmmMockProgramId
+      this.clmmMockProgram.programId
     );
   }
 
@@ -753,7 +755,7 @@ export class DexAdapterHelpers {
         poolState.toBuffer(),
         token0Mint.toBuffer(),
       ],
-      this.clmmMockProgramId
+      this.clmmMockProgram.programId
     );
   }
 
@@ -764,7 +766,7 @@ export class DexAdapterHelpers {
         poolState.toBuffer(),
         token1Mint.toBuffer(),
       ],
-      this.clmmMockProgramId
+      this.clmmMockProgram.programId
     );
   }
 
@@ -825,6 +827,13 @@ export class DexAdapterHelpers {
   ) {
     const [pda] = this.getRoutePda(mintFirst, mintLast);
     const res = await this.program.account.route.fetch(pda);
+
+    return logAndReturn(res, isDisplayed);
+  }
+
+  async queryAmmConfig(ammConfigIndex: number, isDisplayed: boolean = false) {
+    const [pda] = this.getClmmMockAmmConfigPda(ammConfigIndex);
+    const res = await this.clmmMockProgram.account.ammConfig.fetch(pda);
 
     return logAndReturn(res, isDisplayed);
   }

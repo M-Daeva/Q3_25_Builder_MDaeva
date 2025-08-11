@@ -12,9 +12,9 @@ pub use context::*;
 use anchor_lang::prelude::*;
 
 // #[cfg(feature = "devnet")]
-// declare_id!("devi51mZmdwUJGU9hjN27vEz64Gps7uUefqxg27EAtH");
+declare_id!("devi51mZmdwUJGU9hjN27vEz64Gps7uUefqxg27EAtH");
 // #[cfg(not(feature = "devnet"))]
-declare_id!("CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK");
+// declare_id!("CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK");
 
 // pub mod admin {
 //     use anchor_lang::prelude::declare_id;

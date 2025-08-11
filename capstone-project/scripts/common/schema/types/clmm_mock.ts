@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/clmm_mock.json`.
  */
 export type ClmmMock = {
-  "address": "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK",
+  "address": "devi51mZmdwUJGU9hjN27vEz64Gps7uUefqxg27EAtH",
   "metadata": {
     "name": "clmmMock",
     "version": "1.0.0",

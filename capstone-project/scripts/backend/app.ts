@@ -15,6 +15,9 @@ import RegistryIdl from "../common/schema/idl/registry.json";
 import { DexAdapter } from "../common/schema/types/dex_adapter";
 import DexAdapterIdl from "../common/schema/idl/dex_adapter.json";
 
+import { ClmmMock } from "../common/schema/types/clmm_mock";
+import ClmmMockIdl from "../common/schema/idl/clmm_mock.json";
+
 async function main() {
   const ownerKeypair = await readKeypair(rootPath(PATH.OWNER_KEYPAIR));
   const provider = getProvider(
@@ -36,6 +39,7 @@ async function main() {
     provider,
     DexAdapterIdl as any
   );
+  const clmmMockProgram = getProgram<ClmmMock>(provider, ClmmMockIdl as any);
 
   const registryAddress = registryProgram.programId;
   const dexAdapterAddress = dexAdapterProgram.programId;
@@ -54,7 +58,7 @@ async function main() {
     provider,
     dexAdapterProgram,
     registryAddress,
-    dexAddress
+    clmmMockProgram
   );
 
   // await registry.tryInit(
@@ -88,6 +92,25 @@ async function main() {
   // await chain.getTokenBalance(mintWsol, ownerKeypair.publicKey, true);
   // await chain.wrapSol(5, TX_PARAMS);
   // await chain.getTokenBalance(mintWsol, ownerKeypair.publicKey, true);
+
+  // Check if pool exists before swapping
+  const AMM_CONFIG_INDEX = 0;
+
+  // // "CD4aJtX11cqTCAc83nxSPkkh5JW2yjD6uwHeovjqQ1qu"
+  // const ammConfigPda = dexAdapter.getClmmMockAmmConfigPda(idx);
+  // li({ ammConfigPda });
+
+  // const ammConfig = await dexAdapter.queryAmmConfig(idx);
+  // li({ ammConfig });
+  // return;
+
+  const [ammConfig] = dexAdapter.getClmmMockAmmConfigPda(AMM_CONFIG_INDEX);
+  const [token0Mint, token1Mint] = dexAdapter.sortMints(mintWsol, mintUsdc);
+  const [poolState] = dexAdapter.getClmmMockPoolStatePda(
+    ammConfig,
+    token0Mint,
+    token1Mint
+  );
 
   (async () => {
     const balanceWsol = await chain.getTokenBalance(
