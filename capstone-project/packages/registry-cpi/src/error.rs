@@ -39,12 +39,6 @@ pub enum CustomError {
 
     #[msg("Nonce must be unique!")]
     BadNonce,
-    //
-    // #[msg("Insufficient SOL amount for account creation")]
-    // InsufficientSolAmount,
-
-    // #[msg("Insufficient USDC amount for account activation")]
-    // InsufficientUsdcAmount,
 }
 
 impl From<CustomError> for ProgError {

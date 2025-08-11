@@ -1,9 +1,9 @@
 use {
-    crate::state::{
+    anchor_lang::prelude::*,
+    registry_cpi::state::{
         RotationState, UserAccount, UserId, SEED_USER_ACCOUNT, SEED_USER_ID,
         SEED_USER_ROTATION_STATE,
     },
-    anchor_lang::prelude::*,
 };
 
 #[derive(Accounts)]
@@ -41,7 +41,7 @@ pub struct CloseAccount<'info> {
 
 impl<'info> CloseAccount<'info> {
     pub fn close_account(&mut self) -> Result<()> {
-        let CloseAccount { user_id, .. } = self;
+        let Self { user_id, .. } = self;
 
         user_id.is_open = false;
 

@@ -51,8 +51,8 @@ impl fmt::Display for CheckedFromRatioError {
 impl std::error::Error for CheckedFromRatioError {}
 
 impl Decimal {
-    const DECIMAL_FRACTIONAL: u128 = 1_000_000_000_000_000_000u128; // 1*10^18
-    const DECIMAL_PLACES: u32 = 18;
+    pub const DECIMAL_FRACTIONAL: u128 = 1_000_000_000_000_000_000u128; // 1*10^18
+    pub const DECIMAL_PLACES: u32 = 18;
 
     /// Create a new Decimal from raw atomic units
     pub const fn new(value: u128) -> Self {

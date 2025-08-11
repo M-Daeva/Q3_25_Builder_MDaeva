@@ -2,15 +2,15 @@ use {
     crate::helpers::suite::{
         core::{
             extension::{get_data, send_tx_with_ix},
-            token::WithTokenKeys,
             App, ProgramId,
         },
         types::{AppToken, AppUser},
     },
     anchor_lang::Result,
     litesvm::types::TransactionMetadata,
-    registry::{
-        accounts, instruction, state,
+    registry::{accounts, instruction},
+    registry_cpi::{
+        state,
         types::{AssetItem, Range},
     },
 };
@@ -162,6 +162,7 @@ impl RegistryExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 
@@ -211,6 +212,7 @@ impl RegistryExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 
@@ -249,6 +251,7 @@ impl RegistryExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 
@@ -276,7 +279,7 @@ impl RegistryExtension for App {
 
         // mint
         let revenue_mint = match revenue_asset {
-            Some(x) => x.pubkey(&self),
+            Some(x) => x.pubkey(),
             _ => self.registry_query_config()?.registration_fee.asset,
         };
 
@@ -310,6 +313,7 @@ impl RegistryExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 
@@ -362,6 +366,7 @@ impl RegistryExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 
@@ -400,6 +405,7 @@ impl RegistryExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 
@@ -447,6 +453,7 @@ impl RegistryExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 
@@ -473,7 +480,7 @@ impl RegistryExtension for App {
 
         // mint
         let revenue_mint = match revenue_asset {
-            Some(x) => x.pubkey(&self),
+            Some(x) => x.pubkey(),
             _ => self.registry_query_config()?.registration_fee.asset,
         };
 
@@ -509,6 +516,7 @@ impl RegistryExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 
@@ -551,6 +559,7 @@ impl RegistryExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 
@@ -596,6 +605,7 @@ impl RegistryExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 
@@ -638,6 +648,7 @@ impl RegistryExtension for App {
             &instruction_data,
             &payer,
             &signers,
+            &[],
         )
     }
 

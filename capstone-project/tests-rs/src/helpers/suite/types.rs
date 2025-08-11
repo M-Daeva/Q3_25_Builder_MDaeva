@@ -2,20 +2,24 @@ use {
     crate::helpers::suite::decimal::{str_to_dec, Decimal},
     solana_keypair::Keypair,
     solana_pubkey::Pubkey,
+    strum::IntoEnumIterator,
     strum_macros::{Display, EnumIter, IntoStaticStr},
 };
 
-const ASSET_AMOUNT_DEFAULT: u64 = 1_000;
-const ASSET_AMOUNT_INCREASED: u64 = 100_000;
+const SOL_AMOUNT_DEFAULT: u64 = 1_000;
+const SOL_AMOUNT_INCREASED: u64 = 100_000;
+
+const TOKEN_AMOUNT_DEFAULT: u64 = 1_000_000_000;
+const TOKEN_AMOUNT_INCREASED: u64 = 100_000_000_000;
 
 const DECIMALS_COIN_SOL: u8 = 9;
 const DECIMALS_TOKEN_DEFAULT: u8 = 6;
 const DECIMALS_TOKEN_WBTC: u8 = 8;
 
-const PRICE_COIN_SOL: &str = "160";
+const PRICE_COIN_SOL: &str = "100";
 const PRICE_TOKEN_USDC: &str = "1";
 const PRICE_TOKEN_PYTH: &str = "0.1";
-const PRICE_TOKEN_WBTC: &str = "120000";
+const PRICE_TOKEN_WBTC: &str = "100000";
 
 const KEYPAIR_ADMIN: &str =
     "3SKiuW2cbAJH8KDAuhB5cdJnAGU8Y9a95gRWMFB6zPy8XH45HTNebRALhL1EqPv2QkBytb8iTu577TcmLutkzC9g";
@@ -28,6 +32,18 @@ const PUBKEY_ALICE: &str = "68ZZmGRDn5971SDrj5Ldj6MUJTeRUdSV1NQUuzsaQ4N3";
 const KEYPAIR_BOB: &str =
     "zsbe2oRXt1K3gRNCurjZFTVzQtYqJjhyPAQMk4VsLWe3QoU3pMGZDVVRvmgZXgLtXvAsC9kGi4ShpYpjrQbtaf5";
 const PUBKEY_BOB: &str = "FPS369ZvUkQTdsU8pzmypafNnNghiDHi8G6gDCvux5SB";
+
+const KEYPAIR_USDC: &str =
+    "5gi185z4U57MEkJJTzweNrJQJQftaQH2onL8ZGRyXKWA3zspJWyQfF1J8ZRV7zd3D8aZyZxtaw8MsPZpMLMGh6L2";
+const PUBKEY_USDC: &str = "8XdLEJXrM3yYfFg5EpMqcCKmXXSQeBKfTjvNP619LbE2";
+
+const KEYPAIR_PYTH: &str =
+    "5fbcPBxRADG5oxsK3K7PtM5A2CXFSErQ7bWoTXA1qeZsngyFYzWKUm4R7pBtD9fazVA9FgFC4h4WschCTQ7xjeJG";
+const PUBKEY_PYTH: &str = "HBtzyBH14hR6t5UfYT3ptL6d1pMnVCep2RY8vUgHmaRA";
+
+const KEYPAIR_WBTC: &str =
+    "2RyN2wrHo8fDrvqULn61ThcSeMyBE3eQ35ADxk5bvjkMrtZRKZwYNRQgxS33UkTrw3udySYMeoJxapbLbyz3aDiZ";
+const PUBKEY_WBTC: &str = "An6eCPnnsspFAy5bUrgnNkU4hkedv9ZDRUJazUTG1ewb";
 
 #[derive(Debug, Clone, Copy, Display, IntoStaticStr, EnumIter, PartialEq)]
 pub enum AppUser {
@@ -57,10 +73,23 @@ impl AppUser {
         Keypair::from_base58_string(base58_string)
     }
 
-    pub fn get_initial_asset_amount(&self) -> u64 {
+    pub fn list() {
+        for item in Self::iter() {
+            println!("{:#?}: {:#?}", item, item.pubkey());
+        }
+        println!();
+    }
+
+    pub fn get_initial_asset_amount(&self, asset: impl Into<AppAsset>) -> u64 {
         match self {
-            Self::Admin => ASSET_AMOUNT_INCREASED,
-            _ => ASSET_AMOUNT_DEFAULT,
+            Self::Admin => match asset.into() {
+                AppAsset::Coin(_) => SOL_AMOUNT_INCREASED,
+                AppAsset::Token(_) => TOKEN_AMOUNT_INCREASED,
+            },
+            _ => match asset.into() {
+                AppAsset::Coin(_) => SOL_AMOUNT_DEFAULT,
+                AppAsset::Token(_) => TOKEN_AMOUNT_DEFAULT,
+            },
         }
     }
 }
@@ -75,6 +104,38 @@ pub enum AppToken {
     USDC,
     PYTH,
     WBTC,
+    WSOL,
+}
+
+impl AppToken {
+    pub fn pubkey(&self) -> Pubkey {
+        let str_const = match self {
+            Self::USDC => PUBKEY_USDC,
+            Self::PYTH => PUBKEY_PYTH,
+            Self::WBTC => PUBKEY_WBTC,
+            Self::WSOL => &spl_token::native_mint::ID.to_string(),
+        };
+
+        Pubkey::from_str_const(str_const)
+    }
+
+    pub fn keypair(&self) -> Keypair {
+        let base58_string = match self {
+            Self::USDC => KEYPAIR_USDC,
+            Self::PYTH => KEYPAIR_PYTH,
+            Self::WBTC => KEYPAIR_WBTC,
+            Self::WSOL => panic!("WSOL doesn't have keypair!"),
+        };
+
+        Keypair::from_base58_string(base58_string)
+    }
+
+    pub fn list() {
+        for item in Self::iter() {
+            println!("{:#?}: {:#?}", item, item.pubkey());
+        }
+        println!();
+    }
 }
 
 pub trait GetPrice {
@@ -106,6 +167,7 @@ impl GetPrice for AppToken {
             Self::USDC => PRICE_TOKEN_USDC,
             Self::PYTH => PRICE_TOKEN_PYTH,
             Self::WBTC => PRICE_TOKEN_WBTC,
+            Self::WSOL => PRICE_COIN_SOL,
         };
 
         str_to_dec(price)
@@ -139,6 +201,7 @@ impl GetDecimals for AppToken {
             Self::USDC => DECIMALS_TOKEN_DEFAULT,
             Self::PYTH => DECIMALS_TOKEN_DEFAULT,
             Self::WBTC => DECIMALS_TOKEN_WBTC,
+            Self::WSOL => DECIMALS_COIN_SOL,
         }
     }
 }

@@ -1,5 +1,5 @@
 use {
-    anchor_lang::{prelude::*, system_program},
+    anchor_lang::{prelude::*, solana_program, system_program},
     anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface},
     std::{collections::HashSet, hash::Hash},
 };
@@ -42,8 +42,28 @@ where
     Ok(T::deserialize(&mut &data[DISCRIMINATOR_SPACE..])?)
 }
 
+pub fn get_discriminator(instruction_name: &str) -> [u8; DISCRIMINATOR_SPACE] {
+    let mut discriminator = [0u8; DISCRIMINATOR_SPACE];
+    let hash = solana_program::hash::hash(format!("global:{}", instruction_name).as_bytes());
+    discriminator.copy_from_slice(&hash.to_bytes()[..DISCRIMINATOR_SPACE]);
+    discriminator
+}
+
 pub fn get_space(struct_space: usize) -> usize {
     DISCRIMINATOR_SPACE + struct_space
+}
+
+/// pass args in the order to expect mint_a <= mint_b
+pub fn are_mints_sorted(mint_a: &Pubkey, mint_b: &Pubkey) -> bool {
+    mint_a <= mint_b
+}
+
+pub fn sort_mints(mint_a: &Pubkey, mint_b: &Pubkey) -> (Pubkey, Pubkey) {
+    if are_mints_sorted(mint_a, mint_b) {
+        (*mint_a, *mint_b)
+    } else {
+        (*mint_b, *mint_a)
+    }
 }
 
 pub fn get_clock_time() -> Result<u64> {

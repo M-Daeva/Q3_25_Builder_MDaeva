@@ -1,10 +1,10 @@
 use {
-    crate::state::{
-        Bump, Config, RotationState, MAINNET_USDC, MAINNET_WBTC, MAINNET_WSOL, ROTATION_TIMEOUT,
-        SEED_ADMIN_ROTATION_STATE, SEED_BUMP, SEED_CONFIG,
-    },
     anchor_lang::prelude::*,
     base::helpers::{get_clock_time, get_space},
+    dex_adapter_cpi::state::{
+        DaBump, DaConfig, RotationState, ROTATION_TIMEOUT, SEED_ADMIN_ROTATION_STATE, SEED_BUMP,
+        SEED_CONFIG,
+    },
 };
 
 #[derive(Accounts)]
@@ -19,20 +19,20 @@ pub struct Init<'info> {
     #[account(
         init,
         payer = sender,
-        space = get_space(Bump::INIT_SPACE),
+        space = get_space(DaBump::INIT_SPACE),
         seeds = [SEED_BUMP.as_bytes()],
         bump
     )]
-    pub bump: Account<'info, Bump>,
+    pub bump: Account<'info, DaBump>,
 
     #[account(
         init,
         payer = sender,
-        space = get_space(Config::INIT_SPACE),
+        space = get_space(DaConfig::INIT_SPACE),
         seeds = [SEED_CONFIG.as_bytes()],
         bump
     )]
-    pub config: Account<'info, Config>,
+    pub config: Account<'info, DaConfig>,
 
     #[account(
         init,
@@ -48,11 +48,11 @@ impl<'info> Init<'info> {
     pub fn init(
         &mut self,
         bumps: InitBumps,
+        dex: Pubkey,
         registry: Option<Pubkey>,
         rotation_timeout: Option<u32>,
-        token_in_whitelist: Option<Vec<Pubkey>>,
     ) -> Result<()> {
-        let Init {
+        let Self {
             sender,
             bump,
             config,
@@ -60,24 +60,21 @@ impl<'info> Init<'info> {
             ..
         } = self;
 
-        bump.set_inner(Bump {
+        bump.set_inner(DaBump {
             config: bumps.config,
             rotation_state: bumps.admin_rotation_state,
         });
 
-        config.set_inner(Config {
+        config.set_inner(DaConfig {
             admin: sender.key(),
+            dex,
             registry,
             is_paused: false,
             rotation_timeout: rotation_timeout.unwrap_or(ROTATION_TIMEOUT),
-            token_in_whitelist: token_in_whitelist.unwrap_or(vec![
-                MAINNET_USDC,
-                MAINNET_WSOL,
-                MAINNET_WBTC,
-            ]),
         });
 
         admin_rotation_state.set_inner(RotationState {
+            owner: sender.key(),
             new_owner: None,
             expiration_date: get_clock_time()?,
         });

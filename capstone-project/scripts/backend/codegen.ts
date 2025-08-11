@@ -240,6 +240,18 @@ export class AnchorTypeGenerator {
   private convertToAnchorType(prop: PropertyInfo): string {
     const baseType = this.getBaseType(prop.type);
 
+    // Handle arrays first, before other type conversions
+    if (prop.isArray) {
+      const elementType = this.extractArrayElementType(prop.type);
+      const elementProp: PropertyInfo = {
+        ...prop,
+        type: elementType,
+        isArray: false,
+      };
+      const elementAnchorType = this.convertToAnchorType(elementProp);
+      return `${elementAnchorType}[]`;
+    }
+
     // Handle N<T> sized number types
     const nTypeMatch = this.extractNType(baseType);
     if (nTypeMatch) {
@@ -287,16 +299,6 @@ export class AnchorTypeGenerator {
         // Handle custom types
         if (this.isCustomType(baseType)) {
           return `Anchor${baseType}`;
-        }
-
-        // Handle arrays
-        if (prop.isArray) {
-          const elementType = this.extractArrayElementType(prop.type);
-          return `${this.convertToAnchorType({
-            ...prop,
-            type: elementType,
-            isArray: false,
-          })}[]`;
         }
 
         // Handle enums
@@ -498,6 +500,32 @@ export class AnchorTypeGenerator {
   ): string {
     const baseType = this.getBaseType(prop.type);
 
+    // Handle arrays first
+    if (prop.isArray) {
+      const elementType = this.extractArrayElementType(prop.type);
+      const elementProp: PropertyInfo = {
+        ...prop,
+        type: elementType,
+        isArray: false,
+      };
+      const elementConversion = this.generateNonOptionalConversion(
+        elementProp,
+        "item"
+      );
+
+      // If the element conversion is just 'item', we can use a direct map
+      if (elementConversion === "item") {
+        return accessor;
+      }
+
+      // For custom types, use the converter function name directly
+      if (this.isCustomType(elementType)) {
+        return `${accessor}.map(convert${elementType})`;
+      }
+
+      return `${accessor}.map(item => ${elementConversion})`;
+    }
+
     // Handle N<T> sized number types in conversions
     const nTypeMatch = this.extractNType(baseType);
     if (nTypeMatch) {
@@ -540,16 +568,6 @@ export class AnchorTypeGenerator {
         if (this.isCustomType(baseType)) {
           const converterName = `convert${baseType}`;
           return `${converterName}(${accessor})`;
-        }
-
-        if (prop.isArray) {
-          const elementType = this.extractArrayElementType(prop.type);
-          const elementProp = { ...prop, type: elementType, isArray: false };
-          const elementConversion = this.generateNonOptionalConversion(
-            elementProp,
-            "item"
-          );
-          return `${accessor}.map(item => ${elementConversion})`;
         }
 
         if (prop.isEnum && prop.enumValues) {

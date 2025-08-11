@@ -1867,63 +1867,6 @@
       ]
     }
   ],
-  "errors": [
-    {
-      "code": 6000,
-      "name": "NoParameters",
-      "msg": "Parameters are not provided!"
-    },
-    {
-      "code": 6001,
-      "name": "WrongAssetType",
-      "msg": "Wrong asset type!"
-    },
-    {
-      "code": 6002,
-      "name": "ZeroAmount",
-      "msg": "Zero amount to send!"
-    },
-    {
-      "code": 6003,
-      "name": "ExceededAvailableAssetAmount",
-      "msg": "Exceeded available asset amount!"
-    },
-    {
-      "code": 6004,
-      "name": "ContractIsPaused",
-      "msg": "The contract is temporary paused!"
-    },
-    {
-      "code": 6005,
-      "name": "MaxDataSizeIsOutOfRange",
-      "msg": "Max data size is out of range!"
-    },
-    {
-      "code": 6006,
-      "name": "MaxDataSizeIsExceeded",
-      "msg": "Max data size is exceeded!"
-    },
-    {
-      "code": 6007,
-      "name": "WrongUserId",
-      "msg": "Wrong user ID!"
-    },
-    {
-      "code": 6008,
-      "name": "ActivateAccountTwice",
-      "msg": "Account can't be activated twice!"
-    },
-    {
-      "code": 6009,
-      "name": "AccountIsNotActivated",
-      "msg": "Account isn't activated!"
-    },
-    {
-      "code": 6010,
-      "name": "BadNonce",
-      "msg": "Nonce must be unique!"
-    }
-  ],
   "types": [
     {
       "name": "AssetItem",

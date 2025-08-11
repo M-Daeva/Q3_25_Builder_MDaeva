@@ -1,9 +1,9 @@
 use {
-    crate::{
+    anchor_lang::prelude::*,
+    registry_cpi::{
         error::CustomError,
         state::{UserAccount, UserId, SEED_USER_ACCOUNT, SEED_USER_ID},
     },
-    anchor_lang::prelude::*,
 };
 
 #[derive(Accounts)]
@@ -28,7 +28,7 @@ pub struct WriteData<'info> {
 
 impl<'info> WriteData<'info> {
     pub fn write_data(&mut self, data: String, nonce: u64) -> Result<()> {
-        let WriteData {
+        let Self {
             user_id,
             user_account,
             ..

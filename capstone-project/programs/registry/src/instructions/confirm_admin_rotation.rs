@@ -1,9 +1,9 @@
 use {
-    crate::state::{
-        Bump, Config, RotationState, SEED_ADMIN_ROTATION_STATE, SEED_BUMP, SEED_CONFIG,
-    },
     anchor_lang::prelude::*,
     base::{error::AuthError, helpers::get_clock_time},
+    registry_cpi::state::{
+        Bump, Config, RotationState, SEED_ADMIN_ROTATION_STATE, SEED_BUMP, SEED_CONFIG,
+    },
 };
 
 #[derive(Accounts)]
@@ -35,7 +35,7 @@ pub struct ConfirmAdminRotation<'info> {
 
 impl<'info> ConfirmAdminRotation<'info> {
     pub fn confirm_admin_rotation(&mut self) -> Result<()> {
-        let ConfirmAdminRotation {
+        let Self {
             sender,
             config,
             admin_rotation_state,

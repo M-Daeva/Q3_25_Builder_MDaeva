@@ -1,14 +1,14 @@
 use {
-    crate::{
-        error::CustomError,
-        state::{Bump, Config, UserId, SEED_BUMP, SEED_CONFIG, SEED_USER_ID},
-    },
     anchor_lang::prelude::*,
     anchor_spl::{
         associated_token::AssociatedToken,
         token_interface::{Mint, TokenAccount, TokenInterface},
     },
     base::helpers::transfer_token_from_user,
+    registry_cpi::{
+        error::CustomError,
+        state::{Bump, Config, UserId, SEED_BUMP, SEED_CONFIG, SEED_USER_ID},
+    },
 };
 
 #[derive(Accounts)]
@@ -66,7 +66,7 @@ pub struct ActivateAccount<'info> {
 
 impl<'info> ActivateAccount<'info> {
     pub fn activate_account(&mut self, _user: Pubkey) -> Result<()> {
-        let ActivateAccount {
+        let Self {
             token_program,
             sender,
             config,

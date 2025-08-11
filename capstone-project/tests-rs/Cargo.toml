@@ -35,10 +35,16 @@ solana-signer = { workspace = true }
 solana-transaction = { workspace = true }
 solana-system-program = { workspace = true }
 solana-program = { workspace = true }
+solana-compute-budget = { workspace = true }
 spl-associated-token-account = { workspace = true }
 spl-token = { workspace = true }
 solana-kite = { workspace = true }
 
 base = { workspace = true }
+registry-cpi = { workspace = true }
+dex-adapter-cpi = { workspace = true }
+raydium-clmm-cpi = { workspace = true }
+
+clmm-mock = { workspace = true, features = ["cpi"] }
 registry = { workspace = true, features = ["cpi"] }
 dex-adapter = { workspace = true, features = ["cpi"] }

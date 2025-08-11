@@ -1,10 +1,10 @@
 use {
-    crate::state::{RotationState, UserId, SEED_USER_ID, SEED_USER_ROTATION_STATE},
     anchor_lang::prelude::*,
     base::{
         error::AuthError,
         helpers::{get_clock_time, get_space},
     },
+    registry_cpi::state::{RotationState, UserId, SEED_USER_ID, SEED_USER_ROTATION_STATE},
 };
 
 #[derive(Accounts)]
@@ -43,7 +43,7 @@ pub struct ConfirmAccountRotation<'info> {
 
 impl<'info> ConfirmAccountRotation<'info> {
     pub fn confirm_account_rotation(&mut self) -> Result<()> {
-        let ConfirmAccountRotation {
+        let Self {
             sender,
             user_id_pre,
             user_id,
