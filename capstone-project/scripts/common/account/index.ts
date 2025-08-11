@@ -365,8 +365,8 @@ export class RegistryHelpers {
 export class DexAdapterHelpers {
   private provider: anchor.AnchorProvider;
   private program: anchor.Program<DexAdapter>;
-  private registryProgram: anchor.Program<any>;
-  private clmmMockProgram: anchor.Program<any>;
+  private registryProgramId: PublicKey;
+  private clmmMockProgramId: PublicKey;
   private sender: PublicKey;
 
   private handleTx: (
@@ -382,13 +382,13 @@ export class DexAdapterHelpers {
   constructor(
     provider: anchor.AnchorProvider,
     program: anchor.Program<DexAdapter>,
-    registryProgram: anchor.Program<any>,
-    clmmMockProgram: anchor.Program<any>
+    registryProgramId: PublicKey,
+    clmmMockProgramId: PublicKey
   ) {
     this.provider = provider;
     this.program = program;
-    this.registryProgram = registryProgram;
-    this.clmmMockProgram = clmmMockProgram;
+    this.registryProgramId = registryProgramId;
+    this.clmmMockProgramId = clmmMockProgramId;
     this.sender = provider.wallet.publicKey;
     this.handleTx = getHandleTx(provider);
     this.getTokenProgram = getTokenProgramFactory(provider);
@@ -487,7 +487,7 @@ export class DexAdapterHelpers {
       associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
       tokenProgram2022: spl.TOKEN_2022_PROGRAM_ID,
       memoProgram: new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
-      clmmMockProgram: this.clmmMockProgram.programId,
+      clmmMockProgram: this.clmmMockProgramId,
       sender: this.sender,
       bump: configBump,
       config,
@@ -548,12 +548,12 @@ export class DexAdapterHelpers {
       associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
       tokenProgram2022: spl.TOKEN_2022_PROGRAM_ID,
       memoProgram: new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
-      clmmMockProgram: this.clmmMockProgram.programId,
+      clmmMockProgram: this.clmmMockProgramId,
       sender: this.sender,
       bump: configBump,
       config,
       route,
-      registryProgram: this.registryProgram.programId,
+      registryProgram: this.registryProgramId,
       registryBump,
       registryConfig,
       registryUserId,
@@ -607,7 +607,7 @@ export class DexAdapterHelpers {
       associatedTokenProgram: spl.ASSOCIATED_TOKEN_PROGRAM_ID,
       tokenProgram2022: spl.TOKEN_2022_PROGRAM_ID,
       memoProgram: new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"),
-      clmmMockProgram: this.clmmMockProgram.programId,
+      clmmMockProgram: this.clmmMockProgramId,
       sender: this.sender,
       bump: configBump,
       config,
@@ -702,21 +702,21 @@ export class DexAdapterHelpers {
   getRegistryConfigPda() {
     return PublicKey.findProgramAddressSync(
       [Buffer.from("config")],
-      this.registryProgram.programId
+      this.registryProgramId
     );
   }
 
   getRegistryUserIdPda() {
     return PublicKey.findProgramAddressSync(
       [Buffer.from("user_id"), this.sender.toBuffer()],
-      this.registryProgram.programId
+      this.registryProgramId
     );
   }
 
   getClmmMockAmmConfigPda(ammConfigIndex: number) {
     return PublicKey.findProgramAddressSync(
       [Buffer.from("amm_config"), Buffer.from([ammConfigIndex])],
-      this.clmmMockProgram.programId
+      this.clmmMockProgramId
     );
   }
 
@@ -732,14 +732,14 @@ export class DexAdapterHelpers {
         token0Mint.toBuffer(),
         token1Mint.toBuffer(),
       ],
-      this.clmmMockProgram.programId
+      this.clmmMockProgramId
     );
   }
 
   getClmmMockObservationStatePda(poolState: PublicKey) {
     return PublicKey.findProgramAddressSync(
       [Buffer.from("observation_state"), poolState.toBuffer()],
-      this.clmmMockProgram.programId
+      this.clmmMockProgramId
     );
   }
 
@@ -750,7 +750,7 @@ export class DexAdapterHelpers {
         poolState.toBuffer(),
         token0Mint.toBuffer(),
       ],
-      this.clmmMockProgram.programId
+      this.clmmMockProgramId
     );
   }
 
@@ -761,7 +761,7 @@ export class DexAdapterHelpers {
         poolState.toBuffer(),
         token1Mint.toBuffer(),
       ],
-      this.clmmMockProgram.programId
+      this.clmmMockProgramId
     );
   }
 
