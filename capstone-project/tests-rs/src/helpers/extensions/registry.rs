@@ -51,6 +51,7 @@ pub trait RegistryExtension {
         &mut self,
         sender: AppUser,
         max_data_size: u32,
+        expected_user_id: Option<u32>, // to test guards
     ) -> Result<TransactionMetadata>;
 
     fn registry_try_close_account(&mut self, sender: AppUser) -> Result<TransactionMetadata>;
@@ -65,7 +66,7 @@ pub trait RegistryExtension {
         &mut self,
         sender: AppUser,
         user: Option<AppUser>,
-        revenue_asset: Option<AppToken>, // to test asset guard
+        revenue_asset: Option<AppToken>, // to test guards
     ) -> Result<TransactionMetadata>;
 
     fn registry_try_write_data(
@@ -260,7 +261,7 @@ impl RegistryExtension for App {
         sender: AppUser,
         amount: Option<u64>,
         recipient: Option<AppUser>,
-        revenue_asset: Option<AppToken>, // to test asset guard
+        revenue_asset: Option<AppToken>,
     ) -> Result<TransactionMetadata> {
         // programs
         let ProgramId {
@@ -321,6 +322,7 @@ impl RegistryExtension for App {
         &mut self,
         sender: AppUser,
         max_data_size: u32,
+        expected_user_id: Option<u32>,
     ) -> Result<TransactionMetadata> {
         // programs
         let ProgramId {
@@ -339,7 +341,8 @@ impl RegistryExtension for App {
         let user_counter = self.pda.registry_user_counter();
 
         let user_id = self.pda.registry_user_id(payer);
-        let expected_user_id = self.registry_query_user_counter()?.last_user_id + 1;
+        let expected_user_id =
+            expected_user_id.unwrap_or(self.registry_query_user_counter()?.last_user_id + 1);
         let user_account = self.pda.registry_user_account(expected_user_id);
         let user_rotation_state = self.pda.registry_user_rotation_state(expected_user_id);
 

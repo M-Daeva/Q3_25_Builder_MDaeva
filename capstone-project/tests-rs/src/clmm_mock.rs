@@ -369,7 +369,7 @@ fn swap_multihop_same_config() -> Result<()> {
         1_000,
         9_950_000,
         &[
-            (AppToken::WBTC, 42),                 // unused
+            (AppToken::WBTC, AMM_CONFIG_INDEX_0), // unused
             (AppToken::USDC, AMM_CONFIG_INDEX_0), // WBTC -> USDC uses config_1
             (AppToken::PYTH, AMM_CONFIG_INDEX_0), // USDC -> PYTH uses config_0
         ],
