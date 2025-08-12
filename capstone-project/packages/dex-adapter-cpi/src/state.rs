@@ -5,6 +5,10 @@ pub const ROTATION_TIMEOUT: u32 = SECONDS_PER_DAY;
 pub const TOKEN_IN_WHITELIST_MAX_LEN: usize = 16;
 pub const ROUTE_MAX_LEN: usize = 4;
 
+pub const CLOCK_TIME_MIN: u64 = 1750000000;
+pub const MAINNET_ADMIN: Pubkey =
+    Pubkey::from_str_const("AH9JvTDAiQy2zAuFfzteNyUrW5DYoTsTLoeNjXrxTTSt");
+
 pub const SEED_BUMP: &str = "bump";
 pub const SEED_CONFIG: &str = "config";
 pub const SEED_ADMIN_ROTATION_STATE: &str = "admin_rotation_state";
