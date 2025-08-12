@@ -64,6 +64,7 @@ fn init_admin_guard() -> Result<()> {
     let mut app = App::new();
     app.wait(CLOCK_TIME_MIN + 1);
 
+    // only specified admin can init devnet/mainnet program
     let res = app
         .registry_try_init(
             AppUser::Admin,
@@ -84,11 +85,13 @@ fn init_admin_guard() -> Result<()> {
 fn transfer_admin() -> Result<()> {
     let mut app = init_app()?;
 
+    // only admin can rotate admin
     let res = app
         .registry_try_update_config(AppUser::Alice, Some(AppUser::Alice), None, None, None, None)
         .unwrap_err();
     assert_error(res, AuthError::Unauthorized);
 
+    // new admin isn't specified
     let res = app
         .registry_try_confirm_admin_rotation(AppUser::Alice)
         .unwrap_err();
@@ -96,6 +99,7 @@ fn transfer_admin() -> Result<()> {
 
     app.registry_try_update_config(AppUser::Admin, Some(AppUser::Alice), None, None, None, None)?;
 
+    // too late to confirm admin rotation
     app.wait(ROTATION_TIMEOUT as u64);
     let res = app
         .registry_try_confirm_admin_rotation(AppUser::Alice)
@@ -104,11 +108,13 @@ fn transfer_admin() -> Result<()> {
 
     app.registry_try_update_config(AppUser::Admin, Some(AppUser::Alice), None, None, None, None)?;
 
+    // only new admin can confirm admin rotation
     let res = app
         .registry_try_confirm_admin_rotation(AppUser::Bob)
         .unwrap_err();
     assert_error(res, AuthError::Unauthorized);
 
+    // success
     app.registry_try_confirm_admin_rotation(AppUser::Alice)?;
     assert_eq!(app.registry_query_config()?.admin, AppUser::Alice.pubkey());
 
@@ -206,6 +212,28 @@ fn create_and_activate_account_default() -> Result<()> {
     assert_eq!(user_id.id, 1);
     assert_eq!(user_id.is_open, true);
     assert_eq!(user_id.is_activated, true);
+
+    Ok(())
+}
+
+#[test]
+fn activate_account_guards() -> Result<()> {
+    const MAX_DATA_SIZE: u32 = 1_000;
+
+    let mut app = init_app()?;
+
+    // user can't activate nonexistent account
+    app.registry_try_activate_account(AppUser::Alice, None, None)
+        .unwrap_err();
+
+    app.registry_try_create_account(AppUser::Alice, MAX_DATA_SIZE, None)?;
+    app.registry_try_close_account(AppUser::Alice)?;
+
+    // user can't activate closed account
+    let res = app
+        .registry_try_activate_account(AppUser::Alice, None, None)
+        .unwrap_err();
+    assert_error(res, CustomError::AccountIsNotOpened);
 
     Ok(())
 }

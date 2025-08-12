@@ -321,10 +321,7 @@ export class RegistryHelpers {
     const { id } = await this.queryUserId(user);
 
     const [pda] = PublicKey.findProgramAddressSync(
-      [
-        Buffer.from("user_account"),
-        new anchor.BN(id).toArrayLike(Buffer, "le", 1),
-      ],
+      [Buffer.from("user_account"), numberToRustBuffer(id, "u32")],
       this.program.programId
     );
     const res = await this.program.account.userAccount.fetch(pda);
@@ -352,10 +349,7 @@ export class RegistryHelpers {
     const { id } = await this.queryUserId(user);
 
     const [pda] = PublicKey.findProgramAddressSync(
-      [
-        Buffer.from("user_rotation_state"),
-        new anchor.BN(id).toArrayLike(Buffer, "le", 1),
-      ],
+      [Buffer.from("user_rotation_state"), numberToRustBuffer(id, "u32")],
       this.program.programId
     );
     const res = await this.program.account.rotationState.fetch(pda);

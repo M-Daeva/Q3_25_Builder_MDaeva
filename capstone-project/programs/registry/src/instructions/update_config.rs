@@ -51,6 +51,7 @@ impl<'info> UpdateConfig<'info> {
             ..
         } = self;
 
+        // check sender
         if sender.key() != config.admin {
             Err(AuthError::Unauthorized)?;
         }

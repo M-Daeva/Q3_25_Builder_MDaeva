@@ -72,20 +72,24 @@ impl<'info> WithdrawRevenue<'info> {
             ..
         } = self;
 
+        // check sender
         if sender.key() != config.admin {
             Err(AuthError::Unauthorized)?;
         }
 
+        // validate fee token
         if revenue_mint.key() != config.registration_fee.asset {
             Err(CustomError::WrongAssetType)?;
         }
 
         let amount = amount.unwrap_or(revenue_app_ata.amount);
 
+        // lower limit of amount to withdraw
         if amount == 0 {
             Err(CustomError::ZeroAmount)?;
         }
 
+        // higher limit of amount to withdraw
         if amount > revenue_app_ata.amount {
             Err(CustomError::ExceededAvailableAssetAmount)?;
         }

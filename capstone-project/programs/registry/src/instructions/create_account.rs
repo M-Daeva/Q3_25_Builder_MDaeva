@@ -85,14 +85,17 @@ impl<'info> CreateAccount<'info> {
             ..
         } = self;
 
+        // allow only incremented user_id
         if expected_user_id != user_counter.last_user_id + 1 {
             Err(CustomError::WrongUserId)?;
         }
 
+        // don't allow register accounts in paused program
         if config.is_paused {
             Err(CustomError::ContractIsPaused)?;
         }
 
+        // validate max allocated data size
         if max_data_size < config.data_size_range.min || max_data_size > config.data_size_range.max
         {
             Err(CustomError::MaxDataSizeIsOutOfRange)?;

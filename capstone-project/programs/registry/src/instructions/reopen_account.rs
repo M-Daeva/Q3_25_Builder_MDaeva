@@ -69,6 +69,12 @@ impl<'info> ReopenAccount<'info> {
             ..
         } = self;
 
+        // only closed account can be open
+        if user_id.is_open {
+            Err(CustomError::OpenAccountTwice)?;
+        }
+
+        // validate max allocated data size
         if max_data_size < config.data_size_range.min || max_data_size > config.data_size_range.max
         {
             Err(CustomError::MaxDataSizeIsOutOfRange)?;

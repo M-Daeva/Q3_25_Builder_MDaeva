@@ -59,6 +59,10 @@ async function main() {
     clmmMockProgram
   );
 
+  const user = new PublicKey("4aPycKEbgz5tpFozhX3M22vdhPKumM4dpLwFXoFyR8WW");
+  const userId = await registry.queryUserId(user, true);
+  await registry.queryUserAccount(user, true);
+
   // await registry.tryInit(
   //   { accountRegistrationFee: { amount: 100_000, asset: REVENUE_MINT.DEVNET } },
   //   REVENUE_MINT.DEVNET,
@@ -92,56 +96,56 @@ async function main() {
   // await chain.getTokenBalance(mintWsol, ownerKeypair.publicKey, true);
 
   // Check if pool exists before swapping
-  const AMM_CONFIG_INDEX = 0;
+  // const AMM_CONFIG_INDEX = 0;
 
-  await dexAdapter.queryAmmPoolState(
-    AMM_CONFIG_INDEX,
-    mintUsdc,
-    mintWsol,
-    true
-  );
+  // await dexAdapter.queryAmmPoolState(
+  //   AMM_CONFIG_INDEX,
+  //   mintUsdc,
+  //   mintWsol,
+  //   true
+  // );
 
-  (async () => {
-    const balanceWsol = await chain.getTokenBalance(
-      mintWsol,
-      ownerKeypair.publicKey
-    );
-    const balanceUsdc = await chain.getTokenBalance(
-      mintUsdc,
-      ownerKeypair.publicKey
-    );
+  // (async () => {
+  //   const balanceWsol = await chain.getTokenBalance(
+  //     mintWsol,
+  //     ownerKeypair.publicKey
+  //   );
+  //   const balanceUsdc = await chain.getTokenBalance(
+  //     mintUsdc,
+  //     ownerKeypair.publicKey
+  //   );
 
-    li({
-      balanceWsol,
-      balanceUsdc,
-    });
-  })();
+  //   li({
+  //     balanceWsol,
+  //     balanceUsdc,
+  //   });
+  // })();
 
-  await dexAdapter.trySwap(
-    {
-      amountIn: 5 * LAMPORTS_PER_SOL,
-      amountOutMinimum: 1,
-      tokenIn: mintWsol,
-      tokenOut: mintUsdc,
-    },
-    TX_PARAMS
-  );
+  // await dexAdapter.trySwap(
+  //   {
+  //     amountIn: 5 * LAMPORTS_PER_SOL,
+  //     amountOutMinimum: 1,
+  //     tokenIn: mintWsol,
+  //     tokenOut: mintUsdc,
+  //   },
+  //   TX_PARAMS
+  // );
 
-  (async () => {
-    const balanceWsol = await chain.getTokenBalance(
-      mintWsol,
-      ownerKeypair.publicKey
-    );
-    const balanceUsdc = await chain.getTokenBalance(
-      mintUsdc,
-      ownerKeypair.publicKey
-    );
+  // (async () => {
+  //   const balanceWsol = await chain.getTokenBalance(
+  //     mintWsol,
+  //     ownerKeypair.publicKey
+  //   );
+  //   const balanceUsdc = await chain.getTokenBalance(
+  //     mintUsdc,
+  //     ownerKeypair.publicKey
+  //   );
 
-    li({
-      balanceWsol,
-      balanceUsdc,
-    });
-  })();
+  //   li({
+  //     balanceWsol,
+  //     balanceUsdc,
+  //   });
+  // })();
 }
 
 main();
