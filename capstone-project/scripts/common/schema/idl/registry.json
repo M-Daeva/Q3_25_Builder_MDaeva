@@ -1424,13 +1424,9 @@
           }
         },
         {
-          "name": "registration_fee",
+          "name": "registration_fee_amount",
           "type": {
-            "option": {
-              "defined": {
-                "name": "AssetItem"
-              }
-            }
+            "option": "u64"
           }
         },
         {

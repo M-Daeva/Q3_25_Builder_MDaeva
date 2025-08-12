@@ -30,7 +30,7 @@ pub trait RegistryExtension {
         admin: Option<AppUser>,
         is_paused: Option<bool>,
         rotation_timeout: Option<u32>,
-        registration_fee: Option<AssetItem>,
+        registration_fee_amount: Option<u64>,
         data_size_range: Option<Range>,
     ) -> Result<TransactionMetadata>;
 
@@ -172,7 +172,7 @@ impl RegistryExtension for App {
         admin: Option<AppUser>,
         is_paused: Option<bool>,
         rotation_timeout: Option<u32>,
-        registration_fee: Option<AssetItem>,
+        registration_fee_amount: Option<u64>,
         data_size_range: Option<Range>,
     ) -> Result<TransactionMetadata> {
         // programs
@@ -201,7 +201,7 @@ impl RegistryExtension for App {
             admin: admin.map(|x| x.pubkey()),
             is_paused,
             rotation_timeout,
-            registration_fee,
+            registration_fee_amount,
             data_size_range,
         };
 

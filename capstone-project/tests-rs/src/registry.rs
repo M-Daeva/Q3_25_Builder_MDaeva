@@ -12,7 +12,7 @@ use {
     registry_cpi::{
         state::{
             Config, UserAccount, ACCOUNT_DATA_SIZE_MAX, ACCOUNT_DATA_SIZE_MIN,
-            ACCOUNT_REGISTRATION_FEE_AMOUNT, ROTATION_TIMEOUT,
+            ACCOUNT_REGISTRATION_FEE_AMOUNT, CLOCK_TIME_MIN, ROTATION_TIMEOUT,
         },
         types::{AssetItem, Range},
     },
@@ -54,6 +54,27 @@ fn init_default() -> Result<()> {
             }
         }
     );
+
+    Ok(())
+}
+
+#[test]
+fn init_admin_guard() -> Result<()> {
+    let mut app = App::new();
+    app.wait(CLOCK_TIME_MIN + 1);
+
+    let res = app
+        .registry_try_init(
+            AppUser::Admin,
+            None,
+            Some(AssetItem {
+                amount: ACCOUNT_REGISTRATION_FEE_AMOUNT,
+                asset: AppToken::USDC.pubkey(),
+            }),
+            None,
+        )
+        .unwrap_err();
+    assert_error(res, AuthError::Unauthorized);
 
     Ok(())
 }

@@ -24,7 +24,7 @@ export type AnchorUpdateConfigArgs = [
   PublicKey | null,
   boolean | null,
   number | null,
-  AnchorAssetItem | null,
+  anchor.BN | null,
   AnchorRange | null
 ];
 
@@ -81,7 +81,7 @@ export function convertUpdateConfigArgs(
     args.admin !== undefined ? args.admin : null,
     args.is_paused !== undefined ? args.is_paused : null,
     args.rotation_timeout !== undefined ? args.rotation_timeout : null,
-    args.registration_fee !== undefined ? convertAssetItem(args.registration_fee) : null,
+    args.registration_fee_amount !== undefined ? new anchor.BN(args.registration_fee_amount) : null,
     args.data_size_range !== undefined ? convertRange(args.data_size_range) : null
   ];
 }

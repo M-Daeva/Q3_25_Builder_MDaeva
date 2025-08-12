@@ -1430,13 +1430,9 @@ export type Registry = {
           }
         },
         {
-          "name": "registrationFee",
+          "name": "registrationFeeAmount",
           "type": {
-            "option": {
-              "defined": {
-                "name": "assetItem"
-              }
-            }
+            "option": "u64"
           }
         },
         {

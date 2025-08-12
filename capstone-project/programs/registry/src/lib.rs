@@ -38,14 +38,14 @@ pub mod registry {
         admin: Option<Pubkey>,
         is_paused: Option<bool>,
         rotation_timeout: Option<u32>,
-        registration_fee: Option<AssetItem>,
+        registration_fee_amount: Option<u64>,
         data_size_range: Option<Range>,
     ) -> Result<()> {
         ctx.accounts.update_config(
             admin,
             is_paused,
             rotation_timeout,
-            registration_fee,
+            registration_fee_amount,
             data_size_range,
         )
     }
