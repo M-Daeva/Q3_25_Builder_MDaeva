@@ -112,9 +112,9 @@ impl Decimal {
 
         // Calculate numerator * DECIMAL_FRACTIONAL / denominator
         // We need to be careful about overflow
-        let numerator_u256 = numerator as u128;
-        let fractional_u256 = Self::DECIMAL_FRACTIONAL as u128;
-        let denominator_u256 = denominator as u128;
+        let numerator_u256 = numerator;
+        let fractional_u256 = Self::DECIMAL_FRACTIONAL;
+        let denominator_u256 = denominator;
 
         // Check for overflow in multiplication
         match numerator_u256.checked_mul(fractional_u256) {
@@ -231,7 +231,7 @@ impl Mul for Decimal {
     fn mul(self, other: Self) -> Self {
         // For multiplication: (a * b) / DECIMAL_FRACTIONAL
         // We need to handle potential overflow
-        let result = ((self.0 as u128) * (other.0 as u128)) / Self::DECIMAL_FRACTIONAL;
+        let result = (self.0 * other.0) / Self::DECIMAL_FRACTIONAL;
         Decimal(result)
     }
 }

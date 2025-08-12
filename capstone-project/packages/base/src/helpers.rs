@@ -139,6 +139,7 @@ pub fn transfer_token_from_user<'a>(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn transfer_token_from_program<'a, T>(
     amount: u64,
     mint: &InterfaceAccount<'a, Mint>,

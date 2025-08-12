@@ -10,7 +10,7 @@ use {
     litesvm::types::TransactionMetadata,
     registry::{accounts, instruction},
     registry_cpi::{
-        state,
+        state::{self, ACCOUNT_REGISTRATION_FEE_ASSET},
         types::{AssetItem, Range},
     },
 };
@@ -124,8 +124,8 @@ impl RegistryExtension for App {
         // mint
         let revenue_mint = account_registration_fee
             .as_ref()
-            .map(|x| x.asset.clone())
-            .unwrap();
+            .map(|x| x.asset)
+            .unwrap_or(ACCOUNT_REGISTRATION_FEE_ASSET);
 
         // pda
         let bump = self.pda.registry_bump();
