@@ -121,7 +121,7 @@ fn swap_multihop_2() -> Result<()> {
         ],
     )?;
 
-    // swap WBTC -> WSOL -> USDC
+    // swap WBTC -> PYTH -> USDC
     let bob_wbtc_before = app.get_balance(AppUser::Bob, AppToken::WBTC);
     let bob_usdc_before = app.get_balance(AppUser::Bob, AppToken::USDC);
 
@@ -185,7 +185,7 @@ fn swap_and_activate_default() -> Result<()> {
         ],
     )?;
 
-    // swap WBTC -> WSOL -> USDC
+    // swap WBTC -> PYTH -> USDC
     let bob_wbtc_before = app.get_balance(AppUser::Bob, AppToken::WBTC);
     let bob_usdc_before = app.get_balance(AppUser::Bob, AppToken::USDC);
 

@@ -59,6 +59,10 @@ impl<'info> UpdateConfig<'info> {
         let mut is_config_updated = false;
 
         if let Some(new_admin) = admin {
+            if new_admin == sender.key() {
+                Err(AuthError::UselessRotation)?;
+            }
+
             admin_rotation_state.new_owner = Some(new_admin);
             admin_rotation_state.expiration_date =
                 get_clock_time()? + config.rotation_timeout as u64;

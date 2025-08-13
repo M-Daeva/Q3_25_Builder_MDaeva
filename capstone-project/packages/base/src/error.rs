@@ -8,6 +8,9 @@ pub enum AuthError {
     #[msg("New owner wasn't specified!")]
     NoNewOwner,
 
+    #[msg("Sender can't be the new owner!")]
+    UselessRotation,
+
     #[msg("It's too late to accept owner role!")]
     TransferOwnerDeadline,
 }

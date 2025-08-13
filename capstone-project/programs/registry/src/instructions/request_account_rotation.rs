@@ -1,6 +1,6 @@
 use {
     anchor_lang::prelude::*,
-    base::helpers::get_clock_time,
+    base::{error::AuthError, helpers::get_clock_time},
     registry_cpi::state::{
         Bump, Config, RotationState, UserId, SEED_BUMP, SEED_CONFIG, SEED_USER_ID,
         SEED_USER_ROTATION_STATE,
@@ -42,10 +42,15 @@ pub struct RequestAccountRotation<'info> {
 impl<'info> RequestAccountRotation<'info> {
     pub fn request_account_rotation(&mut self, new_owner: Pubkey) -> Result<()> {
         let Self {
+            sender,
             user_rotation_state,
             config,
             ..
         } = self;
+
+        if new_owner == sender.key() {
+            Err(AuthError::UselessRotation)?;
+        }
 
         user_rotation_state.new_owner = Some(new_owner);
         user_rotation_state.expiration_date = get_clock_time()? + config.rotation_timeout as u64;
