@@ -13,7 +13,7 @@ use {
 };
 
 // IDL builder doesn't see ID from cpi package, we need to duplicate it here
-declare_id!("3RVBZDA6dgcjkGJtXRJxLvLh5g8qY6QwGHoribyKPN2E");
+declare_id!("EXcPAkk4fXUpabER61k2KTURT4bL7cgfxTmi6AyDkJLD");
 
 #[program]
 pub mod registry {

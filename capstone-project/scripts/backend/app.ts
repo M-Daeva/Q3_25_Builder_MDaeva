@@ -59,17 +59,21 @@ async function main() {
     clmmMockProgram
   );
 
-  const user = new PublicKey("4aPycKEbgz5tpFozhX3M22vdhPKumM4dpLwFXoFyR8WW");
-  const userId = await registry.queryUserId(user, true);
-  await registry.queryUserAccount(user, true);
-
   // await registry.tryInit(
   //   { accountRegistrationFee: { amount: 100_000, asset: REVENUE_MINT.DEVNET } },
   //   REVENUE_MINT.DEVNET,
   //   TX_PARAMS
   // );
-
   // await registry.queryConfig(true);
+
+  const user = new PublicKey("4aPycKEbgz5tpFozhX3M22vdhPKumM4dpLwFXoFyR8WW");
+  // const userId = await registry.queryUserId(user, true);
+  // await registry.queryUserAccount(user, true);
+
+  // await registry.tryCreateAccount(420, TX_PARAMS);
+  await registry.queryUserAccount(ownerKeypair.publicKey, true);
+  // await registry.tryRequestAccountRotation({ newOwner: user }, TX_PARAMS);
+  await registry.queryUserRotationState(ownerKeypair.publicKey, true);
 
   // await dexAdapter.tryInit(
   //   {
