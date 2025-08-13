@@ -318,10 +318,7 @@ export class RegistryHelpers {
   }
 
   async queryConfig(isDisplayed: boolean = false) {
-    const [pda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("config")],
-      this.program.programId
-    );
+    const [pda] = this.getConfigPda();
     const res = await this.program.account.config.fetch(pda);
 
     return logAndReturn(res, isDisplayed);
@@ -387,6 +384,35 @@ export class RegistryHelpers {
     const res = await this.program.account.rotationState.fetch(pda);
 
     return logAndReturn(res, isDisplayed);
+  }
+
+  async queryRevenue(isDisplayed: boolean = false) {
+    const [configPda] = this.getConfigPda();
+    const {
+      registrationFee: { asset },
+    } = await this.program.account.config.fetch(configPda);
+
+    const ata = await spl.getAssociatedTokenAddress(
+      asset,
+      configPda,
+      true,
+      spl.TOKEN_PROGRAM_ID,
+      spl.ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+
+    const res = await ChainHelpers.getAtaTokenBalance(
+      this.provider.connection,
+      ata
+    );
+
+    return logAndReturn(res, isDisplayed);
+  }
+
+  getConfigPda() {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("config")],
+      this.program.programId
+    );
   }
 
   getUserAccountPda(id: number) {
@@ -1079,6 +1105,21 @@ export class ChainHelpers {
     return logAndReturn(balance / anchor.web3.LAMPORTS_PER_SOL, isDisplayed);
   }
 
+  static async getAtaTokenBalance(
+    connection: anchor.web3.Connection,
+    ownerAta: PublicKey
+  ): Promise<number> {
+    let uiAmount: number | null = 0;
+
+    try {
+      ({
+        value: { uiAmount },
+      } = await connection.getTokenAccountBalance(ownerAta));
+    } catch (_) {}
+
+    return uiAmount || 0;
+  }
+
   async getTokenBalance(
     mint: PublicKey | string,
     owner: PublicKey | string,
@@ -1095,15 +1136,12 @@ export class ChainHelpers {
       spl.ASSOCIATED_TOKEN_PROGRAM_ID
     );
 
-    let uiAmount: number | null = 0;
+    const uiAmount = await ChainHelpers.getAtaTokenBalance(
+      this.provider.connection,
+      ata
+    );
 
-    try {
-      ({
-        value: { uiAmount },
-      } = await this.provider.connection.getTokenAccountBalance(ata));
-    } catch (_) {}
-
-    return logAndReturn(uiAmount || 0, isDisplayed);
+    return logAndReturn(uiAmount, isDisplayed);
   }
 
   async getTx(signature: string, isDisplayed: boolean = false) {
