@@ -361,10 +361,7 @@ impl RegistryExtension for App {
             user_rotation_state,
         };
 
-        let instruction_data = instruction::CreateAccount {
-            max_data_size,
-            expected_user_id,
-        };
+        let instruction_data = instruction::CreateAccount { max_data_size };
 
         send_tx_with_ix(
             self,

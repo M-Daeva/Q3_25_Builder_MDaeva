@@ -11,7 +11,7 @@ use {
 };
 
 #[derive(Accounts)]
-#[instruction(max_data_size: u32, expected_user_id: u32)]
+#[instruction(max_data_size: u32)]
 pub struct CreateAccount<'info> {
     pub system_program: Program<'info, System>,
 
@@ -48,12 +48,12 @@ pub struct CreateAccount<'info> {
     )]
     pub user_id: Account<'info, UserId>,
 
-    // user_id.id doesn't exist yet, use expected_user_id instead
+    // user_id.id doesn't exist yet, use user_counter.last_user_id + 1 instead
     #[account(
         init,
         payer = sender,
         space = UserAccount::get_space(max_data_size),
-        seeds = [SEED_USER_ACCOUNT.as_bytes(), expected_user_id.to_le_bytes().as_ref()],
+        seeds = [SEED_USER_ACCOUNT.as_bytes(), (user_counter.last_user_id + 1).to_le_bytes().as_ref()],
         bump
     )]
     pub user_account: Account<'info, UserAccount>,
@@ -62,19 +62,14 @@ pub struct CreateAccount<'info> {
         init,
         payer = sender,
         space = get_space(RotationState::INIT_SPACE),
-        seeds = [SEED_USER_ROTATION_STATE.as_bytes(), expected_user_id.to_le_bytes().as_ref()],
+        seeds = [SEED_USER_ROTATION_STATE.as_bytes(), (user_counter.last_user_id + 1).to_le_bytes().as_ref()],
         bump
     )]
     pub user_rotation_state: Account<'info, RotationState>,
 }
 
 impl<'info> CreateAccount<'info> {
-    pub fn create_account(
-        &mut self,
-        bumps: CreateAccountBumps,
-        max_data_size: u32,
-        expected_user_id: u32,
-    ) -> Result<()> {
+    pub fn create_account(&mut self, bumps: CreateAccountBumps, max_data_size: u32) -> Result<()> {
         let Self {
             sender,
             config,
@@ -84,11 +79,6 @@ impl<'info> CreateAccount<'info> {
             user_rotation_state,
             ..
         } = self;
-
-        // allow only incremented user_id
-        if expected_user_id != user_counter.last_user_id + 1 {
-            Err(CustomError::WrongUserId)?;
-        }
 
         // don't allow register accounts in paused program
         if config.is_paused {
@@ -101,10 +91,11 @@ impl<'info> CreateAccount<'info> {
             Err(CustomError::MaxDataSizeIsOutOfRange)?;
         }
 
-        user_counter.last_user_id = expected_user_id;
+        let current_user_id = user_counter.last_user_id + 1;
+        user_counter.last_user_id = current_user_id;
 
         user_id.set_inner(UserId {
-            id: expected_user_id,
+            id: current_user_id,
             is_open: true,
             is_activated: false,
             account_bump: bumps.user_account,

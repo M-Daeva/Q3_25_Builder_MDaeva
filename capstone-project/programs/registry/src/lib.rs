@@ -59,13 +59,8 @@ pub mod registry {
     }
 
     /// creates user PDA account taking rent exempt in SOL
-    pub fn create_account(
-        ctx: Context<CreateAccount>,
-        max_data_size: u32,
-        expected_user_id: u32,
-    ) -> Result<()> {
-        ctx.accounts
-            .create_account(ctx.bumps, max_data_size, expected_user_id)
+    pub fn create_account(ctx: Context<CreateAccount>, max_data_size: u32) -> Result<()> {
+        ctx.accounts.create_account(ctx.bumps, max_data_size)
     }
 
     /// 1st step to to change allocated data space or just to redeem rent

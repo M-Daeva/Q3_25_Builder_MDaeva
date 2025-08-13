@@ -726,77 +726,16 @@ export type Registry = {
         },
         {
           "name": "userAccount",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  117,
-                  115,
-                  101,
-                  114,
-                  95,
-                  97,
-                  99,
-                  99,
-                  111,
-                  117,
-                  110,
-                  116
-                ]
-              },
-              {
-                "kind": "arg",
-                "path": "expectedUserId"
-              }
-            ]
-          }
+          "writable": true
         },
         {
           "name": "userRotationState",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  117,
-                  115,
-                  101,
-                  114,
-                  95,
-                  114,
-                  111,
-                  116,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
-                  95,
-                  115,
-                  116,
-                  97,
-                  116,
-                  101
-                ]
-              },
-              {
-                "kind": "arg",
-                "path": "expectedUserId"
-              }
-            ]
-          }
+          "writable": true
         }
       ],
       "args": [
         {
           "name": "maxDataSize",
-          "type": "u32"
-        },
-        {
-          "name": "expectedUserId",
           "type": "u32"
         }
       ]

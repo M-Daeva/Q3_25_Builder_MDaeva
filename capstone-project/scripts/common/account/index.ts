@@ -131,15 +131,51 @@ export class RegistryHelpers {
   ): Promise<anchor.web3.TransactionSignature> {
     const { lastUserId } = await this.queryUserCounter();
     const expectedUserId = lastUserId + 1;
+    const [userAccountPda] = this.getUserAccountPda(expectedUserId);
+    const [userRotationStatePda] = this.getUserRotationStatePda(expectedUserId);
 
     const ix = await this.program.methods
-      .createAccount(maxDataSize, expectedUserId)
+      .createAccount(maxDataSize)
       .accounts({
         sender: this.sender,
+        userAccount: userAccountPda,
+        userRotationState: userRotationStatePda,
       })
       .instruction();
 
     return await this.handleTx([ix], params, isDisplayed);
+  }
+
+  async tryCreateAndActivateAccount(
+    maxDataSize: number,
+    revenueMint: PublicKey,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const { lastUserId } = await this.queryUserCounter();
+    const expectedUserId = lastUserId + 1;
+    const [userAccountPda] = this.getUserAccountPda(expectedUserId);
+    const [userRotationStatePda] = this.getUserRotationStatePda(expectedUserId);
+
+    const createIx = await this.program.methods
+      .createAccount(maxDataSize)
+      .accounts({
+        sender: this.sender,
+        userAccount: userAccountPda,
+        userRotationState: userRotationStatePda,
+      })
+      .instruction();
+
+    const activateIx = await this.program.methods
+      .activateAccount(this.sender)
+      .accounts({
+        tokenProgram: await this.getTokenProgram(revenueMint),
+        sender: this.sender,
+        revenueMint,
+      })
+      .instruction();
+
+    return await this.handleTx([createIx, activateIx], params, isDisplayed);
   }
 
   // get estimated tx cost in SOL
@@ -150,11 +186,15 @@ export class RegistryHelpers {
   ) {
     const { lastUserId } = await this.queryUserCounter();
     const expectedUserId = lastUserId + 1;
+    const [userAccountPda] = this.getUserAccountPda(expectedUserId);
+    const [userRotationStatePda] = this.getUserRotationStatePda(expectedUserId);
 
     const res = await this.program.methods
-      .createAccount(maxDataSize, expectedUserId)
+      .createAccount(maxDataSize)
       .accounts({
         sender: this.sender,
+        userAccount: userAccountPda,
+        userRotationState: userRotationStatePda,
       })
       .simulate();
 
@@ -319,11 +359,7 @@ export class RegistryHelpers {
 
   async queryUserAccount(user: PublicKey, isDisplayed: boolean = false) {
     const { id } = await this.queryUserId(user);
-
-    const [pda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("user_account"), numberToRustBuffer(id, "u32")],
-      this.program.programId
-    );
+    const [pda] = this.getUserAccountPda(id);
     const res = await this.program.account.userAccount.fetch(pda);
 
     return logAndReturn(res, isDisplayed);
@@ -347,14 +383,24 @@ export class RegistryHelpers {
 
   async queryUserRotationState(user: PublicKey, isDisplayed: boolean = false) {
     const { id } = await this.queryUserId(user);
-
-    const [pda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("user_rotation_state"), numberToRustBuffer(id, "u32")],
-      this.program.programId
-    );
+    const [pda] = this.getUserRotationStatePda(id);
     const res = await this.program.account.rotationState.fetch(pda);
 
     return logAndReturn(res, isDisplayed);
+  }
+
+  getUserAccountPda(id: number) {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("user_account"), numberToRustBuffer(id, "u32")],
+      this.program.programId
+    );
+  }
+
+  getUserRotationStatePda(id: number) {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("user_rotation_state"), numberToRustBuffer(id, "u32")],
+      this.program.programId
+    );
   }
 }
 

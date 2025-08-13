@@ -138,10 +138,8 @@ fn create_account_guards() -> Result<()> {
     let mut app = init_app()?;
 
     // user can't create account with improper user_id
-    let res = app
-        .registry_try_create_account(AppUser::Alice, MAX_DATA_SIZE, Some(5))
+    app.registry_try_create_account(AppUser::Alice, MAX_DATA_SIZE, Some(5))
         .unwrap_err();
-    assert_error(res, CustomError::WrongUserId);
 
     // user can't create account with too small data
     let res = app
