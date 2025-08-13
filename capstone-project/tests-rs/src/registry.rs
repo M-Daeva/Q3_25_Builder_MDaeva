@@ -226,14 +226,32 @@ fn activate_account_guards() -> Result<()> {
     app.registry_try_activate_account(AppUser::Alice, None, None)
         .unwrap_err();
 
+    // user can't activate closed account
     app.registry_try_create_account(AppUser::Alice, MAX_DATA_SIZE, None)?;
     app.registry_try_close_account(AppUser::Alice)?;
-
-    // user can't activate closed account
     let res = app
         .registry_try_activate_account(AppUser::Alice, None, None)
         .unwrap_err();
     assert_error(res, CustomError::AccountIsNotOpened);
+
+    // user can't activate account using wrong token
+    app.registry_try_reopen_account(AppUser::Alice, MAX_DATA_SIZE)?;
+    app.get_or_create_ata(
+        AppUser::Admin,
+        &app.pda.registry_config(),
+        &AppToken::PYTH.pubkey(),
+    )?;
+    let res = app
+        .registry_try_activate_account(AppUser::Alice, None, Some(AppToken::PYTH))
+        .unwrap_err();
+    assert_error(res, CustomError::WrongAssetType);
+
+    // user can't activate account twice
+    app.registry_try_activate_account(AppUser::Alice, None, None)?;
+    let res = app
+        .registry_try_activate_account(AppUser::Alice, None, None)
+        .unwrap_err();
+    assert_error(res, CustomError::ActivateAccountTwice);
 
     Ok(())
 }
