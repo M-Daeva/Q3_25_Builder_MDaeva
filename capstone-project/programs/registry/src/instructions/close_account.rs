@@ -1,8 +1,11 @@
 use {
     anchor_lang::prelude::*,
-    registry_cpi::state::{
-        RotationState, UserAccount, UserId, SEED_USER_ACCOUNT, SEED_USER_ID,
-        SEED_USER_ROTATION_STATE,
+    registry_cpi::{
+        error::CustomError,
+        state::{
+            RotationState, UserAccount, UserId, SEED_USER_ACCOUNT, SEED_USER_ID,
+            SEED_USER_ROTATION_STATE,
+        },
     },
 };
 
@@ -42,6 +45,11 @@ pub struct CloseAccount<'info> {
 impl<'info> CloseAccount<'info> {
     pub fn close_account(&mut self) -> Result<()> {
         let Self { user_id, .. } = self;
+
+        // only open account can be closed
+        if !user_id.is_open {
+            Err(CustomError::AccountIsNotOpened)?;
+        }
 
         user_id.is_open = false;
 

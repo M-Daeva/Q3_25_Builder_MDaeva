@@ -37,6 +37,12 @@ pub enum CustomError {
     #[msg("Account isn't activated!")]
     AccountIsNotActivated,
 
+    #[msg("Account can't be opened twice!")]
+    OpenAccountTwice,
+
+    #[msg("Account isn't opened!")]
+    AccountIsNotOpened,
+
     #[msg("Nonce must be unique!")]
     BadNonce,
 }

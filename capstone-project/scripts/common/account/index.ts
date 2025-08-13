@@ -131,15 +131,51 @@ export class RegistryHelpers {
   ): Promise<anchor.web3.TransactionSignature> {
     const { lastUserId } = await this.queryUserCounter();
     const expectedUserId = lastUserId + 1;
+    const [userAccountPda] = this.getUserAccountPda(expectedUserId);
+    const [userRotationStatePda] = this.getUserRotationStatePda(expectedUserId);
 
     const ix = await this.program.methods
-      .createAccount(maxDataSize, expectedUserId)
+      .createAccount(maxDataSize)
       .accounts({
         sender: this.sender,
+        userAccount: userAccountPda,
+        userRotationState: userRotationStatePda,
       })
       .instruction();
 
     return await this.handleTx([ix], params, isDisplayed);
+  }
+
+  async tryCreateAndActivateAccount(
+    maxDataSize: number,
+    revenueMint: PublicKey,
+    params: TxParams = {},
+    isDisplayed: boolean = false
+  ): Promise<anchor.web3.TransactionSignature> {
+    const { lastUserId } = await this.queryUserCounter();
+    const expectedUserId = lastUserId + 1;
+    const [userAccountPda] = this.getUserAccountPda(expectedUserId);
+    const [userRotationStatePda] = this.getUserRotationStatePda(expectedUserId);
+
+    const createIx = await this.program.methods
+      .createAccount(maxDataSize)
+      .accounts({
+        sender: this.sender,
+        userAccount: userAccountPda,
+        userRotationState: userRotationStatePda,
+      })
+      .instruction();
+
+    const activateIx = await this.program.methods
+      .activateAccount(this.sender)
+      .accounts({
+        tokenProgram: await this.getTokenProgram(revenueMint),
+        sender: this.sender,
+        revenueMint,
+      })
+      .instruction();
+
+    return await this.handleTx([createIx, activateIx], params, isDisplayed);
   }
 
   // get estimated tx cost in SOL
@@ -150,11 +186,15 @@ export class RegistryHelpers {
   ) {
     const { lastUserId } = await this.queryUserCounter();
     const expectedUserId = lastUserId + 1;
+    const [userAccountPda] = this.getUserAccountPda(expectedUserId);
+    const [userRotationStatePda] = this.getUserRotationStatePda(expectedUserId);
 
     const res = await this.program.methods
-      .createAccount(maxDataSize, expectedUserId)
+      .createAccount(maxDataSize)
       .accounts({
         sender: this.sender,
+        userAccount: userAccountPda,
+        userRotationState: userRotationStatePda,
       })
       .simulate();
 
@@ -278,10 +318,7 @@ export class RegistryHelpers {
   }
 
   async queryConfig(isDisplayed: boolean = false) {
-    const [pda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("config")],
-      this.program.programId
-    );
+    const [pda] = this.getConfigPda();
     const res = await this.program.account.config.fetch(pda);
 
     return logAndReturn(res, isDisplayed);
@@ -317,19 +354,83 @@ export class RegistryHelpers {
     return logAndReturn(res, isDisplayed);
   }
 
+  async queryUserAccountById(id: number) {
+    const [pda] = this.getUserAccountPda(id);
+    return await this.program.account.userAccount.fetch(pda);
+  }
+
   async queryUserAccount(user: PublicKey, isDisplayed: boolean = false) {
     const { id } = await this.queryUserId(user);
-
-    const [pda] = PublicKey.findProgramAddressSync(
-      [
-        Buffer.from("user_account"),
-        new anchor.BN(id).toArrayLike(Buffer, "le", 1),
-      ],
-      this.program.programId
-    );
-    const res = await this.program.account.userAccount.fetch(pda);
+    const res = await this.queryUserAccountById(id);
 
     return logAndReturn(res, isDisplayed);
+  }
+
+  async queryUserAccountList(batchSize: number = 100): Promise<
+    {
+      id: number;
+      data: string;
+      nonce: anchor.BN;
+      maxSize: number;
+    }[]
+  > {
+    let userAccountList: {
+      id: number;
+      data: string;
+      nonce: anchor.BN;
+      maxSize: number;
+    }[] = [];
+
+    const { lastUserId } = await this.queryUserCounter();
+
+    // Create all PDAs first
+    const userAccountPdas: { id: number; pda: PublicKey }[] = [];
+    for (let i = 1; i <= lastUserId; i++) {
+      const [pda] = this.getUserAccountPda(i);
+      userAccountPdas.push({ id: i, pda });
+    }
+
+    // Batch fetch accounts
+    for (let i = 0; i < userAccountPdas.length; i += batchSize) {
+      const batch = userAccountPdas.slice(i, i + batchSize);
+      const pdas = batch.map((item) => item.pda);
+
+      try {
+        const accountList =
+          await this.program.account.userAccount.fetchMultiple(pdas);
+
+        // Process the batch
+        for (let j = 0; j < accountList.length; j++) {
+          const account = accountList[j];
+
+          // Account exists
+          if (account) {
+            userAccountList.push({
+              id: batch[j].id,
+              ...account,
+            });
+          }
+        }
+      } catch (error) {
+        li(`Error fetching batch starting at index ${i}: ${error}`);
+
+        // Fallback to individual fetches for this batch
+        for (const { id, pda } of batch) {
+          try {
+            const account = await this.program.account.userAccount.fetch(pda);
+
+            userAccountList.push({
+              id,
+              ...account,
+            });
+          } catch (err) {
+            li(`Failed to fetch account ${id}: ${err}`);
+          }
+        }
+      }
+    }
+
+    return userAccountList;
   }
 
   async readUserData(
@@ -350,17 +451,53 @@ export class RegistryHelpers {
 
   async queryUserRotationState(user: PublicKey, isDisplayed: boolean = false) {
     const { id } = await this.queryUserId(user);
-
-    const [pda] = PublicKey.findProgramAddressSync(
-      [
-        Buffer.from("user_rotation_state"),
-        new anchor.BN(id).toArrayLike(Buffer, "le", 1),
-      ],
-      this.program.programId
-    );
+    const [pda] = this.getUserRotationStatePda(id);
     const res = await this.program.account.rotationState.fetch(pda);
 
     return logAndReturn(res, isDisplayed);
+  }
+
+  async queryRevenue(isDisplayed: boolean = false) {
+    const [configPda] = this.getConfigPda();
+    const {
+      registrationFee: { asset },
+    } = await this.program.account.config.fetch(configPda);
+
+    const ata = await spl.getAssociatedTokenAddress(
+      asset,
+      configPda,
+      true,
+      spl.TOKEN_PROGRAM_ID,
+      spl.ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+
+    const res = await ChainHelpers.getAtaTokenBalance(
+      this.provider.connection,
+      ata
+    );
+
+    return logAndReturn(res, isDisplayed);
+  }
+
+  getConfigPda() {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("config")],
+      this.program.programId
+    );
+  }
+
+  getUserAccountPda(id: number) {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("user_account"), numberToRustBuffer(id, "u32")],
+      this.program.programId
+    );
+  }
+
+  getUserRotationStatePda(id: number) {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("user_rotation_state"), numberToRustBuffer(id, "u32")],
+      this.program.programId
+    );
   }
 }
 
@@ -1039,6 +1176,21 @@ export class ChainHelpers {
     return logAndReturn(balance / anchor.web3.LAMPORTS_PER_SOL, isDisplayed);
   }
 
+  static async getAtaTokenBalance(
+    connection: anchor.web3.Connection,
+    ownerAta: PublicKey
+  ): Promise<number> {
+    let uiAmount: number | null = 0;
+
+    try {
+      ({
+        value: { uiAmount },
+      } = await connection.getTokenAccountBalance(ownerAta));
+    } catch (_) {}
+
+    return uiAmount || 0;
+  }
+
   async getTokenBalance(
     mint: PublicKey | string,
     owner: PublicKey | string,
@@ -1055,15 +1207,12 @@ export class ChainHelpers {
       spl.ASSOCIATED_TOKEN_PROGRAM_ID
     );
 
-    let uiAmount: number | null = 0;
+    const uiAmount = await ChainHelpers.getAtaTokenBalance(
+      this.provider.connection,
+      ata
+    );
 
-    try {
-      ({
-        value: { uiAmount },
-      } = await this.provider.connection.getTokenAccountBalance(ata));
-    } catch (_) {}
-
-    return logAndReturn(uiAmount || 0, isDisplayed);
+    return logAndReturn(uiAmount, isDisplayed);
   }
 
   async getTx(signature: string, isDisplayed: boolean = false) {

@@ -146,6 +146,7 @@ pub struct Pda {
     dex_adapter_program_id: Pubkey,
 }
 
+#[allow(clippy::useless_vec)]
 impl Pda {
     // clmm-mock
     //
@@ -631,13 +632,15 @@ impl App {
         owner: &Pubkey,
         mint: &Pubkey,
     ) -> Result<Pubkey> {
-        sol_kite::create_associated_token_account(litesvm, owner, mint, &sender)
+        sol_kite::create_associated_token_account(litesvm, owner, mint, sender)
             .map_err(to_anchor_err)
     }
 }
 
-pub fn to_string_vec(str_vec: &[&str]) -> Vec<String> {
-    str_vec.iter().map(|x| x.to_string()).collect()
+impl Default for App {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 // get_token_account_balance(&app.litesvm, &bob_pyth_ata).map_err(|_| anchor_lang::error!(CustomError::TokenBalanceError))?;
@@ -659,7 +662,7 @@ fn upload_program(litesvm: &mut LiteSVM, program_name: &str, program_id: &Pubkey
     let path_b = &format!("{}{}.so", DUMPS_PATH, program_name);
 
     // try to deploy custom programs first, if it doesn't work then deploy dumps
-    if let Err(_) = deploy_program(litesvm, program_id, path_a) {
+    if deploy_program(litesvm, program_id, path_a).is_err() {
         deploy_program(litesvm, program_id, path_b).unwrap()
     }
 }
@@ -738,7 +741,7 @@ pub mod extension {
         litesvm.send_transaction(transaction).map_err(|e| {
             let logs = e.meta.logs;
             let logs_str = format!("{:#?}", &logs);
-            println!("logs: {:#?}\n", logs);
+            // println!("logs: {:#?}\n", logs);
 
             to_anchor_err(logs_str)
         })
@@ -802,14 +805,13 @@ fn parse_anchor_err(error: impl std::fmt::Debug) -> String {
     let error_msg = &format!("{:#?}", error);
 
     // Try to parse the error message as JSON (program logs)
-    if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(error_msg) {
-        if let serde_json::Value::Array(logs) = json_value {
-            // Look for the AnchorError log entry
-            for log in &logs {
-                if let Some(log_str) = log.as_str() {
-                    if log_str.contains("AnchorError occurred") {
-                        return extract_error_details(log_str).unwrap_or_default();
-                    }
+    if let Ok(serde_json::Value::Array(logs)) = serde_json::from_str::<serde_json::Value>(error_msg)
+    {
+        // Look for the AnchorError log entry
+        for log in &logs {
+            if let Some(log_str) = log.as_str() {
+                if log_str.contains("AnchorError occurred") {
+                    return extract_error_details(log_str).unwrap_or_default();
                 }
             }
         }

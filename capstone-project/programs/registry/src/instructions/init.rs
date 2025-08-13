@@ -4,12 +4,16 @@ use {
         associated_token::AssociatedToken,
         token_interface::{Mint, TokenAccount, TokenInterface},
     },
-    base::helpers::{get_clock_time, get_space},
+    base::{
+        error::AuthError,
+        helpers::{get_clock_time, get_space},
+    },
     registry_cpi::{
         state::{
             Bump, Config, RotationState, UserCounter, ACCOUNT_DATA_SIZE_MAX, ACCOUNT_DATA_SIZE_MIN,
-            ACCOUNT_REGISTRATION_FEE_AMOUNT, ACCOUNT_REGISTRATION_FEE_ASSET, ROTATION_TIMEOUT,
-            SEED_ADMIN_ROTATION_STATE, SEED_BUMP, SEED_CONFIG, SEED_USER_COUNTER,
+            ACCOUNT_REGISTRATION_FEE_AMOUNT, ACCOUNT_REGISTRATION_FEE_ASSET, CLOCK_TIME_MIN,
+            MAINNET_ADMIN, ROTATION_TIMEOUT, SEED_ADMIN_ROTATION_STATE, SEED_BUMP, SEED_CONFIG,
+            SEED_USER_COUNTER,
         },
         types::{AssetItem, Range},
     },
@@ -77,7 +81,6 @@ pub struct Init<'info> {
     pub revenue_app_ata: InterfaceAccount<'info, TokenAccount>,
 }
 
-// TODO: add localnet/mainnet admin guard based on clock_time
 impl<'info> Init<'info> {
     pub fn init(
         &mut self,
@@ -86,6 +89,7 @@ impl<'info> Init<'info> {
         account_registration_fee: Option<AssetItem>,
         account_data_size_range: Option<Range>,
     ) -> Result<()> {
+        let clock_time = get_clock_time()?;
         let Self {
             sender,
             bump,
@@ -94,6 +98,11 @@ impl<'info> Init<'info> {
             admin_rotation_state,
             ..
         } = self;
+
+        // devnet/mainnet program must be initialized by specified address
+        if clock_time > CLOCK_TIME_MIN && sender.key() != MAINNET_ADMIN {
+            Err(AuthError::Unauthorized)?;
+        }
 
         bump.set_inner(Bump {
             config: bumps.config,
@@ -120,7 +129,7 @@ impl<'info> Init<'info> {
         admin_rotation_state.set_inner(RotationState {
             owner: sender.key(),
             new_owner: None,
-            expiration_date: get_clock_time()?,
+            expiration_date: clock_time,
         });
 
         Ok(())

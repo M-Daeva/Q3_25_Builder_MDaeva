@@ -4,7 +4,7 @@ use {
     registry_cpi::{
         error::CustomError,
         state::{Bump, Config, RotationState, SEED_ADMIN_ROTATION_STATE, SEED_BUMP, SEED_CONFIG},
-        types::{AssetItem, Range},
+        types::Range,
     },
 };
 
@@ -41,7 +41,7 @@ impl<'info> UpdateConfig<'info> {
         admin: Option<Pubkey>,
         is_paused: Option<bool>,
         rotation_timeout: Option<u32>,
-        registration_fee: Option<AssetItem>,
+        registration_fee_amount: Option<u64>,
         data_size_range: Option<Range>,
     ) -> Result<()> {
         let Self {
@@ -51,6 +51,7 @@ impl<'info> UpdateConfig<'info> {
             ..
         } = self;
 
+        // check sender
         if sender.key() != config.admin {
             Err(AuthError::Unauthorized)?;
         }
@@ -58,6 +59,10 @@ impl<'info> UpdateConfig<'info> {
         let mut is_config_updated = false;
 
         if let Some(new_admin) = admin {
+            if new_admin == sender.key() {
+                Err(AuthError::UselessRotation)?;
+            }
+
             admin_rotation_state.new_owner = Some(new_admin);
             admin_rotation_state.expiration_date =
                 get_clock_time()? + config.rotation_timeout as u64;
@@ -74,8 +79,8 @@ impl<'info> UpdateConfig<'info> {
             is_config_updated = true;
         }
 
-        if let Some(x) = registration_fee {
-            config.registration_fee = x;
+        if let Some(x) = registration_fee_amount {
+            config.registration_fee.amount = x;
             is_config_updated = true;
         }
 

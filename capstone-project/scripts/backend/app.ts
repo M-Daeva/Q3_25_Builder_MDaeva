@@ -64,8 +64,16 @@ async function main() {
   //   REVENUE_MINT.DEVNET,
   //   TX_PARAMS
   // );
-
   // await registry.queryConfig(true);
+
+  const user = new PublicKey("4aPycKEbgz5tpFozhX3M22vdhPKumM4dpLwFXoFyR8WW");
+  // const userId = await registry.queryUserId(user, true);
+  // await registry.queryUserAccount(user, true);
+
+  // await registry.tryCreateAccount(420, TX_PARAMS);
+  await registry.queryUserAccount(ownerKeypair.publicKey, true);
+  // await registry.tryRequestAccountRotation({ newOwner: user }, TX_PARAMS);
+  await registry.queryUserRotationState(ownerKeypair.publicKey, true);
 
   // await dexAdapter.tryInit(
   //   {
@@ -92,56 +100,56 @@ async function main() {
   // await chain.getTokenBalance(mintWsol, ownerKeypair.publicKey, true);
 
   // Check if pool exists before swapping
-  const AMM_CONFIG_INDEX = 0;
+  // const AMM_CONFIG_INDEX = 0;
 
-  await dexAdapter.queryAmmPoolState(
-    AMM_CONFIG_INDEX,
-    mintUsdc,
-    mintWsol,
-    true
-  );
+  // await dexAdapter.queryAmmPoolState(
+  //   AMM_CONFIG_INDEX,
+  //   mintUsdc,
+  //   mintWsol,
+  //   true
+  // );
 
-  (async () => {
-    const balanceWsol = await chain.getTokenBalance(
-      mintWsol,
-      ownerKeypair.publicKey
-    );
-    const balanceUsdc = await chain.getTokenBalance(
-      mintUsdc,
-      ownerKeypair.publicKey
-    );
+  // (async () => {
+  //   const balanceWsol = await chain.getTokenBalance(
+  //     mintWsol,
+  //     ownerKeypair.publicKey
+  //   );
+  //   const balanceUsdc = await chain.getTokenBalance(
+  //     mintUsdc,
+  //     ownerKeypair.publicKey
+  //   );
 
-    li({
-      balanceWsol,
-      balanceUsdc,
-    });
-  })();
+  //   li({
+  //     balanceWsol,
+  //     balanceUsdc,
+  //   });
+  // })();
 
-  await dexAdapter.trySwap(
-    {
-      amountIn: 5 * LAMPORTS_PER_SOL,
-      amountOutMinimum: 1,
-      tokenIn: mintWsol,
-      tokenOut: mintUsdc,
-    },
-    TX_PARAMS
-  );
+  // await dexAdapter.trySwap(
+  //   {
+  //     amountIn: 5 * LAMPORTS_PER_SOL,
+  //     amountOutMinimum: 1,
+  //     tokenIn: mintWsol,
+  //     tokenOut: mintUsdc,
+  //   },
+  //   TX_PARAMS
+  // );
 
-  (async () => {
-    const balanceWsol = await chain.getTokenBalance(
-      mintWsol,
-      ownerKeypair.publicKey
-    );
-    const balanceUsdc = await chain.getTokenBalance(
-      mintUsdc,
-      ownerKeypair.publicKey
-    );
+  // (async () => {
+  //   const balanceWsol = await chain.getTokenBalance(
+  //     mintWsol,
+  //     ownerKeypair.publicKey
+  //   );
+  //   const balanceUsdc = await chain.getTokenBalance(
+  //     mintUsdc,
+  //     ownerKeypair.publicKey
+  //   );
 
-    li({
-      balanceWsol,
-      balanceUsdc,
-    });
-  })();
+  //   li({
+  //     balanceWsol,
+  //     balanceUsdc,
+  //   });
+  // })();
 }
 
 main();

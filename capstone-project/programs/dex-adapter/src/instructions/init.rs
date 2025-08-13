@@ -1,9 +1,12 @@
 use {
     anchor_lang::prelude::*,
-    base::helpers::{get_clock_time, get_space},
+    base::{
+        error::AuthError,
+        helpers::{get_clock_time, get_space},
+    },
     dex_adapter_cpi::state::{
-        DaBump, DaConfig, RotationState, ROTATION_TIMEOUT, SEED_ADMIN_ROTATION_STATE, SEED_BUMP,
-        SEED_CONFIG,
+        DaBump, DaConfig, RotationState, CLOCK_TIME_MIN, MAINNET_ADMIN, ROTATION_TIMEOUT,
+        SEED_ADMIN_ROTATION_STATE, SEED_BUMP, SEED_CONFIG,
     },
 };
 
@@ -52,6 +55,7 @@ impl<'info> Init<'info> {
         registry: Option<Pubkey>,
         rotation_timeout: Option<u32>,
     ) -> Result<()> {
+        let clock_time = get_clock_time()?;
         let Self {
             sender,
             bump,
@@ -59,6 +63,11 @@ impl<'info> Init<'info> {
             admin_rotation_state,
             ..
         } = self;
+
+        // devnet/mainnet program must be initialized by specified address
+        if clock_time > CLOCK_TIME_MIN && sender.key() != MAINNET_ADMIN {
+            Err(AuthError::Unauthorized)?;
+        }
 
         bump.set_inner(DaBump {
             config: bumps.config,
@@ -76,7 +85,7 @@ impl<'info> Init<'info> {
         admin_rotation_state.set_inner(RotationState {
             owner: sender.key(),
             new_owner: None,
-            expiration_date: get_clock_time()?,
+            expiration_date: clock_time,
         });
 
         Ok(())

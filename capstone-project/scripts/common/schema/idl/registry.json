@@ -1,5 +1,5 @@
 {
-  "address": "3RVBZDA6dgcjkGJtXRJxLvLh5g8qY6QwGHoribyKPN2E",
+  "address": "EXcPAkk4fXUpabER61k2KTURT4bL7cgfxTmi6AyDkJLD",
   "metadata": {
     "name": "registry",
     "version": "1.0.0",
@@ -720,77 +720,16 @@
         },
         {
           "name": "user_account",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  117,
-                  115,
-                  101,
-                  114,
-                  95,
-                  97,
-                  99,
-                  99,
-                  111,
-                  117,
-                  110,
-                  116
-                ]
-              },
-              {
-                "kind": "arg",
-                "path": "expected_user_id"
-              }
-            ]
-          }
+          "writable": true
         },
         {
           "name": "user_rotation_state",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  117,
-                  115,
-                  101,
-                  114,
-                  95,
-                  114,
-                  111,
-                  116,
-                  97,
-                  116,
-                  105,
-                  111,
-                  110,
-                  95,
-                  115,
-                  116,
-                  97,
-                  116,
-                  101
-                ]
-              },
-              {
-                "kind": "arg",
-                "path": "expected_user_id"
-              }
-            ]
-          }
+          "writable": true
         }
       ],
       "args": [
         {
           "name": "max_data_size",
-          "type": "u32"
-        },
-        {
-          "name": "expected_user_id",
           "type": "u32"
         }
       ]
@@ -1424,13 +1363,9 @@
           }
         },
         {
-          "name": "registration_fee",
+          "name": "registration_fee_amount",
           "type": {
-            "option": {
-              "defined": {
-                "name": "AssetItem"
-              }
-            }
+            "option": "u64"
           }
         },
         {

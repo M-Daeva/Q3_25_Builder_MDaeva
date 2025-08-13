@@ -6,12 +6,17 @@ use {
 pub const SECONDS_PER_DAY: u32 = 24 * 3_600;
 pub const SECONDS_PER_YEAR: u32 = 365 * SECONDS_PER_DAY;
 
+pub const CLOCK_TIME_MIN: u64 = 1750000000;
+pub const MAINNET_ADMIN: Pubkey =
+    Pubkey::from_str_const("AH9JvTDAiQy2zAuFfzteNyUrW5DYoTsTLoeNjXrxTTSt");
+
 pub const ROTATION_TIMEOUT: u32 = SECONDS_PER_DAY;
 pub const ACCOUNT_REGISTRATION_FEE_AMOUNT: u64 = 10_000_000; // 10 $
 pub const ACCOUNT_REGISTRATION_FEE_ASSET: Pubkey =
     Pubkey::from_str_const("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"); // mainnet USDC
 pub const ACCOUNT_DATA_SIZE_MIN: u32 = 100;
-pub const ACCOUNT_DATA_SIZE_MAX: u32 = 100_000;
+/// "Account data size realloc limited to 10240 in inner instructions"
+pub const ACCOUNT_DATA_SIZE_MAX: u32 = 10_000;
 
 pub const SEED_BUMP: &str = "bump";
 pub const SEED_CONFIG: &str = "config";

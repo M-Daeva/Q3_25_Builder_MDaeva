@@ -121,7 +121,7 @@ fn swap_multihop_2() -> Result<()> {
         ],
     )?;
 
-    // swap WBTC -> WSOL -> USDC
+    // swap WBTC -> PYTH -> USDC
     let bob_wbtc_before = app.get_balance(AppUser::Bob, AppToken::WBTC);
     let bob_usdc_before = app.get_balance(AppUser::Bob, AppToken::USDC);
 
@@ -166,7 +166,7 @@ fn swap_and_activate_default() -> Result<()> {
         None,
     )?;
 
-    app.registry_try_create_account(AppUser::Bob, MAX_DATA_SIZE_0)?;
+    app.registry_try_create_account(AppUser::Bob, MAX_DATA_SIZE_0, None)?;
 
     app.dex_adapter_try_init(AppUser::Admin, app.program_id.clmm_mock, None, None)?;
     app.dex_adapter_try_save_route(
@@ -185,7 +185,7 @@ fn swap_and_activate_default() -> Result<()> {
         ],
     )?;
 
-    // swap WBTC -> WSOL -> USDC
+    // swap WBTC -> PYTH -> USDC
     let bob_wbtc_before = app.get_balance(AppUser::Bob, AppToken::WBTC);
     let bob_usdc_before = app.get_balance(AppUser::Bob, AppToken::USDC);
 
@@ -292,150 +292,3 @@ fn swap_and_unwrap_wsol_default() -> Result<()> {
 
     Ok(())
 }
-
-// #[test]
-// fn swap_and_unwrap_wsol_default() -> Result<()> {
-//     const BASE_AMOUNT: u128 = 10_000;
-
-//     let mut app = App::new();
-//     app.wsol_try_wrap(AppUser::Admin, BASE_AMOUNT as u64 * LAMPORTS_PER_SOL)?;
-//     prepare_dex(
-//         &mut app,
-//         &[
-//             (AMM_CONFIG_INDEX_0, AppToken::USDC, AppToken::WBTC),
-//             (AMM_CONFIG_INDEX_1, AppToken::WBTC, AppToken::WSOL),
-//         ],
-//         Some(BASE_AMOUNT),
-//     )?;
-
-//     app.dex_adapter_try_init(AppUser::Admin, app.program_id.clmm_mock, None, None, None)?;
-//     app.dex_adapter_try_save_route(
-//         AppUser::Admin,
-//         AppToken::USDC,
-//         AppToken::WSOL,
-//         &[
-//             RouteItem {
-//                 amm_index: AMM_CONFIG_INDEX_0,
-//                 token_out: AppToken::WBTC.pubkey(),
-//             },
-//             RouteItem {
-//                 amm_index: AMM_CONFIG_INDEX_1,
-//                 token_out: AppToken::WSOL.pubkey(),
-//             },
-//         ],
-//     )?;
-
-//     app.dex_adapter_try_swap_multihop(AppUser::Bob, AppToken::USDC, AppToken::WSOL, 1_000, 1)?;
-
-//     // // swap USDC -> WBTC -> WSOL
-//     // let bob_usdc_before = app.get_balance(AppUser::Bob, AppToken::USDC);
-//     // let bob_wsol_before = app.get_balance(AppUser::Bob, AppToken::WSOL);
-
-//     // app.dex_adapter_try_swap_and_unwrap_wsol(
-//     //     AppUser::Bob,
-//     //     AppToken::USDC,
-//     //     AppToken::WSOL,
-//     //     1_000,
-//     //     1,
-//     // )?;
-
-//     // let bob_wbtc_after = app.get_balance(AppUser::Bob, AppToken::WBTC);
-//     // let bob_wsol_after = app.get_balance(AppUser::Bob, AppToken::WSOL);
-
-//     // assert_eq!(bob_wbtc_before - bob_wbtc_after, 11_000);
-//     // assert_eq!(bob_usdc_after - bob_usdc_before, 955_803);
-
-//     Ok(())
-// }
-
-// #[test]
-// fn swap_multihop_2() -> Result<()> {
-//     let mut app = App::new();
-//     app.wsol_try_wrap(AppUser::Admin, 10_000_000_000_000)?;
-//     prepare_dex(
-//         &mut app,
-//         &[
-//             (AMM_CONFIG_INDEX_0, AppToken::WBTC, AppToken::WSOL),
-//             (AMM_CONFIG_INDEX_1, AppToken::WSOL, AppToken::USDC),
-//         ],
-//         Some(10_000),
-//     )?;
-
-//     app.dex_adapter_try_init(AppUser::Admin, app.program_id.clmm_mock, None, None, None)?;
-//     app.dex_adapter_try_save_route(
-//         AppUser::Admin,
-//         AppToken::WBTC,
-//         AppToken::USDC,
-//         &[
-//             RouteItem {
-//                 amm_index: AMM_CONFIG_INDEX_0,
-//                 token_out: AppToken::WSOL.pubkey(),
-//             },
-//             RouteItem {
-//                 amm_index: AMM_CONFIG_INDEX_1,
-//                 token_out: AppToken::USDC.pubkey(),
-//             },
-//         ],
-//     )?;
-
-//     // swap WBTC -> WSOL -> USDC
-//     app.dex_adapter_try_swap_multihop(AppUser::Bob, AppToken::WBTC, AppToken::USDC, 1, 0)?;
-
-//     Ok(())
-// }
-
-// #[test]
-// fn swap_and_activate_default() -> Result<()> {
-//     const MAX_DATA_SIZE_0: u32 = 1_000;
-
-//     let mut app = App::new();
-//     app.wsol_try_wrap(AppUser::Admin, 1_000_000_000_000)?;
-//     prepare_dex(
-//         &mut app,
-//         &[
-//             (AMM_CONFIG_INDEX_0, AppToken::WBTC, AppToken::WSOL),
-//             (AMM_CONFIG_INDEX_1, AppToken::WSOL, AppToken::USDC),
-//         ],
-//         Some(1_000),
-//     )?;
-
-//     app.registry_try_init(
-//         AppUser::Admin,
-//         None,
-//         Some(AssetItem {
-//             amount: ACCOUNT_REGISTRATION_FEE_AMOUNT,
-//             asset: AppToken::USDC.pubkey(),
-//         }),
-//         None,
-//     )?;
-
-//     app.registry_try_create_account(AppUser::Bob, MAX_DATA_SIZE_0)?;
-
-//     app.dex_adapter_try_init(AppUser::Admin, app.program_id.clmm_mock, None, None, None)?;
-//     app.dex_adapter_try_save_route(
-//         AppUser::Admin,
-//         AppToken::WBTC,
-//         AppToken::USDC,
-//         &[
-//             RouteItem {
-//                 amm_index: AMM_CONFIG_INDEX_0,
-//                 token_out: AppToken::WSOL.pubkey(),
-//             },
-//             RouteItem {
-//                 amm_index: AMM_CONFIG_INDEX_1,
-//                 token_out: AppToken::USDC.pubkey(),
-//             },
-//         ],
-//     )?;
-
-//     // swap WBTC -> WSOL -> USDC
-//     app.dex_adapter_try_swap_and_activate(
-//         AppUser::Bob,
-//         AppToken::WBTC,
-//         AppToken::USDC,
-//         app.registry_query_config()?.registration_fee.amount,
-//         1,
-//     )?;
-
-//     Ok(())
-// }

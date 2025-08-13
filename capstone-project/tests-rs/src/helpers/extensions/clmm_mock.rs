@@ -44,6 +44,7 @@ pub trait ClmmMockExtension {
         token_mint_1: AppToken,
     ) -> Result<TransactionMetadata>;
 
+    #[allow(clippy::too_many_arguments)]
     fn clmm_mock_try_open_position(
         &mut self,
         sender: AppUser,
@@ -61,6 +62,7 @@ pub trait ClmmMockExtension {
         token_mint_1: AppToken,
     ) -> Result<TransactionMetadata>;
 
+    #[allow(clippy::too_many_arguments)]
     fn clmm_mock_try_swap(
         &mut self,
         sender: AppUser,

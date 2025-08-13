@@ -84,6 +84,7 @@ pub mod raydium_clmm {
     /// * `amount_0_max` - The max amount of token_0 to spend, which serves as a slippage check
     /// * `amount_1_max` - The max amount of token_1 to spend, which serves as a slippage check
     ///
+    #[allow(clippy::too_many_arguments)]
     pub fn open_position<'a, 'b, 'c: 'info, 'info>(
         ctx: Context<'a, 'b, 'c, 'info, OpenPosition<'info>>,
         tick_lower_index: i32,
@@ -112,6 +113,7 @@ pub mod raydium_clmm {
     /// * `amount_1_max` - The max amount of token_1 to spend, which serves as a slippage check
     /// * `base_flag` - if the liquidity specified as zero, true: calculate liquidity base amount_0_max otherwise base amount_1_max
     ///
+    #[allow(clippy::too_many_arguments)]
     pub fn open_position_v2<'a, 'b, 'c: 'info, 'info>(
         ctx: Context<'a, 'b, 'c, 'info, OpenPositionV2<'info>>,
         tick_lower_index: i32,
@@ -141,6 +143,7 @@ pub mod raydium_clmm {
     /// * `amount_1_max` - The max amount of token_1 to spend, which serves as a slippage check
     /// * `base_flag` - if the liquidity specified as zero, true: calculate liquidity base amount_0_max otherwise base amount_1_max
     ///
+    #[allow(clippy::too_many_arguments)]
     pub fn open_position_with_token22_nft<'a, 'b, 'c: 'info, 'info>(
         ctx: Context<'a, 'b, 'c, 'info, OpenPositionWithToken22Nft<'info>>,
         tick_lower_index: i32,

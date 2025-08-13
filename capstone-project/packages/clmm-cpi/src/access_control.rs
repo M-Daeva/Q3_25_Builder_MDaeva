@@ -10,7 +10,7 @@ use anchor_spl::token_interface::TokenAccount;
 ///
 pub fn is_authorized_for_token<'info>(
     signer: &Signer<'info>,
-    token_account: &Box<InterfaceAccount<'info, TokenAccount>>,
+    token_account: &InterfaceAccount<'info, TokenAccount>,
 ) -> Result<()> {
     require_eq!(token_account.amount, 1);
     require_keys_eq!(token_account.owner, signer.key());

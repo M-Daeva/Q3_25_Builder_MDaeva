@@ -8,6 +8,7 @@ use {
     dex_adapter_cpi::{error::CustomError, types::SwapRouterBaseInData},
 };
 
+#[allow(clippy::too_many_arguments)]
 pub fn execute_clmm_swap<'a>(
     amount_in: u64,
     amount_out_minimum: u64,
@@ -81,6 +82,7 @@ pub fn execute_clmm_swap<'a>(
     )?)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn activate_account_on_registry<'a>(
     user_to_activate: &Pubkey,
     system_program: &Program<'a, System>,

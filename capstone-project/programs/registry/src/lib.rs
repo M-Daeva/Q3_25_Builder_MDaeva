@@ -13,7 +13,7 @@ use {
 };
 
 // IDL builder doesn't see ID from cpi package, we need to duplicate it here
-declare_id!("3RVBZDA6dgcjkGJtXRJxLvLh5g8qY6QwGHoribyKPN2E");
+declare_id!("EXcPAkk4fXUpabER61k2KTURT4bL7cgfxTmi6AyDkJLD");
 
 #[program]
 pub mod registry {
@@ -38,14 +38,14 @@ pub mod registry {
         admin: Option<Pubkey>,
         is_paused: Option<bool>,
         rotation_timeout: Option<u32>,
-        registration_fee: Option<AssetItem>,
+        registration_fee_amount: Option<u64>,
         data_size_range: Option<Range>,
     ) -> Result<()> {
         ctx.accounts.update_config(
             admin,
             is_paused,
             rotation_timeout,
-            registration_fee,
+            registration_fee_amount,
             data_size_range,
         )
     }
@@ -59,13 +59,8 @@ pub mod registry {
     }
 
     /// creates user PDA account taking rent exempt in SOL
-    pub fn create_account(
-        ctx: Context<CreateAccount>,
-        max_data_size: u32,
-        expected_user_id: u32,
-    ) -> Result<()> {
-        ctx.accounts
-            .create_account(ctx.bumps, max_data_size, expected_user_id)
+    pub fn create_account(ctx: Context<CreateAccount>, max_data_size: u32) -> Result<()> {
+        ctx.accounts.create_account(ctx.bumps, max_data_size)
     }
 
     /// 1st step to to change allocated data space or just to redeem rent

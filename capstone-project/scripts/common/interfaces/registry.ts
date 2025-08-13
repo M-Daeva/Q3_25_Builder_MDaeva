@@ -21,7 +21,7 @@ export interface UpdateConfigArgs {
   admin?: PublicKey;
   is_paused?: boolean;
   rotation_timeout?: N<32>;
-  registration_fee?: AssetItem;
+  registration_fee_amount?: N<64>;
   data_size_range?: Range;
 }
 

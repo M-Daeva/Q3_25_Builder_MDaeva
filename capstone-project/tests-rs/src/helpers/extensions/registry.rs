@@ -10,7 +10,7 @@ use {
     litesvm::types::TransactionMetadata,
     registry::{accounts, instruction},
     registry_cpi::{
-        state,
+        state::{self, ACCOUNT_REGISTRATION_FEE_ASSET},
         types::{AssetItem, Range},
     },
 };
@@ -30,7 +30,7 @@ pub trait RegistryExtension {
         admin: Option<AppUser>,
         is_paused: Option<bool>,
         rotation_timeout: Option<u32>,
-        registration_fee: Option<AssetItem>,
+        registration_fee_amount: Option<u64>,
         data_size_range: Option<Range>,
     ) -> Result<TransactionMetadata>;
 
@@ -44,16 +44,21 @@ pub trait RegistryExtension {
         sender: AppUser,
         amount: Option<u64>,
         recipient: Option<AppUser>,
-        revenue_asset: Option<AppToken>,
+        revenue_asset: Option<AppToken>, // to test guards
     ) -> Result<TransactionMetadata>;
 
     fn registry_try_create_account(
         &mut self,
         sender: AppUser,
         max_data_size: u32,
+        expected_user_id: Option<u32>, // to test guards
     ) -> Result<TransactionMetadata>;
 
-    fn registry_try_close_account(&mut self, sender: AppUser) -> Result<TransactionMetadata>;
+    fn registry_try_close_account(
+        &mut self,
+        sender: AppUser,
+        user: Option<AppUser>, // to test guards
+    ) -> Result<TransactionMetadata>;
 
     fn registry_try_reopen_account(
         &mut self,
@@ -65,7 +70,7 @@ pub trait RegistryExtension {
         &mut self,
         sender: AppUser,
         user: Option<AppUser>,
-        revenue_asset: Option<AppToken>, // to test asset guard
+        revenue_asset: Option<AppToken>, // to test guards
     ) -> Result<TransactionMetadata>;
 
     fn registry_try_write_data(
@@ -95,9 +100,9 @@ pub trait RegistryExtension {
 
     fn registry_query_user_id(&self, user: AppUser) -> Result<state::UserId>;
 
-    fn registry_query_user_account(&self, user_id: u32) -> Result<state::UserAccount>;
+    fn registry_query_user_account(&self, user: AppUser) -> Result<state::UserAccount>;
 
-    fn registry_query_user_rotation_state(&self, user_id: u32) -> Result<state::RotationState>;
+    fn registry_query_user_rotation_state(&self, user: AppUser) -> Result<state::RotationState>;
 }
 
 impl RegistryExtension for App {
@@ -124,8 +129,8 @@ impl RegistryExtension for App {
         // mint
         let revenue_mint = account_registration_fee
             .as_ref()
-            .map(|x| x.asset.clone())
-            .unwrap();
+            .map(|x| x.asset)
+            .unwrap_or(ACCOUNT_REGISTRATION_FEE_ASSET);
 
         // pda
         let bump = self.pda.registry_bump();
@@ -172,7 +177,7 @@ impl RegistryExtension for App {
         admin: Option<AppUser>,
         is_paused: Option<bool>,
         rotation_timeout: Option<u32>,
-        registration_fee: Option<AssetItem>,
+        registration_fee_amount: Option<u64>,
         data_size_range: Option<Range>,
     ) -> Result<TransactionMetadata> {
         // programs
@@ -201,7 +206,7 @@ impl RegistryExtension for App {
             admin: admin.map(|x| x.pubkey()),
             is_paused,
             rotation_timeout,
-            registration_fee,
+            registration_fee_amount,
             data_size_range,
         };
 
@@ -260,7 +265,7 @@ impl RegistryExtension for App {
         sender: AppUser,
         amount: Option<u64>,
         recipient: Option<AppUser>,
-        revenue_asset: Option<AppToken>, // to test asset guard
+        revenue_asset: Option<AppToken>,
     ) -> Result<TransactionMetadata> {
         // programs
         let ProgramId {
@@ -321,6 +326,7 @@ impl RegistryExtension for App {
         &mut self,
         sender: AppUser,
         max_data_size: u32,
+        expected_user_id: Option<u32>,
     ) -> Result<TransactionMetadata> {
         // programs
         let ProgramId {
@@ -339,7 +345,8 @@ impl RegistryExtension for App {
         let user_counter = self.pda.registry_user_counter();
 
         let user_id = self.pda.registry_user_id(payer);
-        let expected_user_id = self.registry_query_user_counter()?.last_user_id + 1;
+        let expected_user_id =
+            expected_user_id.unwrap_or(self.registry_query_user_counter()?.last_user_id + 1);
         let user_account = self.pda.registry_user_account(expected_user_id);
         let user_rotation_state = self.pda.registry_user_rotation_state(expected_user_id);
 
@@ -354,10 +361,7 @@ impl RegistryExtension for App {
             user_rotation_state,
         };
 
-        let instruction_data = instruction::CreateAccount {
-            max_data_size,
-            expected_user_id,
-        };
+        let instruction_data = instruction::CreateAccount { max_data_size };
 
         send_tx_with_ix(
             self,
@@ -370,7 +374,11 @@ impl RegistryExtension for App {
         )
     }
 
-    fn registry_try_close_account(&mut self, sender: AppUser) -> Result<TransactionMetadata> {
+    fn registry_try_close_account(
+        &mut self,
+        sender: AppUser,
+        user: Option<AppUser>,
+    ) -> Result<TransactionMetadata> {
         // programs
         let ProgramId {
             system_program,
@@ -378,13 +386,15 @@ impl RegistryExtension for App {
             ..
         } = self.program_id;
 
+        let user = user.unwrap_or(sender);
+
         // signers
         let payer = sender.pubkey();
         let signers = [sender.keypair()];
 
         // pda
-        let user_id = self.pda.registry_user_id(payer);
-        let id = self.registry_query_user_id(sender)?.id;
+        let user_id = self.pda.registry_user_id(user.pubkey());
+        let id = self.registry_query_user_id(user)?.id;
         let user_account = self.pda.registry_user_account(id);
         let user_rotation_state = self.pda.registry_user_rotation_state(id);
 
@@ -487,8 +497,7 @@ impl RegistryExtension for App {
         // pda
         let bump = self.pda.registry_bump();
         let config = self.pda.registry_config();
-
-        let user_id = self.pda.registry_user_id(payer);
+        let user_id = self.pda.registry_user_id(user);
 
         // ata
         let revenue_sender_ata = App::get_ata(&payer, &revenue_mint);
@@ -668,14 +677,16 @@ impl RegistryExtension for App {
         get_data(&self.litesvm, &self.pda.registry_user_id(user.pubkey()))
     }
 
-    fn registry_query_user_account(&self, user_id: u32) -> Result<state::UserAccount> {
-        get_data(&self.litesvm, &self.pda.registry_user_account(user_id))
+    fn registry_query_user_account(&self, user: AppUser) -> Result<state::UserAccount> {
+        let user_id = self.registry_query_user_id(user)?;
+        get_data(&self.litesvm, &self.pda.registry_user_account(user_id.id))
     }
 
-    fn registry_query_user_rotation_state(&self, user_id: u32) -> Result<state::RotationState> {
+    fn registry_query_user_rotation_state(&self, user: AppUser) -> Result<state::RotationState> {
+        let user_id = self.registry_query_user_id(user)?;
         get_data(
             &self.litesvm,
-            &self.pda.registry_user_rotation_state(user_id),
+            &self.pda.registry_user_rotation_state(user_id.id),
         )
     }
 }

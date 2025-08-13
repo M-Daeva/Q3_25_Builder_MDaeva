@@ -77,11 +77,17 @@ impl<'info> ActivateAccount<'info> {
             ..
         } = self;
 
-        // can't be activated twice
+        // only open account can be activated
+        if !user_id.is_open {
+            Err(CustomError::AccountIsNotOpened)?;
+        }
+
+        // only inactive account can be activated
         if user_id.is_activated {
             Err(CustomError::ActivateAccountTwice)?;
         }
 
+        // validate fee token
         if revenue_mint.key() != config.registration_fee.asset {
             Err(CustomError::WrongAssetType)?;
         }
