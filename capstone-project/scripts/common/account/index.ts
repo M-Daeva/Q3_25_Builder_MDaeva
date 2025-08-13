@@ -354,12 +354,83 @@ export class RegistryHelpers {
     return logAndReturn(res, isDisplayed);
   }
 
+  async queryUserAccountById(id: number) {
+    const [pda] = this.getUserAccountPda(id);
+    return await this.program.account.userAccount.fetch(pda);
+  }
+
   async queryUserAccount(user: PublicKey, isDisplayed: boolean = false) {
     const { id } = await this.queryUserId(user);
-    const [pda] = this.getUserAccountPda(id);
-    const res = await this.program.account.userAccount.fetch(pda);
+    const res = await this.queryUserAccountById(id);
 
     return logAndReturn(res, isDisplayed);
+  }
+
+  async queryUserAccountList(batchSize: number = 100): Promise<
+    {
+      id: number;
+      data: string;
+      nonce: anchor.BN;
+      maxSize: number;
+    }[]
+  > {
+    let userAccountList: {
+      id: number;
+      data: string;
+      nonce: anchor.BN;
+      maxSize: number;
+    }[] = [];
+
+    const { lastUserId } = await this.queryUserCounter();
+
+    // Create all PDAs first
+    const userAccountPdas: { id: number; pda: PublicKey }[] = [];
+    for (let i = 1; i <= lastUserId; i++) {
+      const [pda] = this.getUserAccountPda(i);
+      userAccountPdas.push({ id: i, pda });
+    }
+
+    // Batch fetch accounts
+    for (let i = 0; i < userAccountPdas.length; i += batchSize) {
+      const batch = userAccountPdas.slice(i, i + batchSize);
+      const pdas = batch.map((item) => item.pda);
+
+      try {
+        const accountList =
+          await this.program.account.userAccount.fetchMultiple(pdas);
+
+        // Process the batch
+        for (let j = 0; j < accountList.length; j++) {
+          const account = accountList[j];
+
+          // Account exists
+          if (account) {
+            userAccountList.push({
+              id: batch[j].id,
+              ...account,
+            });
+          }
+        }
+      } catch (error) {
+        li(`Error fetching batch starting at index ${i}: ${error}`);
+
+        // Fallback to individual fetches for this batch
+        for (const { id, pda } of batch) {
+          try {
+            const account = await this.program.account.userAccount.fetch(pda);
+
+            userAccountList.push({
+              id,
+              ...account,
+            });
+          } catch (err) {
+            li(`Failed to fetch account ${id}: ${err}`);
+          }
+        }
+      }
+    }
+
+    return userAccountList;
   }
 
   async readUserData(

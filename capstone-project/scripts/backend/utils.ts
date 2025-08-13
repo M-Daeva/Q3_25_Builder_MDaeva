@@ -22,6 +22,12 @@ export function parseNetwork(): Network {
   }
 }
 
+export function getSnapshotPath(network: Network, fileName: string) {
+  return rootPath(
+    `./scripts/backend/snapshots/${network.toLocaleLowerCase()}/${fileName}`
+  );
+}
+
 /**
  * Converts a Unix epoch time (in seconds) to a human-readable date string in the format "DD.MM.YYYY HH:MM:SS".
  * @param unixTimestamp Unix epoch time in seconds
