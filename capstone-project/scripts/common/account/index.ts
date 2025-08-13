@@ -304,13 +304,22 @@ export class RegistryHelpers {
   }
 
   async tryConfirmAccountRotation(
+    prevOwner: PublicKey,
     params: TxParams = {},
     isDisplayed: boolean = false
   ): Promise<anchor.web3.TransactionSignature> {
+    const [userIdPrePda] = this.getUserIdPda(prevOwner);
+    const [userIdPda] = this.getUserIdPda(this.sender);
+    const { id: userIdValuePre } = await this.queryUserId(prevOwner);
+    const [userRotationStatePda] = this.getUserRotationStatePda(userIdValuePre);
+
     const ix = await this.program.methods
       .confirmAccountRotation()
-      .accounts({
+      .accountsPartial({
         sender: this.sender,
+        userIdPre: userIdPrePda,
+        userId: userIdPda,
+        userRotationState: userRotationStatePda,
       })
       .instruction();
 
@@ -345,10 +354,7 @@ export class RegistryHelpers {
   }
 
   async queryUserId(user: PublicKey, isDisplayed: boolean = false) {
-    const [pda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("user_id"), user.toBuffer()],
-      this.program.programId
-    );
+    const [pda] = this.getUserIdPda(user);
     const res = await this.program.account.userId.fetch(pda);
 
     return logAndReturn(res, isDisplayed);
@@ -482,6 +488,13 @@ export class RegistryHelpers {
   getConfigPda() {
     return PublicKey.findProgramAddressSync(
       [Buffer.from("config")],
+      this.program.programId
+    );
+  }
+
+  getUserIdPda(user: PublicKey) {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("user_id"), user.toBuffer()],
       this.program.programId
     );
   }
