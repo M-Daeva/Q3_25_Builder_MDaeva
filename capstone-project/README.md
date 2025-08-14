@@ -5,7 +5,9 @@
 SolVeil (Solar Veil) is a decentralized password manager that combines self-custody security with blockchain-based data persistence. Users maintain complete control over their encrypted data while optionally leveraging Solana blockchain storage for enhanced reliability and cross-device synchronization.
 
 This repository contains the **smart contracts** that power SolVeil's on-chain functionality.
+
 [The application](https://solveil.cryptogopniks.xyz)
+
 [Frontend repository](https://github.com/MedvedCrypto/SolVeil-UI)
 
 ## Key Features
