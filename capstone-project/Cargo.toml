@@ -1,8 +1,9 @@
 [workspace.package]
+name = "SolVeil"
 edition = "2021"
-repository = "https://github.com/M-Daeva/solana-boilerplate"
+repository = "https://github.com/M-Daeva/Q3_25_Builder_MDaeva/tree/main/capstone-project"
 authors = ["M. Daeva <embedmad@gmail.com>"]
-license = "Apache-2.0"
+license = "BSL-1.1"
 
 [workspace]
 members = ["programs/*", "packages/*", "tests-rs"]
