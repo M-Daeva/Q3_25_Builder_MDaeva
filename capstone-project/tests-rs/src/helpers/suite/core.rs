@@ -30,6 +30,10 @@ use {
     strum::IntoEnumIterator,
 };
 
+pub const PROGRAM_NAME_CLMM_MOCK: &str = "clmm_mock";
+pub const PROGRAM_NAME_REGISTRY: &str = "registry";
+pub const PROGRAM_NAME_DEX_ADAPTER: &str = "dex_adapter";
+
 pub mod sol_kite {
     use {
         litesvm::LiteSVM, solana_keypair::Keypair, solana_kite::SolanaKiteError,
@@ -410,11 +414,15 @@ impl App {
         };
 
         // upload 3rd party programs
-        upload_program(&mut litesvm, "clmm_mock", &program_id.clmm_mock);
+        upload_program(&mut litesvm, PROGRAM_NAME_CLMM_MOCK, &program_id.clmm_mock);
 
         // upload custom programs
-        upload_program(&mut litesvm, "registry", &program_id.registry);
-        upload_program(&mut litesvm, "dex_adapter", &program_id.dex_adapter);
+        upload_program(&mut litesvm, PROGRAM_NAME_REGISTRY, &program_id.registry);
+        upload_program(
+            &mut litesvm,
+            PROGRAM_NAME_DEX_ADAPTER,
+            &program_id.dex_adapter,
+        );
 
         Self {
             litesvm,
@@ -654,16 +662,28 @@ pub fn to_anchor_err(message: impl ToString) -> anchor_lang::error::Error {
     }))
 }
 
-fn upload_program(litesvm: &mut LiteSVM, program_name: &str, program_id: &Pubkey) {
+pub fn get_program_size(program_name: &str) -> Result<u64> {
+    let program_path = &get_program_path(program_name);
+
+    std::fs::metadata(program_path)
+        .map(|x| x.len())
+        .map_err(|_| to_anchor_err(format!("{} program isn't found!", program_path)))
+}
+
+fn get_program_path(program_name: &str) -> String {
     const PROGRAM_PATH: &str = "../target/deploy/";
+    format!("{}{}.so", PROGRAM_PATH, program_name)
+}
+
+fn get_dumps_path(program_name: &str) -> String {
     const DUMPS_PATH: &str = "./src/helpers/dumps/";
+    format!("{}{}.so", DUMPS_PATH, program_name)
+}
 
-    let path_a = &format!("{}{}.so", PROGRAM_PATH, program_name);
-    let path_b = &format!("{}{}.so", DUMPS_PATH, program_name);
-
+fn upload_program(litesvm: &mut LiteSVM, program_name: &str, program_id: &Pubkey) {
     // try to deploy custom programs first, if it doesn't work then deploy dumps
-    if deploy_program(litesvm, program_id, path_a).is_err() {
-        deploy_program(litesvm, program_id, path_b).unwrap()
+    if deploy_program(litesvm, program_id, &get_program_path(program_name)).is_err() {
+        deploy_program(litesvm, program_id, &get_dumps_path(program_name)).unwrap()
     }
 }
 

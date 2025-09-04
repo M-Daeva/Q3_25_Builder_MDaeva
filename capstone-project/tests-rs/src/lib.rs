@@ -3,6 +3,8 @@ pub mod clmm_mock;
 #[cfg(test)]
 pub mod dex_adapter;
 #[cfg(test)]
+pub mod profiler;
+#[cfg(test)]
 pub mod registry;
 #[cfg(test)]
 pub mod wsol;
